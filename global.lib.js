@@ -78,6 +78,55 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
     return xhttp;
 }
 
+/**
+ * Todo 
+ * Get curent Dolibarr version
+ */
+export function getDolVersion(cache = true){
+/*
+    return new Promise((resolve, reject) => {
+
+        if(cache){
+
+            browser.storage.local.get({dolibarrVersion:'', dolibarrVersionTime:0})
+            .then((cacheData)=>{
+                
+
+                if(cacheData.dolibarrVersion.length > 0){
+
+                }
+
+                // TODO check dolibarrVersionTime before resolve
+
+                resolve(parseVersionString (cacheData.dolibarrVersion));
+
+
+
+            }).catch((err) => {
+                console.error(err);
+            });
+
+
+        
+
+            
+        }
+    
+    
+    
+        callDolibarrApi('status', {}, 'GET', {}, (resData)=>{
+    
+            const versionInfo = parseVersionString (resData.dolibarr_version);
+            
+    
+        },(errorMsg)=>{
+            throw new Error("Fail call status endpoint to get Dolibarr Version");
+        });
+
+        resolve(777);
+    });
+*/
+}
 
 export function extractEmailAddressFromString(text){
     // Expression régulière pour rechercher les adresses e-mail
@@ -105,6 +154,21 @@ export async function getDolibarrUrl() {
     return dolUrl;
 }
 
+
+function parseVersionString (strVersion){
+    const pattern = /([0-9]+)\.?([0-9]+)?\.?([0-9]+)?/;
+
+    if (!strVersion) throw new Error(`missing version`);
+
+    const match = strVersion.match(pattern);
+    if (!match) throw new Error(`invalid version - does not match pattern ${pattern}`);
+    
+    return  {
+        major: typeof match[1] != "undefined" ? Number(match[1]) : null,
+        minor: typeof match[1] != "undefined" ? Number(match[2]) : null,
+        patch: typeof match[1] != "undefined" ? Number(match[3]) : null,
+    };
+}
 
 // function getAllStorageSyncData(top_key) {
 //     // Immediately return a promise and start asynchronous work
