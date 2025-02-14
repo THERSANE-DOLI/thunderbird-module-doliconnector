@@ -1,0 +1,48 @@
+{
+  "extensionName": {
+    "message": "Dolibarr connector"
+  },
+  "extensionDescription": {
+    "message": "Επέκταση Thunderbird για την ενσωμάτωση του Dolibarr"
+  },
+  "Save": {
+    "message": "Αποθήκευση"
+  },
+  "dolibarrApiKey": {
+    "message": "REST API key"
+  },
+  "dolibarrUrl": {
+    "message": "Dolibarr Url "
+  },
+  "CreateNewCompany": {
+    "message": "Δημιουργία Πελάτη/Προμηθευτή"
+  },
+  "CreateNewContact": {
+    "message": "Δημιουργία νέας επαφής"
+  },
+  "FicheDolibarr": {
+    "message": "Εμφάνιση Πελάτη/Προμηθευτή"
+  },
+  "Ref": {
+    "message": "Αρ. παραστατικού"
+  },
+  "RefClient": {
+    "message": "Αναφ. Πελάτη"
+  },
+  "CheckYourModuleConfig": {
+    "message": "Ημιτελής διαμόρφωση : Ελέγξτε τη διαμόρφωση του Dolibarr connector"
+  },
+  "refFourn": {
+	"message": "Αναφ. Προμηθευτή"
+  },
+  "Date": {
+    "message": "Ημερομηνία"
+  },
+  "Total": {
+    "message": "Σύνολο"
+  },
+  "options.options": {
+    "message": "Επιλογές",
+    "description": "Επιλογές"
+  }
+}

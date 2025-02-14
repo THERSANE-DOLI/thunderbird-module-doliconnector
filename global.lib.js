@@ -78,6 +78,7 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
     return xhttp;
 }
 
+
 /**
  * Todo 
  * Get curent Dolibarr version
@@ -126,6 +127,15 @@ export function getDolVersion(cache = true){
         resolve(777);
     });
 */
+}
+
+
+export async function filterDraftCancel(){
+  //filtre sur les objetx brouillons et annulés
+  let configData = await browser.storage.local.get({dolibarrDraftCancel:''});
+  let draftCancel= configData.dolibarrDraftCancel;
+  if(draftCancel != true){draftCancel = false;}
+
 }
 
 export function extractEmailAddressFromString(text){

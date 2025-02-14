@@ -3,40 +3,37 @@
     "message": "Dolibarr connector"
   },
   "extensionDescription": {
-    "message": "Extension Thunderbird pour intégrer Dolibarr"
+    "message": "Thunderbird extension to integrate Dolibarr"
   },
   "Save": {
-    "message": "Sauvegarder"
+    "message": "Save"
   },
   "dolibarrApiKey": {
-    "message": "Clé API REST"
-  },
-  "dolibarrDraftCancel": {
-	      "message": "Masquer les brouillons et annulés"
+    "message": "REST API key"
   },
   "dolibarrUrl": {
-    "message": "Url Dolibarr"
+    "message": "Dolibarr Url "
   },
   "CreateNewCompany": {
-    "message": "Créer un nouveau tiers"
+    "message": "Create a new third party"
   },
   "CreateNewContact": {
-    "message": "Créer un nouveau contact"
+    "message": "Create a new contact"
   },
   "FicheDolibarr": {
-    "message": "Voir Fiche"
+    "message": "Show thirdparty"
   },
   "Ref": {
     "message": "Ref"
   },
   "RefClient": {
-    "message": "Ref Client"
+    "message": "Client Ref"
   },
   "CheckYourModuleConfig": {
-    "message": "Configuration incomplete : Vérifiez votre configuration module"
+    "message": "Configuration incomplete : Check your module configuration"
   },
   "refFourn": {
-    "message": "Ref Fournisseur"
+	"message": "Vendor Ref"
   },
   "Date": {
     "message": "Date"
