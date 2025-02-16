@@ -11,8 +11,26 @@
   "dolibarrApiKey": {
     "message": "Clé API REST"
   },
-  "dolibarrDraftCancel": {
-	      "message": "Masquer les brouillons et annulés"
+   "dolibarrPropal": {
+    "message": "Afficher uniquement les proposition commerciales  (aucune selection = tout afficher)"
+  }, 
+    "dolibarrCanceled": {
+    "message": "Annulées"
+  },
+  "dolibarrDraft": {
+    "message": "Brouillons"
+  },
+    "dolibarrValidated": {
+    "message": "Validées"
+  },
+    "dolibarrSigned": {
+    "message": "Signées"
+  },
+    "dolibarrNotSigned": {
+    "message": "Non signées"
+  },
+    "dolibarrBilled": {
+    "message": "Facturées"
   },
   "dolibarrUrl": {
     "message": "Url Dolibarr"

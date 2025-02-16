@@ -24,8 +24,8 @@ import {searchPhonesInString} from "../global.lib.js";
     // Extract email from author
     let authorEmail = dolLib.extractEmailAddressFromString(message.author)[0];
 
-    //Filter on draft and canceled objects
-    let filterDraftCancel = await dolLib.filterDraftCancel();
+    //Filter on propal objects status
+     let propalDisplayStatus = await dolLib.filterPropalStatus();
 
     let confDolibarUrl = await dolLib.getDolibarrUrl();
 
@@ -249,12 +249,9 @@ import {searchPhonesInString} from "../global.lib.js";
         
         //defaut no filter
         let sqlfilters ='';
-        if (filterDraftCancel == true) {
-            //propal values ares STATUS_CANCELED -1, STATUS_DRAFT 0
-            //from Dolibarr 19 we can use :
-            //sqlfilters = '(t.fk_statut:notin:-1,0)';
-             sqlfilters = '(t.fk_statut:in:1) OR (t.fk_statut:in:2) OR (t.fk_statut:in:3) OR (t.fk_statut:in:4)';
-            
+        if (propalDisplayStatus.length > 0) {
+            propalDisplayStatus= propalDisplayStatus.join(',');//status to string comma separated
+            sqlfilters = '(t.fk_statut:in:' + propalDisplayStatus + ')';
         }
 
         // Get contact infos

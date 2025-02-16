@@ -22,10 +22,39 @@
 				<td><input class="dol-input" type="text" id="dolibarr-api-key" name="dolibarr-api-key" /></td>
 			</tr>
 
-			<tr>
- 				<td><label id="label-for-dolibarr-draft-cancel" for="dolibarr-draft-cancel">__MSG_dolibarrDraftCancel__</label></td>
- 				<td><input class="dol-input" type="checkbox" value="1"  id="dolibarr-draft-cancel" name="dolibarr-draft-cancel" /></td>
+<tr>
+			  <th colspan="2" id="dolibarr-propal">__MSG_dolibarrPropal__</th>
 			</tr>
+<!-- 	const STATUS_CANCELED = -1; -->
+<tr>
+ <td><label id="label-for-dolibarr-propal-canceled" for="dolibarr-propal-canceled">__MSG_dolibarrCanceled__</label></td>
+ <td><input class="dol-input" type="checkbox" value="-1"  id="dolibarr-propal-canceled" name="dolibarr-propal-canceled" /></td>
+</tr>
+<!-- 	const STATUS_DRAFT = 0; -->
+<tr>
+ <td><label id="label-for-dolibarr-propal-draft" for="dolibarr-propal-draft">__MSG_dolibarrDraft__</label></td>
+ <td><input class="dol-input" type="checkbox" value="0"  id="dolibarr-propal-draft" name="dolibarr-propal-draft" /></td>
+</tr>
+<!-- 	const STATUS_VALIDATED = 1; -->
+<tr>
+ <td><label id="label-for-dolibarr-propal-validated" for="dolibarr-propal-validated">__MSG_dolibarrValidated__</label></td>
+ <td><input class="dol-input" type="checkbox" value="1"  id="dolibarr-propal-validated" name="dolibarr-propal-validated" /></td>
+</tr>
+<!-- const STATUS_SIGNED = 2; -->
+<tr>
+ <td><label id="label-for-dolibarr-propal-signed" for="dolibarr-propal-signed">__MSG_dolibarrSigned__</label></td>
+ <td><input class="dol-input" type="checkbox" value="2"  id="dolibarr-propal-signed" name="dolibarr-propal-signed" /></td>
+</tr>
+<!-- const STATUS_NOTSIGNED = 3; -->
+<tr>
+ <td><label id="label-for-dolibarr-propal-notsigned" for="dolibarr-propal-notsigned">__MSG_dolibarrNotSigned__</label></td>
+ <td><input class="dol-input" type="checkbox" value="3"  id="dolibarr-propal-notsigned" name="dolibarr-propal-notsigned" /></td>
+</tr>
+<!-- const STATUS_BILLED = 4; -->
+<tr>
+ <td><label id="label-for-dolibarr-propal-billed" for="dolibarr-propal-billed">__MSG_dolibarrBilled__</label></td>
+ <td><input class="dol-input" type="checkbox" value="4"  id="dolibarr-propal-billed" name="dolibarr-propal-billed" /></td>
+</tr>
 
 			<tr>
 				<td></td>
