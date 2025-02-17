@@ -47,5 +47,8 @@
   "options.options": {
     "message": "Options",
     "description": "Options"
+  },
+  "MorePropalOptions" :{
+    "message": "More quotation options"
   }
 }

@@ -65,5 +65,8 @@
   "options.options": {
     "message": "Options",
     "description": "Options"
+  },
+  "MorePropalOptions" :{
+    "message": "Plus d'option pour les devis"
   }
 }

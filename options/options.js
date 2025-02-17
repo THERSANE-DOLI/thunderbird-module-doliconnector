@@ -1,4 +1,3 @@
-
 document.addEventListener("DOMContentLoaded", restoreOptions);
 
 document.getElementById("save-dolibarr-options").addEventListener("click", saveOptions);
@@ -30,6 +29,7 @@ function restoreOptions() {
     document.title = browser.i18n.getMessage("extensionName") + " " + browser.i18n.getMessage("options.options");
     document.getElementById("label-for-dolibarr-api-url").textContent = browser.i18n.getMessage("dolibarrUrl");
     document.getElementById("label-for-dolibarr-api-key").textContent = browser.i18n.getMessage("dolibarrApiKey");
+    document.getElementById("more-propal-option-title").textContent = browser.i18n.getMessage("MorePropalOptions");
     document.getElementById("dolibarr-propal").textContent = browser.i18n.getMessage("dolibarrPropal");
 	document.getElementById("label-for-dolibarr-propal-canceled").textContent = browser.i18n.getMessage("dolibarrCanceled");
 	document.getElementById("label-for-dolibarr-propal-draft").textContent = browser.i18n.getMessage("dolibarrDraft");
@@ -41,7 +41,16 @@ function restoreOptions() {
 
 
 
-    var getting = browser.storage.local.get({dolibarrApiKey:'', dolibarrApiUrl:''}).then(setCurrentChoice, onError);
+    var getting = browser.storage.local.get({
+        dolibarrApiKey:'',
+        dolibarrApiUrl:'',
+        dolibarrPropalCanceled: false,
+        dolibarrPropalDraft:  false,
+        dolibarrPropalValidated:  false,
+        dolibarrPropalSigned:  false,
+        dolibarrPropalNotSigned:  false,
+        dolibarrPropalBilled:  false
+    }).then(setCurrentChoice, onError);
 }
 
 
@@ -53,14 +62,17 @@ function isInputType(node, type) {
 
 function saveOptions(e) {
     e.preventDefault();
-    browser.storage.local.set({
+
+    let objToStore = {
         dolibarrApiKey: document.getElementById("dolibarr-api-key").value,
         dolibarrApiUrl: document.getElementById("dolibarr-api-url").value,
         dolibarrPropalCanceled: document.getElementById("dolibarr-propal-canceled").checked,
-		dolibarrPropalDraft: document.getElementById("dolibarr-propal-draft").checked,
-		dolibarrPropalValidated: document.getElementById("dolibarr-propal-validated").checked,
-		dolibarrPropalSigned: document.getElementById("dolibarr-propal-signed").checked,
-		dolibarrPropalNotSigned: document.getElementById("dolibarr-propal-notsigned").checked,
-		dolibarrPropalBilled: document.getElementById("dolibarr-propal-billed").checked
-    });
+        dolibarrPropalDraft: document.getElementById("dolibarr-propal-draft").checked,
+        dolibarrPropalValidated: document.getElementById("dolibarr-propal-validated").checked,
+        dolibarrPropalSigned: document.getElementById("dolibarr-propal-signed").checked,
+        dolibarrPropalNotSigned: document.getElementById("dolibarr-propal-notsigned").checked,
+        dolibarrPropalBilled: document.getElementById("dolibarr-propal-billed").checked
+    }
+    // console.log(objToStore);
+    browser.storage.local.set(objToStore);
 }
