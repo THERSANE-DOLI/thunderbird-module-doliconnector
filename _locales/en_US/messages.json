@@ -11,6 +11,9 @@
   "dolibarrApiKey": {
     "message": "REST API key"
   },
+  "dolibarrApiEntity": {
+    "message": "Entity of Dolibarr (default 1)"
+  },
   "dolibarrDraftCancel": {
 	      "message": "Hide drafts and cancelled objects"
   },

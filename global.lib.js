@@ -1,25 +1,27 @@
 export async function checkConfig(){
 
-    let configData = await browser.storage.local.get({dolibarrApiKey:'', dolibarrApiUrl:''});
+    let configData = await browser.storage.local.get({dolibarrApiKey:'', dolibarrApiUrl:'', dolibarrApiEntity:'1'});
 
 
     let apiKey = configData.dolibarrApiKey;
     let dolUrl = configData.dolibarrApiUrl;
+	let apiEntity = configData.dolibarrApiEntity;
 
-    if(apiKey.length == 0 || dolUrl ==0 ){  return false; }
+    if(apiKey.length == 0 || dolUrl ==0 || apiEntity.length == 0){  return false; }
 
     return true;
 }
 
 export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', postData, successCallBackFunction = ()=>{}, errorCallBackFunction = ()=>{}){
 
-    let configData = await browser.storage.local.get({dolibarrApiKey:'', dolibarrApiUrl:''});
+    let configData = await browser.storage.local.get({dolibarrApiKey:'', dolibarrApiUrl:'', dolibarrApiEntity:'1'});
 
 
     let apiKey = configData.dolibarrApiKey;
     let dolUrl = configData.dolibarrApiUrl;
+	let apiEntity = configData.dolibarrApiEntity;
 
-    if(apiKey.length == 0 || dolUrl ==0 ){  reject("Fail getting settings"); }
+    if(apiKey.length == 0 || dolUrl ==0 || apiEntity.length == 0){  reject("Fail getting settings"); }
     if(dolUrl.slice(-1) != '/'){ dolUrl = dolUrl + '/';  }
     let dolApiUrl = dolUrl + 'api/index.php/';
     let finalUrl = dolApiUrl + endPoint;
@@ -38,6 +40,7 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
     let xhttp = new XMLHttpRequest();
     xhttp.open(type, finalUrl, true);
     xhttp.setRequestHeader("DOLAPIKEY", apiKey);
+	xhttp.setRequestHeader("DOLAPIENTITY", apiEntity);
     xhttp.onreadystatechange = function()
     {
         if (this.readyState == XMLHttpRequest.DONE && this.status == 200)
@@ -102,10 +105,12 @@ export async function getDolibarrUrl() {
     let configData = await messenger.storage.local.get({
         dolibarrApiUrl: '',
         dolibarrApiKey: '',
+		dolibarrApiEntity: '1',
     });
 
     let apiKey = configData.dolibarrApiKey;
     let dolUrl = configData.dolibarrApiUrl;
+	let apiEntity = configData.dolibarrApiEntity;
 
 
     if(dolUrl.length > 0 && dolUrl.slice(-1) != '/'){ dolUrl = dolUrl + '/';  }
