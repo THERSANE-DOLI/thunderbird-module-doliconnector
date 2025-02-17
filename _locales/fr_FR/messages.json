@@ -11,6 +11,9 @@
   "dolibarrApiKey": {
     "message": "Clé API REST"
   },
+  "dolibarrApiEntity": {
+    "message": "Eenvironnement de Dolibarr (default 1)"
+  },
   "dolibarrDraftCancel": {
 	      "message": "Masquer les brouillons et annulés"
   },
