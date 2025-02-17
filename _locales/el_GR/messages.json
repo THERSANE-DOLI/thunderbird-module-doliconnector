@@ -11,8 +11,26 @@
   "dolibarrApiKey": {
     "message": "REST API key"
   },
-  "dolibarrDraftCancel": {
-    "message": "Απόκρυψη προσχεδίων και ακυρωμένων"
+   "dolibarrPropal": {
+    "message": "Επιλογή κατάστασης προσφορών (χωρίς επιλογή = εμφάνιση όλων)"
+  }, 
+    "dolibarrCanceled": {
+    "message": "Ακυρωμένες"
+  },
+  "dolibarrDraft": {
+    "message": "Προσχέδια"
+  },
+    "dolibarrValidated": {
+    "message": "Επικυρωμένες"
+  },
+    "dolibarrSigned": {
+    "message": "Υπογεγραμμένες"
+  },
+    "dolibarrNotSigned": {
+    "message": "Μη Υπογεγραμμένες"
+  },
+    "dolibarrBilled": {
+    "message": "Τιμολογημένες"
   },
   "dolibarrUrl": {
     "message": "Dolibarr Url "
@@ -42,10 +60,20 @@
     "message": "Ημερομηνία"
   },
   "Total": {
-    "message": "Σύνολο"
+    "message": "Καθαρή αξία"
   },
   "options.options": {
     "message": "Επιλογές",
+    "description": "Επιλογές"
+  },
+  "MorePropalOptions" :{
+    "message": "Περισσότερες επιλογές για προσφορές"
+  },
+  "Saved" :{
+    "message": "Αποθηκεύθηκε"
+  },
+  "dolibarrOptSearchDomain" :{
+    "message": "Προσθήκη κοινών domain email για αναζήτηση Πελάτη/Προμηθευτή π.χ. @yahoo.gr",
     "description": "Επιλογές"
   }
 }
