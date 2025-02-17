@@ -68,5 +68,12 @@
   },
   "MorePropalOptions" :{
     "message": "Plus d'option pour les devis"
+  },
+  "Saved" :{
+    "message": "Sauvegardé"
+  },
+  "dolibarrOptSearchDomain" :{
+    "message": "Rechercher aussi les tiers grâce aux domaines des emails, ex. : @nomdedomaine.fr",
+    "description": "Options"
   }
 }

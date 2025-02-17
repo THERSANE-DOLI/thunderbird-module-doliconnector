@@ -1,4 +1,5 @@
 import * as dolLib from '../global.lib.js';
+
 import {searchPhonesInString} from "../global.lib.js";
 
     // first need to translate page before add dom events
@@ -100,61 +101,61 @@ import {searchPhonesInString} from "../global.lib.js";
 
         },(errorMsg)=>{
             console.log("thirdpartie  not found now search Thirdparties And Populate By Email domain " + authorEmail);
-            searchThirdpartieAndPopulateByEmailDomain(authorEmail);
+            browser.storage.local.get({dolibarrSearchDomain:  false}).then(
+                (data)=>{
+                    if(data.dolibarrSearchDomain){
+                        searchThirdpartieAndPopulateByEmailDomain(authorEmail);
+                    }else{
+                        setSocInfos({});
+                    }
+                }
+            );
+
+
         });
     }
 
     function searchThirdpartieAndPopulateByEmailDomain(authorEmail){
         console.log("search for same domain soc");
 
-        // TODO check if email domain isn't in FAI list
-        let emailPulbicDomains = [
-            'google.com','live.fr', 'live.com', 'orange.fr','yopmail.com',
-            "orange.fr", "hotmail.fr", "wanadoo.fr", "free.fr", "yahoo.fr",
-            "hotmail.com", "sfr.fr", "laposte.net", "outlook.fr", "live.fr",
-            "neuf.fr", "aol.com", "yahoo.com", "bbox.fr", "icloud.com",
-            "outlook.com", "msn.com", "cegetel.net",
-            "club-internet.fr", "gmx.fr", "aliceadsl.fr", "me.com",
-            "numericable.fr", "nordnet.fr", "protonmail.com",
-            "ymail.com", "hotmail.be", "9online.fr","live.be",
-            "libertysurf.fr", "live.com", "skynet.be", "gmail.fr", "aol.fr",
-            "tiscali.it", "libero.it", "hotmail.gr", "yahoo.gr", "otenet.gr",
-            "gmail.com", "windowslive.com", "outlook.com.gr", "proton.me"
-
-        ]
-
         let emailDomain = authorEmail.split('@').pop();
 
-        if(!emailPulbicDomains.includes(emailDomain.toLowerCase())){
-            console.log("not public email " + emailDomain);
+        fetch(browser.runtime.getURL("exclude-domains.json"))
+            .then(response => response.json())
+            .then(emailPublicDomains => {
+                if(!emailPublicDomains.includes(emailDomain.toLowerCase())){
+                    console.log("not public email " + emailDomain);
 
-            // console.error(msg);
-            dolLib.callDolibarrApi('thirdparties', {
-                limit : 5,
-                sortfield: 't.rowid',
-                sortorder: 'DESC',
-                sqlfilters: "(t.email:like:'%@"+emailDomain+"')"
-            }, 'GET', {}, (resData)=>{
-                resData = resData.pop();
-                console.log("searchThirdpartieAndPopulateByEmailDomain found ");
-                // Populate company data
-                setSocInfos({
-                    id: resData.id,
-                    name: resData.name
-                });
+                    // console.error(msg);
+                    dolLib.callDolibarrApi('thirdparties', {
+                        limit : 5,
+                        sortfield: 't.rowid',
+                        sortorder: 'DESC',
+                        sqlfilters: "(t.email:like:'%@"+emailDomain+"')"
+                    }, 'GET', {}, (resData)=>{
+                        resData = resData.pop();
+                        console.log("searchThirdpartieAndPopulateByEmailDomain found ");
+                        // Populate company data
+                        setSocInfos({
+                            id: resData.id,
+                            name: resData.name
+                        });
 
-                loadDocumentsInfos({
-                    socId : resData.id
-                })
+                        loadDocumentsInfos({
+                            socId : resData.id
+                        })
 
-            },(errorMsg)=>{
-                console.log("not found ");
-                setSocInfos({});
-            });
+                    },(errorMsg)=>{
+                        console.log("not found ");
+                        setSocInfos({});
+                    });
 
-        }else{
-            setSocInfos({});
-        }
+                }else{
+                    setSocInfos({});
+                }
+            })
+            .catch(error => console.error("Erreur de chargement du JSON :", error));
+
     }
 
 

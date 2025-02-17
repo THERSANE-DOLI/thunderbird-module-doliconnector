@@ -1,1 +1,74 @@
 @import "../global.css";
+
+.dol-input-swith {
+    --switch-btn-width: 30px;
+    --switch-btn-space: 1px;
+    --switch-btn-height: calc(var(--switch-btn-width)/2 + var(--switch-btn-space)*2);
+    --switch-btn-dot: calc(var(--switch-btn-width)/2 - var(--switch-btn-space)*2);
+
+    position: relative;
+    display: inline-block;
+    width: var(--switch-btn-width);
+    height: var(--switch-btn-height);
+    cursor: pointer;
+}
+
+.dol-input-swith input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.dol-input-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+.dol-input-slider:before {
+    position: absolute;
+    content: "";
+    height: var(--switch-btn-dot);
+    width: var(--switch-btn-dot);
+    left: calc(var(--switch-btn-space)*2);
+    bottom: calc(var(--switch-btn-space)*2);
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+input:checked + .dol-input-slider {
+    background-color: #2196F3;
+}
+
+input:focus + .dol-input-slider {
+    box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .dol-input-slider:before {
+    -webkit-transform: translateX(var(--switch-btn-dot));
+    -ms-transform: translateX(var(--switch-btn-dot));
+    transform: translateX(var(--switch-btn-dot));
+}
+
+.dol-input-slider {
+    border-radius: var(--switch-btn-height);
+}
+
+.dol-input-slider:before {
+    border-radius: 50%;
+}
+
+#save-feed-back{
+    margin-top: 5px;
+}
+#ave-dolibarr-options{
+    cursor: pointer;
+
+}

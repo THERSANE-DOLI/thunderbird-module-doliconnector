@@ -22,6 +22,7 @@ function restoreOptions() {
 		document.getElementById("dolibarr-propal-signed").checked = data.dolibarrPropalSigned;
 		document.getElementById("dolibarr-propal-notsigned").checked = data.dolibarrPropalNotSigned;
 		document.getElementById("dolibarr-propal-billed").checked = data.dolibarrPropalBilled;
+		document.getElementById("dolibarr-search-domain").checked = data.dolibarrSearchDomain;
     }
 
 
@@ -38,6 +39,8 @@ function restoreOptions() {
 	document.getElementById("label-for-dolibarr-propal-notsigned").textContent = browser.i18n.getMessage("dolibarrNotSigned");
 	document.getElementById("label-for-dolibarr-propal-billed").textContent = browser.i18n.getMessage("dolibarrBilled");
     document.getElementById("save-dolibarr-options").textContent = browser.i18n.getMessage("Save");
+    document.getElementById("label-for-dolibarr-search-domain").textContent = browser.i18n.getMessage("dolibarrOptSearchDomain");
+
 
 
 
@@ -49,7 +52,8 @@ function restoreOptions() {
         dolibarrPropalValidated:  false,
         dolibarrPropalSigned:  false,
         dolibarrPropalNotSigned:  false,
-        dolibarrPropalBilled:  false
+        dolibarrPropalBilled:  false,
+        dolibarrSearchDomain:  false
     }).then(setCurrentChoice, onError);
 }
 
@@ -71,8 +75,16 @@ function saveOptions(e) {
         dolibarrPropalValidated: document.getElementById("dolibarr-propal-validated").checked,
         dolibarrPropalSigned: document.getElementById("dolibarr-propal-signed").checked,
         dolibarrPropalNotSigned: document.getElementById("dolibarr-propal-notsigned").checked,
-        dolibarrPropalBilled: document.getElementById("dolibarr-propal-billed").checked
+        dolibarrPropalBilled: document.getElementById("dolibarr-propal-billed").checked,
+        dolibarrSearchDomain: document.getElementById("dolibarr-search-domain").checked
     }
     // console.log(objToStore);
     browser.storage.local.set(objToStore);
+
+
+    const event = new Date();
+    const options = { weekday: "long", year: "numeric", month: "long", day: "numeric", minute:"numeric", second:"numeric"};
+    const getBrowserLocale = () => navigator.language || navigator.browserLanguage || (navigator.languages || ["en"])[0]
+    document.getElementById("save-feed-back").textContent = browser.i18n.getMessage("Saved") + ' ' + event.toLocaleDateString(getBrowserLocale() , options);
+
 }

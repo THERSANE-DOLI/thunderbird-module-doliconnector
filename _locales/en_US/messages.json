@@ -50,5 +50,8 @@
   },
   "MorePropalOptions" :{
     "message": "More quotation options"
+  },
+  "Saved" :{
+    "message": "Saved"
   }
 }

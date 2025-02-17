@@ -21,6 +21,16 @@
 				<td><label id="label-for-dolibarr-api-key" for="dolibarr-api-key">__MSG_dolibarrApiKey__</label></td>
 				<td><input class="dol-input" type="text" id="dolibarr-api-key" name="dolibarr-api-key" /></td>
 			</tr>
+
+			<tr>
+				<td><label id="label-for-dolibarr-search-domain" for="dolibarr-search-domain">__MSG_dolibarrOptSearchDomain__</label></td>
+				<td>
+					<label class="dol-input-swith" >
+						<input type="checkbox" class="dol-input" id="dolibarr-search-domain" name="dolibarr-search-domain" />
+						<span class="dol-input-slider"></span>
+					</label>
+				</td>
+			</tr>
 		</table>
 
 
@@ -73,7 +83,7 @@
 
 	<hr/>
 	<button id="save-dolibarr-options" type="submit">__MSG_Save__</button>
-
+	<div id="save-feed-back"></div>
 	</form>
 	<script src="options.js"></script>
 
