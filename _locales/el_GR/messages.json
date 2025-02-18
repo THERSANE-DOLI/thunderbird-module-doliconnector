@@ -11,6 +11,9 @@
   "dolibarrApiKey": {
     "message": "REST API key"
   },
+  "dolibarrDraftCancel": {
+    "message": "Απόκρυψη προσχεδίων και ακυρωμένων"
+  },
   "dolibarrUrl": {
     "message": "Dolibarr Url "
   },
@@ -33,7 +36,7 @@
     "message": "Ημιτελής διαμόρφωση : Ελέγξτε τη διαμόρφωση του Dolibarr connector"
   },
   "refFourn": {
-	"message": "Αναφ. Προμηθευτή"
+    "message": "Αναφ. Προμηθευτή"
   },
   "Date": {
     "message": "Ημερομηνία"

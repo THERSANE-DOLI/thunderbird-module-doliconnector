@@ -1,5 +1,5 @@
-import * as dolLib from "../global.lib.js";
-import { searchPhonesInString } from "../global.lib.js";
+import * as dolLib from '../global.lib.js';
+import {searchPhonesInString} from "../global.lib.js";
 
 // Localisation de la page
 dolLib.localizeHtmlPage();
@@ -26,8 +26,8 @@ dolLib.localizeHtmlPage();
     // Extract email from author
     let authorEmail = dolLib.extractEmailAddressFromString(message.author)[0];
 
-    //Filter on draft and canceled objects
-    let filterDraftCancel = await dolLib.filterDraftCancel();
+    //Filter on propal objects status
+     let propalDisplayStatus = await dolLib.filterPropalStatus();
 
     let confDolibarrUrl = await dolLib.getDolibarrUrl();
 
@@ -63,20 +63,48 @@ if (!checkConfig) {
               socId: resData.socid 
             })
 
-        } else {
-          setSocInfos({ 
-            id: 0, 
-            name: 'Contact found but not attached to company' });
-        }
-      } else {
-        console.log("Aucun contact trouvé, recherche dans Thirdparties...");
-        searchThirdpartiesAndPopulateByEmail(authorEmail);
-      }
-    },(errorMsg)=>{
-      console.log("thirdpartie  not found now search Thirdparties And Populate By Email domain " + authorEmail);
-      searchThirdpartieAndPopulateByEmailDomain(authorEmail);
-  });
+    function searchThirdpartieAndPopulateByEmailDomain(authorEmail){
+        console.log("search for same domain soc");
 
+        let emailDomain = authorEmail.split('@').pop();
+
+        fetch(browser.runtime.getURL("exclude-domains.json"))
+            .then(response => response.json())
+            .then(emailPublicDomains => {
+                if(!emailPublicDomains.includes(emailDomain.toLowerCase())){
+                    console.log("not public email " + emailDomain);
+
+                    // console.error(msg);
+                    dolLib.callDolibarrApi('thirdparties', {
+                        limit : 5,
+                        sortfield: 't.rowid',
+                        sortorder: 'DESC',
+                        sqlfilters: "(t.email:like:'%@"+emailDomain+"')"
+                    }, 'GET', {}, (resData)=>{
+                        resData = resData.pop();
+                        console.log("searchThirdpartieAndPopulateByEmailDomain found ");
+                        // Populate company data
+                        setSocInfos({
+                            id: resData.id,
+                            name: resData.name
+                        });
+
+                        loadDocumentsInfos({
+                            socId : resData.id
+                        })
+
+                    },(errorMsg)=>{
+                        console.log("not found ");
+                        setSocInfos({});
+                    });
+
+                }else{
+                    setSocInfos({});
+                }
+            })
+            .catch(error => console.error("Erreur de chargement du JSON :", error));
+
+    }
 
 }
 
@@ -221,6 +249,7 @@ function searchThirdpartieAndPopulateByEmailDomain(authorEmail) {
      * display propal history
      * @param object confData
      */
+
      function setQuotationsInfos(confData) {
       let conf = Object.assign({ 
         socId: 0 
@@ -280,6 +309,21 @@ function searchThirdpartieAndPopulateByEmailDomain(authorEmail) {
               propal.ref_client.length > 0
             ) {
               item.refClient = { html: propal.ref_client };
+
+    
+        // Get contact infos
+        return dolLib.callDolibarrApi('proposals', {
+            sortfield: 't.rowid',
+            sortorder: 'DESC',
+            limit:5,
+            thirdparty_ids: conf.socId,
+            sqlfilters: sqlfilters
+        }, 'GET', {}, (dataLastPropals)=>{
+
+            if(!Array.isArray(dataLastPropals) || dataLastPropals.length == 0){
+                // No contact found in database
+                return;
+
             }
     
             let dateP = new Date(parseInt(propal.date) * 1000);

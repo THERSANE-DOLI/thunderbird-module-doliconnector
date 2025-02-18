@@ -11,6 +11,9 @@
   "dolibarrApiKey": {
     "message": "REST API key"
   },
+  "dolibarrDraftCancel": {
+	      "message": "Hide drafts and cancelled objects"
+  },
   "dolibarrUrl": {
     "message": "Dolibarr Url "
   },
@@ -44,5 +47,11 @@
   "options.options": {
     "message": "Options",
     "description": "Options"
+  },
+  "MorePropalOptions" :{
+    "message": "More quotation options"
+  },
+  "Saved" :{
+    "message": "Saved"
   }
 }

@@ -12,7 +12,7 @@
     "messagesRead",
     "messagesModify"
   ],
-  "version": "1.4",
+  "version": "1.5",
   "author": "THERSANE",
   "homepage_url": "https://www.thersane.fr",
   "browser_specific_settings": {
@@ -35,5 +35,8 @@
     "256": "images/dolibarr.png",
     "32": "images/dolibarr-32.png",
     "16": "images/dolibarr-16.png"
-  }
+  },
+  "web_accessible_resources": [
+    "exclude-domains.json"
+  ]
 }
