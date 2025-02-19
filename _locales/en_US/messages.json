@@ -11,8 +11,26 @@
   "dolibarrApiKey": {
     "message": "REST API key"
   },
-  "dolibarrDraftCancel": {
-	      "message": "Hide drafts and cancelled objects"
+  "dolibarrPropal": {
+    "message": "Select proposal status (no choice = show all)"
+  }, 
+  "dolibarrCanceled": {
+    "message": "Cancelled"
+  },
+  "dolibarrDraft": {
+    "message": "Drafts"
+  },
+  "dolibarrValidated": {
+    "message": "Validated"
+  },
+  "dolibarrSigned": {
+    "message": "Signed"
+  },
+  "dolibarrNotSigned": {
+    "message": "Not signed"
+  },
+  "dolibarrBilled": {
+    "message": "Billed"
   },
   "dolibarrUrl": {
     "message": "Dolibarr Url "
@@ -36,22 +54,26 @@
     "message": "Configuration incomplete : Check your module configuration"
   },
   "refFourn": {
-	"message": "Vendor Ref"
+    "message": "Vendor Ref"
   },
   "Date": {
     "message": "Date"
   },
   "Total": {
-    "message": "Total"
+    "message": "Amount (excl. tax)"
   },
   "options.options": {
     "message": "Options",
     "description": "Options"
   },
   "MorePropalOptions" :{
-    "message": "More quotation options"
+    "message": "More options for proposals"
   },
   "Saved" :{
     "message": "Saved"
+  },
+  "dolibarrOptSearchDomain" :{
+    "message": "Search also for third parties through common email domains e.g. : @domainname.fr",
+    "description": "Options"
   }
 }
