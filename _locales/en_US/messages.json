@@ -12,7 +12,7 @@
     "message": "REST API key"
   },
   "dolibarrApiEntity": {
-    "message": "Entity of Dolibarr (default 1)"
+    "message": "Entity of Dolibarr (default 1, for Multi-company module users only)"
   },
   "dolibarrPropal": {
     "message": "Select proposal status (no choice = show all)"
