@@ -1,6 +1,6 @@
 export async function checkConfig(){
 
-    let configData = await browser.storage.local.get({dolibarrApiKey:'', dolibarrApiUrl:'', dolibarrApiEntity:'1'});
+    let configData = await browser.storage.local.get({dolibarrApiKey:'', dolibarrApiUrl:'', dolibarrApiEntity:1});
 
 
     let apiKey = configData.dolibarrApiKey;
@@ -14,17 +14,24 @@ export async function checkConfig(){
 
 export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', postData, successCallBackFunction = ()=>{}, errorCallBackFunction = ()=>{}){
 
-    let configData = await browser.storage.local.get({dolibarrApiKey:'', dolibarrApiUrl:'', dolibarrApiEntity:'1'});
+    let configData = await browser.storage.local.get({dolibarrApiKey:'', dolibarrApiUrl:'', dolibarrApiEntity:1});
 
 
     let apiKey = configData.dolibarrApiKey;
     let dolUrl = configData.dolibarrApiUrl;
 	let apiEntity = configData.dolibarrApiEntity;
+	if(apiEntity.length == 0 || apiEntity <= 0){
+        apiEntity = 1;
+    }
+    if(typeof getDataParam.entity === "undefined"){
+        getDataParam.entity = apiEntity;
+    }
 
-    if(apiKey.length == 0 || dolUrl ==0 || apiEntity.length == 0){  reject("Fail getting settings"); }
+    if(apiKey.length == 0 || dolUrl ==0){  reject("Fail getting settings"); }
     if(dolUrl.slice(-1) != '/'){ dolUrl = dolUrl + '/';  }
     let dolApiUrl = dolUrl + 'api/index.php/';
     let finalUrl = dolApiUrl + endPoint;
+
 
     if(type == 'GET'){
         let queryString = Object.keys(getDataParam).map((key) => {
@@ -126,13 +133,11 @@ export function extractEmailAddressFromString(text){
 export async function getDolibarrUrl() {
     let configData = await messenger.storage.local.get({
         dolibarrApiUrl: '',
-        dolibarrApiKey: '',
-		dolibarrApiEntity: '1',
+        dolibarrApiKey: ''
     });
 
     let apiKey = configData.dolibarrApiKey;
     let dolUrl = configData.dolibarrApiUrl;
-	let apiEntity = configData.dolibarrApiEntity;
 
 
     if(dolUrl.length > 0 && dolUrl.slice(-1) != '/'){ dolUrl = dolUrl + '/';  }
