@@ -146,3 +146,44 @@ hr {
 	border: 1px solid transparent;
 	border-radius: .25rem;
 }
+
+details.dolibarr-connector-detail[open] summary {border-radius: 5px 5px 0 0;}
+details.dolibarr-connector-detail summary{
+	cursor: pointer;
+	list-style-position: outside;
+	margin-left: 30px;
+	padding: 10px 10px 10px 0px;
+	border-radius: 5px;
+}
+details.dolibarr-connector-detail {
+	background: #ffffff;
+	border : 1px solid #ededed;
+	border-radius: 5px;
+}
+
+details.dolibarr-connector-detail[open] {
+	padding-bottom: 20px;
+}
+
+details.dolibarr-connector-detail > :where(div,p) {
+	padding-left: 30px;
+	padding-right: 30px;
+}
+
+
+.label-badge{
+	padding: 5px 10px 5px 5px;
+	background-color: #ededed;
+	border-radius: 5px;
+	border: 1px solid #d9d9d9;
+	display: inline-block;
+	margin-top: 5px;
+	margin-right: 10px;
+	cursor: pointer;
+}
+
+.label-badge:has(input:checked){
+	background-color: #2f63ff;
+	border: 1px solid #1a566f;
+	color: #fff;
+}

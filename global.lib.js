@@ -81,12 +81,34 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
     return xhttp;
 }
 
-export async function filterDraftCancel(){
-  //filtre sur les objetx brouillons et annulés
-  let configData = await browser.storage.local.get({dolibarrDraftCancel:''});
-  let draftCancel= configData.dolibarrDraftCancel;
-  if(draftCancel != true){draftCancel = false;}
-  return draftCancel;
+//wip
+export async function filterPropalStatus() {
+  let configData = await browser.storage.local.get(
+  {dolibarrPropalCanceled:'',
+  dolibarrPropalDraft:'',
+  dolibarrPropalValidated:'',
+  dolibarrPropalSigned:'',
+  dolibarrPropalNotSigned:'',
+  dolibarrPropalBilled:''}
+  );
+  let propalCanceled = configData.dolibarrPropalCanceled;
+  let propalDraft = configData.dolibarrPropalDraft;
+  let propalValidated = configData.dolibarrPropalValidated;
+  let propalSigned = configData.dolibarrPropalSigned;
+  let propalNotSigned = configData.dolibarrPropalNotSigned;
+  let propalBilled = configData.dolibarrPropalBilled;
+
+  let displayStatus= [];//list of status I want to display
+
+  if(propalCanceled == true){displayStatus.push(-1);}
+  if(propalDraft == true){displayStatus.push(0);}
+  if(propalValidated == true){displayStatus.push(1);}
+  if(propalSigned == true){displayStatus.push(2);}
+  if(propalNotSigned == true){displayStatus.push(3);}
+  if(propalBilled == true){displayStatus.push(4);}
+
+   return displayStatus;
+
 }
 
 export function extractEmailAddressFromString(text){

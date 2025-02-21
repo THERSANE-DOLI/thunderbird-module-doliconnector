@@ -14,8 +14,26 @@
   "dolibarrApiEntity": {
     "message": "Eenvironnement de Dolibarr (default 1)"
   },
-  "dolibarrDraftCancel": {
-	      "message": "Masquer les brouillons et annulés"
+   "dolibarrPropal": {
+    "message": "Afficher uniquement les proposition commerciales  (aucune selection = tout afficher)"
+  }, 
+    "dolibarrCanceled": {
+    "message": "Annulées"
+  },
+  "dolibarrDraft": {
+    "message": "Brouillons"
+  },
+    "dolibarrValidated": {
+    "message": "Validées"
+  },
+    "dolibarrSigned": {
+    "message": "Signées"
+  },
+    "dolibarrNotSigned": {
+    "message": "Non signées"
+  },
+    "dolibarrBilled": {
+    "message": "Facturées"
   },
   "dolibarrUrl": {
     "message": "Url Dolibarr"
@@ -49,6 +67,16 @@
   },
   "options.options": {
     "message": "Options",
+    "description": "Options"
+  },
+  "MorePropalOptions" :{
+    "message": "Plus d'option pour les devis"
+  },
+  "Saved" :{
+    "message": "Sauvegardé"
+  },
+  "dolibarrOptSearchDomain" :{
+    "message": "Rechercher aussi les tiers grâce aux domaines des emails, ex. : @nomdedomaine.fr",
     "description": "Options"
   }
 }

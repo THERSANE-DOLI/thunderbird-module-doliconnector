@@ -19,7 +19,7 @@
 
 			<tr>
 				<td><label id="label-for-dolibarr-api-key" for="dolibarr-api-key">__MSG_dolibarrApiKey__</label></td>
-				<td><input class="dol-input" type="text" id="dolibarr-api-key" name="dolibarr-api-key" /></td>
+				<td><input class="dol-input" type="password" id="dolibarr-api-key" name="dolibarr-api-key" /></td>
 			</tr>
 			
 			<tr>
@@ -28,15 +28,67 @@
 			</tr>
 
 			<tr>
- 				<td><label id="label-for-dolibarr-draft-cancel" for="dolibarr-draft-cancel">__MSG_dolibarrDraftCancel__</label></td>
- 				<td><input class="dol-input" type="checkbox" value="1"  id="dolibarr-draft-cancel" name="dolibarr-draft-cancel" /></td>
-			</tr>
-
-			<tr>
-				<td></td>
-				<td><button id="save-dolibarr-options" type="submit">__MSG_Save__</button></td>
+				<td><label id="label-for-dolibarr-search-domain" for="dolibarr-search-domain">__MSG_dolibarrOptSearchDomain__</label></td>
+				<td>
+					<label class="dol-input-swith" >
+						<input type="checkbox" class="dol-input" id="dolibarr-search-domain" name="dolibarr-search-domain" />
+						<span class="dol-input-slider"></span>
+					</label>
+				</td>
 			</tr>
 		</table>
+
+
+		<details class="dolibarr-connector-detail">
+			<summary id="more-propal-option-title" >
+				More quotation option
+			</summary>
+
+			<p id="dolibarr-propal">__MSG_dolibarrPropal__</p>
+			<div>
+				<!-- 	const STATUS_CANCELED = -1; -->
+				<label class="label-badge" for="dolibarr-propal-canceled">
+					<input class="dol-input" type="checkbox" value="-1"  id="dolibarr-propal-canceled" name="dolibarr-propal-canceled" />
+					<span  id="label-for-dolibarr-propal-canceled" >__MSG_dolibarrCanceled__</span>
+				</label>
+
+				<!-- 	const STATUS_DRAFT = 0; -->
+				<label class="label-badge"  for="dolibarr-propal-draft">
+					<input class="dol-input" type="checkbox" value="0"  id="dolibarr-propal-draft" name="dolibarr-propal-draft" />
+					<span id="label-for-dolibarr-propal-draft" >__MSG_dolibarrDraft__</span>
+				</label>
+					
+				<!-- 	const STATUS_VALIDATED = 1; -->
+				<label class="label-badge"  for="dolibarr-propal-validated">
+					<input class="dol-input" type="checkbox" value="1"  id="dolibarr-propal-validated" name="dolibarr-propal-validated" />
+					<span id="label-for-dolibarr-propal-validated" >__MSG_dolibarrValidated__</span>
+				</label>
+
+				<!-- const STATUS_SIGNED = 2; -->
+				<label class="label-badge"  for="dolibarr-propal-signed">
+					<input class="dol-input" type="checkbox" value="2"  id="dolibarr-propal-signed" name="dolibarr-propal-signed" />
+					<span  id="label-for-dolibarr-propal-signed"  >__MSG_dolibarrSigned__</span>
+				</label>
+					
+				<!-- const STATUS_NOTSIGNED = 3; -->
+				<label  class="label-badge" for="dolibarr-propal-notsigned">
+					<input class="dol-input" type="checkbox" value="3"  id="dolibarr-propal-notsigned" name="dolibarr-propal-notsigned" />
+					<span id="label-for-dolibarr-propal-notsigned" >__MSG_dolibarrNotSigned__</span>
+				</label>
+
+				<!-- const STATUS_BILLED = 4; -->
+				<label class="label-badge"  for="dolibarr-propal-billed">
+					<input class="dol-input" type="checkbox" value="4"  id="dolibarr-propal-billed" name="dolibarr-propal-billed" />
+					<span id="label-for-dolibarr-propal-billed">__MSG_dolibarrBilled__</span>
+				</label>
+
+			</div>
+
+	</details>
+
+	<hr/>
+	<button id="save-dolibarr-options" type="submit">__MSG_Save__</button>
+	<div id="save-feed-back"></div>
 	</form>
 	<script src="options.js"></script>
 
