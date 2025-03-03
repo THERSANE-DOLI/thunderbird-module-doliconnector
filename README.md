@@ -30,5 +30,14 @@ mv my-addon.zip my-addon.xpi
 - Click on the gear icon and select Install Add-on From File….
 - Select your .xpi file and install it.
 
-## Contribute
+## Know issues
+ In somes cases CORS errors can appears so try this in your .htaccess and i it work you will need to adapt your Access-Control-Allow-Origin
+```
+<IfModule mod_headers.c>
+    Header always unset Access-Control-Allow-Origin
+    Header always set Access-Control-Allow-Origin "*"
+</IfModule>
+```
+
+# Contribute
 see this start doc : [How to create hello world addon](https://developer.thunderbird.net/add-ons/hello-world-add-on)
