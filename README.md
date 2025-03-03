@@ -31,7 +31,7 @@ mv my-addon.zip my-addon.xpi
 - Select your .xpi file and install it.
 
 ## Know issues
- In somes cases CORS errors can appears so try this in your .htaccess and i it work you will need to adapt your Access-Control-Allow-Origin
+ In somes cases CORS errors can appears so try this in your .htaccess (in Dolibarr) and i it work you will need to adapt your Access-Control-Allow-Origin
 ```
 <IfModule mod_headers.c>
     Header always unset Access-Control-Allow-Origin
