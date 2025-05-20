@@ -9,8 +9,7 @@
     "storage",
     "webRequest",
     "webRequestBlocking",
-    "messagesRead",
-    "messagesModify"
+    "messagesRead"
   ],
   "version": "1.6",
   "author": "THERSANE",

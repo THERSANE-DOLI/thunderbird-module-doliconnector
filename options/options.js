@@ -42,6 +42,7 @@ function restoreOptions() {
 	document.getElementById("label-for-dolibarr-propal-billed").textContent = browser.i18n.getMessage("dolibarrBilled");
     document.getElementById("save-dolibarr-options").textContent = browser.i18n.getMessage("Save");
     document.getElementById("label-for-dolibarr-search-domain").textContent = browser.i18n.getMessage("dolibarrOptSearchDomain");
+    document.getElementById("label-for-link-to-modules-doc").textContent = browser.i18n.getMessage("SeeModuleDoc");
 
 
 

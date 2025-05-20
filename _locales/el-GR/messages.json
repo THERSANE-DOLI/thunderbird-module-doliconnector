@@ -78,5 +78,9 @@
   "dolibarrOptSearchDomain" :{
     "message": "Προσθήκη κοινών domain email για αναζήτηση Πελάτη/Προμηθευτή π.χ. @yahoo.gr",
     "description": "Επιλογές"
+  },
+  "SeeModuleDoc" :{
+    "message": "Consulter la page de doc des modules",
+    "description": "Options"
   }
 }

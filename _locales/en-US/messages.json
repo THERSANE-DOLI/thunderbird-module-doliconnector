@@ -78,5 +78,9 @@
   "dolibarrOptSearchDomain" :{
     "message": "Search also for third parties through common email domains e.g. : @domainname.fr",
     "description": "Options"
+  },
+  "SeeModuleDoc" :{
+    "message": "Consulter la page de doc des modules",
+    "description": "Options"
   }
 }

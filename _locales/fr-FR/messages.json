@@ -12,7 +12,7 @@
     "message": "Clé API REST"
   },
   "dolibarrApiEntity": {
-    "message": "Eenvironnement de Dolibarr (default 1)"
+    "message": "Environnement de Dolibarr (default 1)"
   },
    "dolibarrPropal": {
     "message": "Afficher uniquement les proposition commerciales  (aucune selection = tout afficher)"
@@ -77,6 +77,10 @@
   },
   "dolibarrOptSearchDomain" :{
     "message": "Rechercher aussi les tiers grâce aux domaines des emails, ex. : @nomdedomaine.fr",
+    "description": "Options"
+  },
+  "SeeModuleDoc" :{
+    "message": "Consulter la page de doc des modules",
     "description": "Options"
   }
 }
