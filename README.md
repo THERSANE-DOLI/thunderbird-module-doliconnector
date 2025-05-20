@@ -36,6 +36,7 @@ mv my-addon.zip my-addon.xpi
 <IfModule mod_headers.c>
     Header always unset Access-Control-Allow-Origin
     Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, DOLAPIKEY, DOLAPIENTITY"
 </IfModule>
 ```
 
