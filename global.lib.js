@@ -44,48 +44,90 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
     }
 
 
-    let xhttp = new XMLHttpRequest();
-    xhttp.open(type, finalUrl, true);
-    xhttp.setRequestHeader("DOLAPIKEY", apiKey);
-	xhttp.setRequestHeader("DOLAPIENTITY", apiEntity);
-    xhttp.onreadystatechange = function()
-    {
-        if (this.readyState == XMLHttpRequest.DONE && this.status == 200)
-        {
-            let responseJsonObj = JSON.parse(this.responseText);
 
-            if (typeof successCallBackFunction === 'function') {
-                successCallBackFunction(responseJsonObj);
-            } else {
-                console.error('Callback function invalide for callKanbanInterface');
-            }
-        }else if (this.readyState == XMLHttpRequest.DONE){
-            let errorMsg = '' ;
-            var statusErrorMap = {
-                '404' : "Not found",
-                '400' : "Server understood the request, but request content was invalid.",
-                '401' : "Unauthorized access.",
-                '403' : "Forbidden resource can't be accessed.",
-                '500' : "Internal server error.",
-                '503' : "Service unavailable."
+    fetch(finalUrl, {
+        method: type,
+        headers: {
+            'DOLAPIKEY': apiKey,
+            'DOLAPIENTITY': apiEntity,
+            "Content-Type": "application/json"
+        },
+        body: (type.toUpperCase() !== 'GET' && postData) ? postData : undefined
+    })
+    .then(response => {
+        if (!response.ok) {
+            const statusErrorMap = {
+                404: "Not found",
+                400: "Server understood the request, but request content was invalid.",
+                401: "Unauthorized access.",
+                403: "Forbidden resource can't be accessed.",
+                500: "Internal server error.",
+                503: "Service unavailable."
             };
-            if (this.status) {
-                errorMsg = statusErrorMap[this.status];
-                if(!errorMsg){
-                    errorMsg = "Unknown Error \n.";
-                }
-            }
-
-            if (typeof errorCallBackFunction === 'function') {
-                errorCallBackFunction(errorMsg);
-            } else {
-                console.error('Error Callback function invalide for callKanbanInterface');
-            }
+            let errorMsg = statusErrorMap[response.status] || "Unknown Error \n.";
+            throw new Error(errorMsg);
         }
-    };
+        return response.json();
+    })
+    .then(responseJsonObj => {
+        if (typeof successCallBackFunction === 'function') {
+            successCallBackFunction(responseJsonObj);
+        } else {
+            console.error('Callback function invalid');
+        }
+    })
+    .catch(error => {
+        if (typeof errorCallBackFunction === 'function') {
+            errorCallBackFunction(error.message);
+        } else {
+            console.error('Error Callback function invalid');
+        }
+    });
 
-    xhttp.send( postData );
-    return xhttp;
+
+    //
+    // let xhttp = new XMLHttpRequest();
+    // xhttp.open(type, finalUrl, true);
+    // xhttp.setRequestHeader("DOLAPIKEY", apiKey);
+	// xhttp.setRequestHeader("DOLAPIENTITY", apiEntity);
+    // xhttp.onreadystatechange = function()
+    // {
+    //     if (this.readyState == XMLHttpRequest.DONE && this.status == 200)
+    //     {
+    //         let responseJsonObj = JSON.parse(this.responseText);
+    //
+    //         if (typeof successCallBackFunction === 'function') {
+    //             successCallBackFunction(responseJsonObj);
+    //         } else {
+    //             console.error('Callback function invalide');
+    //         }
+    //     }else if (this.readyState == XMLHttpRequest.DONE){
+    //         let errorMsg = '' ;
+    //         var statusErrorMap = {
+    //             '404' : "Not found",
+    //             '400' : "Server understood the request, but request content was invalid.",
+    //             '401' : "Unauthorized access.",
+    //             '403' : "Forbidden resource can't be accessed.",
+    //             '500' : "Internal server error.",
+    //             '503' : "Service unavailable."
+    //         };
+    //         if (this.status) {
+    //             errorMsg = statusErrorMap[this.status];
+    //             if(!errorMsg){
+    //                 errorMsg = "Unknown Error \n.";
+    //             }
+    //         }
+    //
+    //         if (typeof errorCallBackFunction === 'function') {
+    //             errorCallBackFunction(errorMsg);
+    //         } else {
+    //             console.error('Error Callback function invalid');
+    //         }
+    //     }
+    // };
+    //
+    // xhttp.send( postData );
+    // return xhttp;
 }
 
 //wip

@@ -4,11 +4,7 @@
   "description": "__MSG_extensionDescription__",
   "default_locale" : "fr_FR",
   "permissions": [
-    "tabs",
-    "activeTab",
     "storage",
-    "webRequest",
-    "webRequestBlocking",
     "messagesRead"
   ],
   "version": "1.6",
