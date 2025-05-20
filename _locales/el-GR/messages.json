@@ -12,7 +12,7 @@
     "message": "REST API key"
   },
   "dolibarrApiEntity": {
-    "message": "Entity of Dolibarr (default 1)"
+    "message": "Entity of Dolibarr (προεπιλογή 1, χρήση μόνο με ενότητα Multi-company)"
    },
    "dolibarrPropal": {
     "message": "Επιλογή κατάστασης προσφορών (χωρίς επιλογή = εμφάνιση όλων)"
