@@ -1,13 +1,83 @@
 @import "../global.css";
 
-
-.grid-container{
-	min-width: 500px;
+.grid-container {
+  min-width: 500px;
 }
 
-#popup-header{
-	font-size: 16px;
-	color: #3c4043;
-	font-weight: 300;
+#popup-header {
+  font-size: 16px;
+  color: #3c4043;
+  font-weight: 300;
+}
 
+/* Pour forcer le contenu des boutons à rester sur une seule ligne */
+.btn,
+#soc-link,
+#sign-quote-btn {
+  white-space: nowrap;
+  text-align: center;
+  line-height: normal;
+}
+
+/* Styles spécifiques pour le bouton "Signer un devis..." */
+#sign-quote-btn {
+  font-size: 14px;
+  padding: 8px 16px;
+  color: #fff !important;
+  text-indent: 0 !important;
+}
+
+/* Ajustement pour le bouton "Fiche" */
+#soc-link {
+  padding: 6px 12px;
+}
+
+/* Styles pour masquer/révéler les éléments */
+.hidden-field {
+  display: none;
+}
+
+/* Forcer le modal à rester caché quand il a la classe hidden-field */
+#quote-number-modal.hidden-field {
+  display: none !important;
+}
+
+/* Styles pour le modal */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 5px;
+  min-width: 300px;
+  max-width: 90%;
+  max-height: 90%;
+  overflow-y: auto;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+
+/* Styles pour le popup de confirmation final */
+#confirmation-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border: 1px solid #000;
+  padding: 20px;
+  z-index: 10000;
+  max-width: 90%;
+  max-height: 90%;
+  overflow-y: auto;
 }

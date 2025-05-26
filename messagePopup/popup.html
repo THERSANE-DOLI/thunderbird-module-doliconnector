@@ -1,46 +1,79 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-	<meta charset="utf-8">
-	<title>Details</title>
-	<link rel="stylesheet" type="text/css" media="screen" href="popup.css">
+  <meta charset="utf-8">
+  <title>Details</title>
+  <link rel="stylesheet" type="text/css" media="screen" href="popup.css">
 </head>
-
 <body>
-<div class="grid-container">
+  <div class="grid-container">
 
-	<div id="check-module-config" class="hidden-field alert alert-warning">
-		__MSG_CheckYourModuleConfig__
-	</div>
+    <div id="check-module-config" class="hidden-field alert alert-warning">
+      __MSG_CheckYourModuleConfig__
+    </div>
 
-	<div id="main-popup" class="hidden-field">
+    <div id="main-popup" class="hidden-field">
+      <table class="dolibarr-table">
+        <tr>
+          <td>
+            <h4 id="popup-header">
+              <div class="text-placeholder --medium">&nbsp;</div>
+            </h4>
+          </td>
+          <td style="text-align: right;">
+            <a id="soc-link" class="hidden-field btn btn-primary" href="">
+              __MSG_FicheDolibarr__
+            </a>
+          </td>
+        </tr>
+      </table>
 
-		<table class="dolibarr-table" >
-			<tr>
-				<td ><h4 id="popup-header"><div class="text-placeholder --medium">&nbsp;</div></h4></td>
-				<td style="text-align: right;" >
-					<a id="soc-link" class="hidden-field btn btn-primary" href="">__MSG_FicheDolibarr__</a>
-				</td>
-			</tr>
-		</table>
+      <div id="soc-infos">
+        <div id="soc-not-found-tpl" class="hidden-field">
+          <hr/>
+          <div class="row">
+            <a id="new-soc-link" class="btn btn-primary" href="">
+              <i class="icon-plus"></i> __MSG_CreateNewCompany__
+            </a>
+            <a id="new-contact-link" class="btn btn-primary" href="">
+              <i class="icon-user-plus"></i> __MSG_CreateNewContact__
+            </a>
+          </div>
+        </div>
+      </div>
 
-		<div id="soc-infos">
-			<div id="soc-not-found-tpl" class="hidden-field" >
-				<hr/>
-				<div class="row" >
-					<a id="new-soc-link" class="btn btn-primary" href="" ><i class="icon-plus"></i> __MSG_CreateNewCompany__</a>
-					<a id="new-contact-link"  class="btn btn-primary" href=""><i class="icon-user-plus"></i> __MSG_CreateNewContact__</a>
-				</div>
-			</div>
-		</div>
+      <table id="data-from-dolibarr" class="dolibarr-table dolibarr-table-stripped"></table>
+      
+      <!-- Conteneur pour le bouton "Signer le devis et envoyer la pièce-jointe" -->
+      <div id="quote-sign-container" class="hidden-field">
+        <button id="sign-quote-btn" class="btn btn-success">
+          Signer un devis et envoyer la pièce-jointe
+        </button>
+      </div>
+    </div>
+  </div>
 
-		<table id="data-from-dolibarr" class="dolibarr-table dolibarr-table-stripped"></table>
+  <script type="module" src="popup.js"></script>
 
-	</div>
-</div>
-
-<script type="module" src="popup.js"></script>
+  <!-- Modal pour la saisie / sélection du numéro de devis et choix des pièces jointes -->
+  <div id="quote-number-modal" class="hidden-field modal">
+    <div class="modal-content">
+      <h3>Sélectionnez ou saisissez le numéro de devis</h3>
+      <label for="quote-number-select">Choisissez parmi les devis disponibles :</label>
+      <select id="quote-number-select">
+        <option value="">-- Aucune sélection --</option>
+      </select>
+      <br/><br/>
+      <label for="quote-number-custom">Ou saisissez un numéro (uniquement les 4 derniers chiffres ou la référence complète) :</label>
+      <input type="text" id="quote-number-custom" placeholder="Saisissez le numéro de devis">
+      <br/><br/>
+      <!-- Zone de sélection des pièces jointes -->
+      <div id="attachment-selection-container"></div>
+      <br/>
+      <button id="confirm-quote-number-btn" class="btn btn-primary">Confirmer</button>
+      <button id="cancel-quote-number-btn" class="btn btn-secondary">Annuler</button>
+    </div>
+  </div>
+  
 </body>
-
 </html>
