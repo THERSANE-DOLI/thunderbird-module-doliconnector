@@ -389,7 +389,7 @@ function messageExtractMultipart(item){
  * @param {} jsonData
  * @param {HTMLElement} container
  */
-export function jsonToTable(JsonTitle, jsonData, container, tableClass = 'dolibarr-table dolibarr-table-stripped'){
+export function jsonToTable(JsonTitle, jsonData, container, tableClass = 'dolibarr-table dolibarr-table-stripped', searchInText = ''){
 
     let appendToTable = false;
 
@@ -435,26 +435,35 @@ export function jsonToTable(JsonTitle, jsonData, container, tableClass = 'doliba
         let tr = document.createElement("tr");
 
         // Get the values of the current object in the JSON data
-        let vals = Object.values(item);
+        // let vals = Object.values(item);
 
         // Loop through the values and create table cells
-        vals.forEach((elem) => {
+        Object.entries(item).forEach(([colKey, elem]) => {
             let td = document.createElement("td");
 
             if(typeof elem === 'object' && elem !== null){
                 td.appendChild(parseHTML(elem.html));
 
-                if(Object.hasOwn(elem, 'class') ){
+                if(elem.hasOwnProperty('class') ){
                     td.classList.add(...elem.class.split(" "));
+                }
+
+                if(elem.hasOwnProperty('hightLight') && searchInText && searchInText.length > 0){
+                    console.log(searchInText);
+                    if(searchInText.includes(elem.hightLight)){
+                        td.classList.add('hightlight');
+                    }
+                    td.classList.add(...elem.hightLight.split(" "));
                 }
             }
             else{
                 td.textContent = elem; // Set the value as the text of the table cell
             }
 
-
             tr.appendChild(td); // Append the table cell to the table row
         });
+
+
 
         if(appendToTable) {
             table.appendChild(tr); // Append the table row to the table

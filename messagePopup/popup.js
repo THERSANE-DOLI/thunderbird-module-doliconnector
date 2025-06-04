@@ -1,6 +1,6 @@
 import * as dolLib from '../global.lib.js';
 
-import {searchPhonesInString} from "../global.lib.js";
+import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
     // first need to translate page before add dom events
     dolLib.localizeHtmlPage();
@@ -280,12 +280,14 @@ import {searchPhonesInString} from "../global.lib.js";
                 }
 
                 item.ref = {
-                    html: '<a href="'+ confDolibarUrl + 'comm/propal/card.php?id=' + propal.id+'" >' + propal.ref + '</a>'
+                    html: '<a href="'+ confDolibarUrl + 'comm/propal/card.php?id=' + propal.id+'" >' + propal.ref + '</a>',
+                    hightLight : propal.ref
                 };
 
                 if(typeof propal.ref_client != undefined && propal.ref_client != null &&  propal.ref_client.length > 0){
                     item.refClient = {
-                        html: propal.ref_client
+                        html: propal.ref_client,
+                        hightLight : propal.ref_client
                     };
                 }
 
@@ -320,9 +322,10 @@ import {searchPhonesInString} from "../global.lib.js";
                     'total_ht': chrome.i18n.getMessage('Total')
                 },
                 tableItems,
-                document.getElementById("data-from-dolibarr")
+                document.getElementById("data-from-dolibarr"),
+                'dolibarr-table dolibarr-table-stripped',
+                message.subject  + ' ' + messageBody.html
             );
-
 
         },(errorMsg)=>{
             console.error("setQuotationsInfos" + errorMsg);
@@ -364,12 +367,14 @@ import {searchPhonesInString} from "../global.lib.js";
                 }
 
                 item.ref = {
-                    html: '<a href="'+ confDolibarUrl + 'commande/card.php?id=' + order.id+'" >' + order.ref + '</a>'
+                    html: '<a href="'+ confDolibarUrl + 'commande/card.php?id=' + order.id+'" >' + order.ref + '</a>',
+                    hightLight : order.ref
                 };
 
                 if(typeof order.ref_client != undefined && order.ref_client != null && order.ref_client.length > 0){
                     item.refClient = {
-                        html:  order.ref_client
+                        html:  order.ref_client,
+                        hightLight : order.ref_client
                     };
                 }
 
@@ -404,7 +409,9 @@ import {searchPhonesInString} from "../global.lib.js";
                     'total_ht': chrome.i18n.getMessage('Total')
                 },
                 tableItems,
-                document.getElementById("data-from-dolibarr")
+                document.getElementById("data-from-dolibarr"),
+                'dolibarr-table dolibarr-table-stripped',
+                message.subject  + ' ' + messageBody.html
             );
 
 
@@ -448,13 +455,15 @@ function setInvoicesInfos(confData){
             }
 
             item.ref = {
-                html: '<a href="'+ confDolibarUrl + 'compta/facture/card.php?id=' + invoice.id+'" >' + invoice.ref + '</a>'
+                html: '<a href="'+ confDolibarUrl + 'compta/facture/card.php?id=' + invoice.id+'" >' + invoice.ref + '</a>',
+                hightLight : invoice.ref
             };
 
             
             if(typeof invoice.ref_client != undefined  && invoice.ref_client != null && invoice.ref_client.length > 0){
                 item.refClient = {
-                    html: invoice.ref_client
+                    html: invoice.ref_client,
+                    hightLight : invoice.ref_client
                 };
             }
 
@@ -489,12 +498,14 @@ function setInvoicesInfos(confData){
                 'total_ht': chrome.i18n.getMessage('Total')
             },
             tableItems,
-            document.getElementById("data-from-dolibarr")
+            document.getElementById("data-from-dolibarr"),
+            'dolibarr-table dolibarr-table-stripped',
+            message.subject  + ' ' + messageBody.html
         );
 
 
     },(errorMsg)=>{
-        console.error("setQuotationsInfos" + errorMsg);
+        console.error("setQuotationsInfos " + errorMsg);
     });
 
 }
@@ -532,7 +543,8 @@ function setSupplierordersInfos(confData){
             }
 
             item.ref = {
-                html: '<a href="'+ confDolibarUrl + 'fourn/commande/card.php?id=' + supplierorder.id+'" >' + supplierorder.ref + '</a>'
+                html: '<a href="'+ confDolibarUrl + 'fourn/commande/card.php?id=' + supplierorder.id+'" >' + supplierorder.ref + '</a>',
+                hightLight : supplierorder.ref
             };
 
             if(typeof supplierorder.ref_supplier != undefined && supplierorder.ref_supplier != null && supplierorder.ref_supplier.length > 0){
@@ -577,7 +589,7 @@ function setSupplierordersInfos(confData){
 
 
     },(errorMsg)=>{
-        console.error("setQuotationsInfos" + errorMsg);
+        console.error("setQuotationsInfos : " + errorMsg);
     });
 
 }
