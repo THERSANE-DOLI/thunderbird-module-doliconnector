@@ -4,7 +4,17 @@ document.getElementById("save-dolibarr-options").addEventListener("click", saveO
 
 
 
+function isValidHttpUrl(string) {
+	let url;
 
+	try {
+		url = new URL(string);
+	} catch (_) {
+		return false;
+	}
+
+	return url.protocol === "http:" || url.protocol === "https:";
+}
 
 
 function restoreOptions() {
@@ -85,6 +95,12 @@ function saveOptions(e) {
         dolibarrSearchDomain: document.getElementById("dolibarr-search-domain").checked
     }
     // console.log(objToStore);
+
+	// remove trailling slash
+    if(objToStore.dolibarrApiUrl.substr(-1) === '/') {
+		objToStore.dolibarrApiUrl = objToStore.dolibarrApiUrl.substr(0, objToStore.dolibarrApiUrl.length - 1);
+	}
+
     browser.storage.local.set(objToStore);
 
 
@@ -92,5 +108,13 @@ function saveOptions(e) {
     const options = { weekday: "long", year: "numeric", month: "long", day: "numeric", minute:"numeric", second:"numeric"};
     const getBrowserLocale = () => navigator.language || navigator.browserLanguage || (navigator.languages || ["en"])[0]
     document.getElementById("save-feed-back").textContent = browser.i18n.getMessage("Saved") + ' ' + event.toLocaleDateString(getBrowserLocale() , options);
+
+    if(objToStore.dolibarrApiUrl.length > 0
+		&& isValidHttpUrl(objToStore.dolibarrApiUrl)
+		&& !browser.permissions.contains({ origins: [`${objToStore.dolibarrApiUrl}/*`] })){
+			browser.permissions.request({ origins: [`${objToStore.dolibarrApiUrl}/*`] });
+	}
+
+
 
 }

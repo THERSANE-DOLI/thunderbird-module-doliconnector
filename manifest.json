@@ -7,6 +7,9 @@
     "storage",
     "messagesRead"
   ],
+  "optional_permissions": [
+    "<all_urls>"
+  ],
   "version": "1.7",
   "author": "THERSANE",
   "homepage_url": "https://www.thersane.fr",
