@@ -281,19 +281,22 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
                 item.ref = {
                     html: '<a href="'+ confDolibarUrl + 'comm/propal/card.php?id=' + propal.id+'" >' + propal.ref + '</a>',
-                    hightLight : propal.ref
+                    hightLight : propal.ref,
+                    class : 'text-center'
                 };
 
                 if(typeof propal.ref_client != undefined && propal.ref_client != null &&  propal.ref_client.length > 0){
                     item.refClient = {
                         html: propal.ref_client,
-                        hightLight : propal.ref_client
+                        hightLight : propal.ref_client,
+                        class : 'text-center'
                     };
                 }
 
                 let dateP = new Date(parseInt(propal.date) * 1000);
                 item.date = {
-                    html: dateP.toLocaleDateString()
+                    html: dateP.toLocaleDateString(),
+                    class : 'text-center'
                 };
 
                 let formatedNumber = '';
@@ -368,19 +371,22 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
                 item.ref = {
                     html: '<a href="'+ confDolibarUrl + 'commande/card.php?id=' + order.id+'" >' + order.ref + '</a>',
-                    hightLight : order.ref
+                    hightLight : order.ref,
+                    class : 'text-center'
                 };
 
                 if(typeof order.ref_client != undefined && order.ref_client != null && order.ref_client.length > 0){
                     item.refClient = {
                         html:  order.ref_client,
-                        hightLight : order.ref_client
+                        hightLight : order.ref_client,
+                        class : 'text-center'
                     };
                 }
 
                 let dateP = new Date(parseInt(order.date) * 1000);
                 item.date = {
-                    html: dateP.toLocaleDateString()
+                    html: dateP.toLocaleDateString(),
+                    class : 'text-center'
                 };
 
                 let formatedNumber = '';
@@ -456,20 +462,23 @@ function setInvoicesInfos(confData){
 
             item.ref = {
                 html: '<a href="'+ confDolibarUrl + 'compta/facture/card.php?id=' + invoice.id+'" >' + invoice.ref + '</a>',
-                hightLight : invoice.ref
+                hightLight : invoice.ref,
+                class : 'text-center'
             };
 
             
             if(typeof invoice.ref_client != undefined  && invoice.ref_client != null && invoice.ref_client.length > 0){
                 item.refClient = {
                     html: invoice.ref_client,
-                    hightLight : invoice.ref_client
+                    hightLight : invoice.ref_client,
+                    class : 'text-center'
                 };
             }
 
             let dateP = new Date(parseInt(invoice.date) * 1000);
             item.date = {
-                html: dateP.toLocaleDateString()
+                html: dateP.toLocaleDateString(),
+                class : 'text-center'
             };
 
             let formatedNumber = '';
@@ -544,7 +553,8 @@ function setSupplierordersInfos(confData){
 
             item.ref = {
                 html: '<a href="'+ confDolibarUrl + 'fourn/commande/card.php?id=' + supplierorder.id+'" >' + supplierorder.ref + '</a>',
-                hightLight : supplierorder.ref
+                hightLight : supplierorder.ref,
+                class : 'text-center'
             };
 
             if(typeof supplierorder.ref_supplier != undefined && supplierorder.ref_supplier != null && supplierorder.ref_supplier.length > 0){
@@ -555,7 +565,8 @@ function setSupplierordersInfos(confData){
 
             let dateP = new Date(parseInt(supplierorder.date) * 1000);
             item.date = {
-                html: dateP.toLocaleDateString()
+                html: dateP.toLocaleDateString(),
+                class : 'text-center'
             };
 
 
