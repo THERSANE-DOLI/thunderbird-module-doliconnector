@@ -94,5 +94,8 @@
   "dolibarrOptMainBtnDisplayOptionTopBar" :{
     "message": "Top Thunderbird Bar",
     "description": "Options"
+  },
+  "PleaseSelectAnEmailBefore" :{
+    "message": "Please select an email"
   }
 }

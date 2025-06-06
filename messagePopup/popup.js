@@ -13,8 +13,10 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     // messageDisplay API. Note: This needs the messagesRead permission.
     // The returned message is a MessageHeader object with the most relevant
     // information.
+
     let message = await messenger.messageDisplay.getDisplayedMessage(tabs[0].id);
-    let messageBody = await dolLib.getMessageBody(message.id);
+    let messageBody = message ? await dolLib.getMessageBody(message.id) : '';
+
 
     // Request the full message to access its full set of headers.
     // let full = await messenger.messages.getFull(message.id);
@@ -23,7 +25,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     let checkConfig = await dolLib.checkConfig();
 
     // Extract email from author
-    let authorEmail = dolLib.extractEmailAddressFromString(message.author)[0];
+    let authorEmail = message ? dolLib.extractEmailAddressFromString(message.author)[0] : '';
 
     //Filter on propal objects status
      let propalDisplayStatus = await dolLib.filterPropalStatus();
@@ -35,7 +37,6 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         displayTpl("check-module-config");
     }else{
         displayTpl("main-popup");
-
 
 
         // Get contact infos
