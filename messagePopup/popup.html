@@ -9,13 +9,12 @@
 
 <body>
 <div class="grid-container">
+	<div id="check-module-config" class="hidden-field alert alert-warning">
+		__MSG_CheckYourModuleConfig__
+	</div>
 
 	<div id="default-page" class="hidden-field">
 		<h4>__MSG_PleaseSelectAnEmailBefore__</h4>
-	</div>
-
-	<div id="check-module-config" class="hidden-field alert alert-warning">
-		__MSG_CheckYourModuleConfig__
 	</div>
 
 	<div id="main-popup" class="hidden-field">
@@ -28,6 +27,11 @@
 				</td>
 			</tr>
 		</table>
+
+		<div id="dolibarr-notes-container" class="hidden-field">
+			<h5 >__MSG_Comments__ <span class="badge badge-info">0</span></h5>
+			<textarea id="dolibarr-note-input"></textarea>
+		</div>
 
 		<div id="soc-infos">
 			<div id="soc-not-found-tpl" class="hidden-field" >

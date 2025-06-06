@@ -12,7 +12,8 @@ export async function checkConfig(){
     return true;
 }
 
-export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', postData, successCallBackFunction = ()=>{}, errorCallBackFunction = ()=>{}, cache = true){
+
+export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', postData, successCallBackFunction = ()=>{}, errorCallBackFunction = ()=>{}, cache = false){
 
     let configData = await browser.storage.local.get({dolibarrApiKey:'', dolibarrApiUrl:'', dolibarrApiEntity:1});
 

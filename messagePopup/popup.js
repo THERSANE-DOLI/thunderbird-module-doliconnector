@@ -2,6 +2,15 @@ import * as dolLib from '../global.lib.js';
 
 import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
+    async function getEmailAccountFromBackground(messageId) {
+        const response = await browser.runtime.sendMessage({
+            type: "getEmailAccount",
+            messageId
+        });
+
+        return response.email;
+    }
+
     // first need to translate page before add dom events
     dolLib.localizeHtmlPage();
 
@@ -28,15 +37,19 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     let authorEmail = message ? dolLib.extractEmailAddressFromString(message.author)[0] : '';
 
     //Filter on propal objects status
-     let propalDisplayStatus = await dolLib.filterPropalStatus();
+    let propalDisplayStatus = await dolLib.filterPropalStatus();
 
     let confDolibarUrl = await dolLib.getDolibarrUrl();
 
+    let config = await browser.storage.local.get({dolibarrUseNotes: false});
 
     if(!checkConfig){
         displayTpl("check-module-config");
     }else{
         displayTpl("main-popup");
+
+
+        initNotesForMessage();
 
 
         // Get contact infos
@@ -131,7 +144,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                 resolve(resData);
             }, (err) => {
                 reject("fail");
-            });
+            },true);
         });
 
         await apiDomain.then((domainList) => {
@@ -641,4 +654,34 @@ function loadDocumentsInfos(data){
     setOrdersInfos(data);
     setInvoicesInfos(data);
     setSupplierordersInfos(data);
+}
+
+/**
+ * INIT Shared notes
+ * need Crm client connector module installed in Dolibarr
+ * @returns {Promise<void>}
+ */
+async function initNotesForMessage(){
+    // console.dir(message, { depth: null })
+    // NOTES
+    // need Crm client connector module installed in Dolibarr
+
+    if (!config.dolibarrUseNotes || !message) {
+        return;
+    }
+
+    const accountEmail = await getEmailAccountFromBackground(message.id);
+    if (!accountEmail) {
+        console.warn("Impossible de déterminer l'adresse du compte.");
+    }
+
+    let msgId = message.headerMessageId; // ou gFolderDisplay.selectedMessage ?
+
+    // Display input form
+    displayTpl("dolibarr-notes-container");
+
+    // Get all notes
+    dolLib.callDolibarrApi('crmclientconnector/emaillinks/quicksearch', {accountEmail: accountEmail.email, msgId: msgId}, 'GET', {}, (resData)=>{
+
+    });
 }

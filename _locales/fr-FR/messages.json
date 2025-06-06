@@ -97,5 +97,14 @@
   },
   "PleaseSelectAnEmailBefore" :{
     "message": "Veuillez selectionner un email"
+  },
+  "DolibarrUseNotes" :{
+    "message": "Permettre de voir et saisir des notes partagées sur les emails"
+  },
+  "DolibarrUseNotesDesc" :{
+    "message": "Nécéssite le module CRM client connector d'installé sur votre Dolibarr"
+  },
+  "Comments" :{
+    "message": "Commentaires"
   }
 }

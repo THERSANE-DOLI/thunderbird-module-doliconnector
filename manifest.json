@@ -5,7 +5,9 @@
   "default_locale" : "fr-FR",
   "permissions": [
     "storage",
-    "messagesRead"
+    "messagesRead",
+    "activeTab",
+    "accountsRead"
   ],
   "optional_permissions": [
     "<all_urls>"
@@ -16,7 +18,7 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "doli.connector@therane.fr",
-      "strict_min_version": "78.0"
+      "strict_min_version": "91.0"
     }
   },
   "message_display_action": {
@@ -40,6 +42,7 @@
     "16": "images/dolibarr-16.png"
   },
   "background": {
+    "type": "module",
     "scripts": ["background.js"],
     "persistent": false
   },

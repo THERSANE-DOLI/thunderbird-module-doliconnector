@@ -1,34 +1,66 @@
 // background.js (ES module)
-//
-// async function updateActionVisibility() {
-//     const { dolibarrMainBtnDisplay = true } = await browser.storage.local.get([ "dolibarrMainBtnDisplay" ]);
-//
-//     if (browser.browserAction) {
-//         dolibarrMainBtnDisplay == 'menu'
-//             ? await browser.browserAction.enable()
-//             : await browser.browserAction.disable();
-//     }
-//
-//     if (browser.messageDisplayAction) {
-//         dolibarrMainBtnDisplay == 'topbar'
-//             ? await browser.messageDisplayAction.enable()
-//             : await browser.messageDisplayAction.disable();
-//     }
-// }
-//
-// // Refaire les contrôles au démarrage
-// browser.runtime.onStartup.addListener(() => {
-//     updateActionVisibility();
-// });
-//
-// // Refaire les contrôles à l'installation
-// browser.runtime.onInstalled.addListener(() => {
-//     updateActionVisibility();
-// });
-//
-// // Refaire les contrôles si les préférences changent
-// browser.storage.onChanged.addListener((changes, area) => {
-//     if (area === "local" && changes.dolibarrMainBtnDisplay) {
-//         updateActionVisibility();
-//     }
-// });
+import * as dolLib from '../global.lib.js';
+
+browser.runtime.onMessage.addListener(async (message, sender) => {
+    if (message.type === "getEmailAccount") {
+        try {
+            const msg = await browser.messages.get(message.messageId);
+            const folder = msg.folder;
+            const accounts = await browser.accounts.list();
+            const account = accounts.find(acc => acc.id === folder.accountId);
+
+            if (account && account.identities.length > 0) {
+                return { email: account.identities[0].email };
+            }
+        } catch (err) {
+            console.error("Erreur récupération compte :", err);
+        }
+
+        return { email: null };
+    }
+});
+
+browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
+
+
+    let config = await browser.storage.local.get({dolibarrUseNotes: false});
+
+    if (!config.dolibarrUseNotes) {
+        return;
+    }
+
+    const folder = message.folder;
+
+    const accounts = await browser.accounts.list();
+    const account = accounts.find(acc => acc.id === folder.accountId);
+
+    if (!account || account.identities.length == 0) {
+        console.warn("Impossible de déterminer l'adresse du compte 1.");
+        return;
+    }
+
+    const accountEmail = { email: account.identities[0].email };
+    if (!accountEmail) {
+        console.warn("Impossible de déterminer l'adresse du compte 2.");
+        return;
+    }
+
+    let msgId = message.headerMessageId; // ou gFolderDisplay.selectedMessage ?
+
+    // Get all notes
+    dolLib.callDolibarrApi('crmclientconnector/emaillinks/quicksearch', {accountEmail: accountEmail.email, msgId: msgId}, 'GET', {}, (resData)=>{
+
+        const commentCount = resData.length;
+
+        browser.messageDisplayAction.setBadgeText({
+            tabId: tab.id,
+            text: commentCount > 0 ? `${commentCount}` : ""
+        });
+
+        browser.messageDisplayAction.setBadgeBackgroundColor({
+            tabId: tab.id,
+            color: commentCount > 0 ? "#d31b11" : "#BDC3C7"
+        });
+
+    });
+});
