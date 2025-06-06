@@ -24,6 +24,11 @@
     "default_title": "Dolibarr",
     "default_icon": "images/dolibarr-32.png"
   },
+  "browser_action": {
+    "default_popup": "messagePopup/popup.html",
+    "default_title": "Dolibarr",
+    "default_icon": "images/dolibarr-32.png"
+  },
   "options_ui": {
     "page": "options/options.html",
     "open_in_tab": false,
@@ -33,6 +38,10 @@
     "256": "images/dolibarr.png",
     "32": "images/dolibarr-32.png",
     "16": "images/dolibarr-16.png"
+  },
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
   },
   "web_accessible_resources": [
     "exclude-domains.json"

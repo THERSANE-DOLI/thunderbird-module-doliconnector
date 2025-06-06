@@ -82,5 +82,17 @@
   "SeeModuleDoc" :{
     "message": "Consulter la page de doc des modules",
     "description": "Options"
+  },
+  "dolibarrOptMainBtnDisplay" :{
+    "message": "Mode d'affichage du bouton Dolibarr",
+    "description": "Options"
+  },
+  "dolibarrOptMainBtnDisplayOptionMenu" :{
+    "message": "Email menu (default)",
+    "description": "Options"
+  },
+  "dolibarrOptMainBtnDisplayOptionTopBar" :{
+    "message": "Top Thunderbird Bar",
+    "description": "Options"
   }
 }

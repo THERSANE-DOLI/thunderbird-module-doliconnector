@@ -115,47 +115,68 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         });
     }
 
+    async function getExcludedDomains(){
+
+        let domains = await fetch(browser.runtime.getURL("exclude-domains.json"))
+            .then(response => response.json())
+            .catch(error => console.error("Erreur de chargement du JSON :", error));
+
+        let apiDomain =  new Promise((resolve, reject) => {
+
+            // TODO add cache
+            dolLib.callDolibarrApi('crmclientconnector/excludeddomains', {
+                sqlfilters: "(t.active:=:1)"
+            }, 'GET', {}, (resData)=>{
+                resolve(resData);
+            }, (err) => {
+                reject("fail");
+            });
+        });
+
+        await apiDomain.then((domainList) => {
+            domains = domains.concat(domainList);
+        });
+
+        return domains;
+    }
+
+
     function searchThirdpartieAndPopulateByEmailDomain(authorEmail){
         console.log("search for same domain soc");
 
         let emailDomain = authorEmail.split('@').pop();
+        getExcludedDomains().then(emailPublicDomains => {
+            if(!emailPublicDomains.includes(emailDomain.toLowerCase())){
+                console.log("not public email " + emailDomain);
 
-        fetch(browser.runtime.getURL("exclude-domains.json"))
-            .then(response => response.json())
-            .then(emailPublicDomains => {
-                if(!emailPublicDomains.includes(emailDomain.toLowerCase())){
-                    console.log("not public email " + emailDomain);
-
-                    // console.error(msg);
-                    dolLib.callDolibarrApi('thirdparties', {
-                        limit : 5,
-                        sortfield: 't.rowid',
-                        sortorder: 'DESC',
-                        sqlfilters: "(t.email:like:'%@"+emailDomain+"')"
-                    }, 'GET', {}, (resData)=>{
-                        resData = resData.pop();
-                        console.log("searchThirdpartieAndPopulateByEmailDomain found ");
-                        // Populate company data
-                        setSocInfos({
-                            id: resData.id,
-                            name: resData.name
-                        });
-
-                        loadDocumentsInfos({
-                            socId : resData.id
-                        })
-
-                    },(errorMsg)=>{
-                        console.log("not found ");
-                        setSocInfos({});
+                // console.error(msg);
+                dolLib.callDolibarrApi('thirdparties', {
+                    limit : 5,
+                    sortfield: 't.rowid',
+                    sortorder: 'DESC',
+                    sqlfilters: "(t.email:like:'%@"+emailDomain+"')"
+                }, 'GET', {}, (resData)=>{
+                    resData = resData.pop();
+                    console.log("searchThirdpartieAndPopulateByEmailDomain found ");
+                    // Populate company data
+                    setSocInfos({
+                        id: resData.id,
+                        name: resData.name
                     });
 
-                }else{
-                    setSocInfos({});
-                }
-            })
-            .catch(error => console.error("Erreur de chargement du JSON :", error));
+                    loadDocumentsInfos({
+                        socId : resData.id
+                    })
 
+                },(errorMsg)=>{
+                    console.log("thirdparties not found ");
+                    setSocInfos({});
+                });
+
+            }else{
+                setSocInfos({});
+            }
+        })
     }
 
 

@@ -85,6 +85,7 @@ function saveOptions(e) {
         dolibarrApiKey: document.getElementById("dolibarr-api-key").value,
         dolibarrApiUrl: document.getElementById("dolibarr-api-url").value,
 		dolibarrApiEntity: document.getElementById("dolibarr-api-entity").value,
+		// dolibarrMainBtnDisplay: document.getElementById("dolibarr-toggle-main-btn-display").value,
                 
 		dolibarrPropalCanceled: document.getElementById("dolibarr-propal-canceled").checked,
         dolibarrPropalDraft: document.getElementById("dolibarr-propal-draft").checked,

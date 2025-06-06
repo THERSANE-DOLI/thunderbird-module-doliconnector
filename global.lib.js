@@ -12,7 +12,7 @@ export async function checkConfig(){
     return true;
 }
 
-export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', postData, successCallBackFunction = ()=>{}, errorCallBackFunction = ()=>{}){
+export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', postData, successCallBackFunction = ()=>{}, errorCallBackFunction = ()=>{}, cache = true){
 
     let configData = await browser.storage.local.get({dolibarrApiKey:'', dolibarrApiUrl:'', dolibarrApiEntity:1});
 
@@ -52,7 +52,8 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
             'DOLAPIENTITY': apiEntity,
             "Content-Type": "application/json"
         },
-        body: (type.toUpperCase() !== 'GET' && postData) ? postData : undefined
+        body: (type.toUpperCase() !== 'GET' && postData) ? postData : undefined,
+        cache: cache && type == 'GET' ? "force-cache" : "default"
     })
     .then(response => {
         if (!response.ok) {
@@ -461,7 +462,6 @@ export function jsonToTable(JsonTitle, jsonData, container, tableClass = 'doliba
                 }
 
                 if(elem.hasOwnProperty('hightLight') && searchInText && searchInText.length > 0){
-                    console.log(searchInText);
                     if(searchInText.includes(elem.hightLight)){
                         td.classList.add('hightlight');
                     }
