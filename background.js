@@ -49,18 +49,9 @@ browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
 
     // Get all notes
     dolLib.callDolibarrApi('crmclientconnector/emaillinks/quicksearch', {accountEmail: accountEmail.email, msgId: msgId}, 'GET', {}, (resData)=>{
-
-        const commentCount = resData.length;
-
-        browser.messageDisplayAction.setBadgeText({
-            tabId: tab.id,
-            text: commentCount > 0 ? `${commentCount}` : ""
-        });
-
-        browser.messageDisplayAction.setBadgeBackgroundColor({
-            tabId: tab.id,
-            color: commentCount > 0 ? "#d31b11" : "#BDC3C7"
-        });
-
-    });
+        dolLib.updateBadgeMessageDisplayAction(tab, resData.length);
+    }, (err)=>{
+        dolLib.updateBadgeMessageDisplayAction(tab,0);
+    } );
 });
+

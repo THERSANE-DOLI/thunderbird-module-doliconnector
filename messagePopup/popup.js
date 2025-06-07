@@ -680,8 +680,12 @@ async function initNotesForMessage(){
     // Display input form
     displayTpl("dolibarr-notes-container");
 
+    document.getElementById("dolibarr-note-input").focus();
+    document.getElementById("dolibarr-note-input").placeholder = browser.i18n.getMessage("WriteComment");
+
+
     // Get all notes
     dolLib.callDolibarrApi('crmclientconnector/emaillinks/quicksearch', {accountEmail: accountEmail.email, msgId: msgId}, 'GET', {}, (resData)=>{
-
+        // dolLib.updateBadgeMessageDisplayAction(5); //resData.length;
     });
 }

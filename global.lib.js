@@ -490,3 +490,16 @@ export function jsonToTable(JsonTitle, jsonData, container, tableClass = 'doliba
         container.appendChild(table) // Append the table to the container element
     }
 }
+
+export function updateBadgeMessageDisplayAction(tab, commentCount){
+
+    browser.messageDisplayAction.setBadgeText({
+        tabId: tab.id,
+        text: commentCount > 0 ? `${commentCount}` : ""
+    });
+
+    browser.messageDisplayAction.setBadgeBackgroundColor({
+        tabId: tab.id,
+        color: commentCount > 0 ? "#d31b11" : "#BDC3C7"
+    });
+}

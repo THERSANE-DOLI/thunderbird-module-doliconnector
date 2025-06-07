@@ -106,5 +106,11 @@
   },
   "Comments" :{
     "message": "Commentaires"
+  },
+  "Submit" :{
+    "message": "Envoyer"
+  },
+  "WriteComment" :{
+    "message": "Écrire une note ou un commentaire..."
   }
 }
