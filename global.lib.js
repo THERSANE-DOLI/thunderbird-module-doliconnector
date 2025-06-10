@@ -536,7 +536,7 @@ export function getMsgTpl(msg) {
     deleteBtn.classList.add('btn-tiny-action');
     deleteBtn.classList.add('--delete-btn');
     deleteBtn.classList.add('delete-message-btn');
-    deleteBtn.title = 'Delete'
+    deleteBtn.title = browser.i18n.getMessage('DoubleClickToDelete');
     deleteBtn.setAttribute('data-msgid', msg.id);
     deleteBtn.setAttribute('data-action', 'delete');
 

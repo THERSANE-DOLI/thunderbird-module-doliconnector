@@ -97,5 +97,8 @@
   },
   "PleaseSelectAnEmailBefore" :{
     "message": "Please select an email"
+  },
+  "DoubleClickToDelete" :{
+    "message": "Double click to delete"
   }
 }

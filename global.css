@@ -436,6 +436,7 @@ details.dolibarr-connector-detail > :where(div,p) {
 	max-width: 24px;
 	color: #94acc2;
 	vertical-align: center;
+	fill: currentColor;
 }
 
 .btn-tiny-action{
