@@ -29,6 +29,8 @@
 	--color-blue-800: #1e40af;
 	--color-blue-900: #1e3a8a;
 
+	--color-delete: #8a1e1e;
+
 	--color-gray-50: #f9fafb;
 	--color-gray-100: #f3f4f6;
 	--color-gray-200: #e5e7eb;
@@ -283,6 +285,40 @@ details.dolibarr-connector-detail > :where(div,p) {
 	outline: none !important;
 }
 
+.mail-msg-box-list .dolibarr-textarea{
+	display: block;
+	background-color: #e0bcff;
+	padding: 10px;
+	border-radius: 5px;
+	resize: none;
+	field-sizing:content;
+}
+.autosize{
+	overflow-y: hidden;
+	resize: vertical;
+}
+
+.mail-msg-box-list {
+	display: block;
+	position: relative;
+}
+.mail-msg-box-list:before {
+	content: '';
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 2px;
+	background: #f1f1f1;
+	left: 15px;
+	margin: 0;
+	border-radius: 2px;
+	z-index: -1;
+}
+
+.mail-msg-box-list .dolibarr-textarea:hover{
+	resize: vertical;
+}
+
 .dolibarr-form-box {
 	padding: 0;
 	border-width: 1px;
@@ -309,7 +345,6 @@ details.dolibarr-connector-detail > :where(div,p) {
 	border-color: var(--color-gray-200);
 
 }
-
 .btn.--submit{
 	color: var(--color-white);
 	font-weight: 600;
@@ -323,10 +358,95 @@ details.dolibarr-connector-detail > :where(div,p) {
 	align-items: center;
 	cursor: pointer;
 }
+.btn.--submit:focus {
+	outline: 2px solid rgba(15, 128, 215, 0.29);
+}
 .dolibarr-btn-primary:focus{
 	outline: 4px solid #BFDBFE8D;
 }
 
 .dolibarr-btn-primary:hover{
 	background-color: var(--color-blue-800);
+}
+
+.inputs-errors:empty{
+	display: none;
+}
+.inputs-errors{
+	color: darkred;
+}
+
+.mail-msg-box__img_user{
+	max-width: 100%;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+}
+
+.mail-msg-box {
+	position: relative;
+	margin-bottom: 10px;
+	width: 100%;
+	/** FLEX */
+	display: flex;
+	gap: 10px;
+}
+
+.mail-msg-box__img{
+	display: block;
+}
+
+.mail-msg-box__message{
+	position: relative;
+	display: block;
+	width: 500px;
+	max-width: 100%;
+	flex-grow: 10;
+}
+
+
+.time_date {
+	color: #747474;
+	display: block;
+	font-size: 10px;
+	margin: 3px 0 0;
+	text-align: right;
+}
+
+.action-btn-list {
+	display: block;
+	position: absolute;
+	right: 0;
+	top:0;
+	opacity: 0;
+	transition: opacity 0.5s;
+	text-align: right;
+	background-color: #ffffff;
+	padding: 3px;
+	border-radius: 0 0 0 5px;
+	cursor: pointer;
+	line-height: 16px;
+}
+.mail-msg-box:hover .action-btn-list {
+	opacity: 1;
+}
+
+.btn-tiny-action-icon {
+	height: 16px;
+	max-width: 24px;
+	color: #94acc2;
+	vertical-align: center;
+}
+
+.btn-tiny-action{
+	min-height: 16px;
+	background-color: #fff;
+	border: 0px solid #94acc2;
+	color : #94acc2;
+	cursor: pointer;
+}
+
+
+.btn-tiny-action.--delete-btn {
+	color : var(--color-delete);
 }

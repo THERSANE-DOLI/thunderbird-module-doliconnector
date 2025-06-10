@@ -47,11 +47,13 @@ browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
 
     let msgId = message.headerMessageId; // ou gFolderDisplay.selectedMessage ?
 
+
     // Get all notes
+    dolLib.updateBadgeMessageDisplayAction(tab,0);
     dolLib.callDolibarrApi('crmclientconnector/emaillinks/quicksearch', {accountEmail: accountEmail.email, msgId: msgId}, 'GET', {}, (resData)=>{
-        dolLib.updateBadgeMessageDisplayAction(tab, resData.length);
-    }, (err)=>{
-        dolLib.updateBadgeMessageDisplayAction(tab,0);
-    } );
+        dolLib.callDolibarrApi('crmclientconnector/emailusermsgs', {sqlfilters: `(fk_email_link:=:${resData.id})`}, 'GET', {}, (resDataMsg)=>{
+            dolLib.updateBadgeMessageDisplayAction(tab, resDataMsg.length);
+        });
+    });
 });
 

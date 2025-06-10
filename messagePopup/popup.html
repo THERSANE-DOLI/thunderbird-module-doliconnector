@@ -29,12 +29,15 @@
 		</table>
 
 		<div id="dolibarr-notes-container" class="hidden-field">
-				<div class="dolibarr-form-box" >
+			<div id="dolibarr-notes-list-container" class="mail-msg-box-list" ></div>
+			<div class="dolibarr-form-box" >
 				<div class="dolibarr-form-box__body" >
 					<textarea class="dolibarr-textarea" id="dolibarr-note-input" placeholder="__MSG_WriteComment__"></textarea>
+
+					<div id="dolibarr-note-input-errors" class="inputs-errors" ></div>
 				</div>
 				<div class="dolibarr-form-box__footer" >
-					<button type="button" class="btn --submit" >__MSG_Submit__</button>
+					<button id="send-comment" type="button" class="btn --submit" >__MSG_Submit__</button>
 				</div>
 			</div>
 		</div>

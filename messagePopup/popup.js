@@ -50,7 +50,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
 
         initNotesForMessage();
-
+        document.querySelectorAll('textarea.autosize').forEach(textarea => dolLib.textareaAutosize(textarea))
 
         // Get contact infos
 
@@ -680,12 +680,35 @@ async function initNotesForMessage(){
     // Display input form
     displayTpl("dolibarr-notes-container");
 
-    document.getElementById("dolibarr-note-input").focus();
-    document.getElementById("dolibarr-note-input").placeholder = browser.i18n.getMessage("WriteComment");
+    let textArea = document.getElementById("dolibarr-note-input");
+    textArea.focus();
+    textArea.placeholder = browser.i18n.getMessage("WriteComment");
 
+    let sendCommentBTN = document.getElementById('send-comment');
+
+    sendCommentBTN.addEventListener('click', function() {
+        if(textArea.value.length > 0){
+
+            // TODO : add feedback animation see Dolibarr experimental Doc
+
+            // Add new note
+            dolLib.callDolibarrApi(
+                'crmclientconnector/emailusermsgs',
+                {},
+                'POST',
+                JSON.stringify({emailAccount: accountEmail, emailMsgId:msgId, message : textArea.value }),
+                (resData)=>{
+                    textArea.value = ''; // clear input
+                    dolLib.refreshComments(tabs, accountEmail, msgId);
+            }, (err)=>{
+                // TODO manage error
+                //     console.log(err);
+                //     document.getElementById('dolibarr-note-input-errors').innerText = err.message;
+            });
+        }
+    })
 
     // Get all notes
-    dolLib.callDolibarrApi('crmclientconnector/emaillinks/quicksearch', {accountEmail: accountEmail.email, msgId: msgId}, 'GET', {}, (resData)=>{
-        // dolLib.updateBadgeMessageDisplayAction(5); //resData.length;
-    });
+    dolLib.refreshComments(tabs, accountEmail, msgId);
+
 }
