@@ -537,8 +537,23 @@ export function getMsgTpl(msg) {
     deleteBtn.classList.add('--delete-btn');
     deleteBtn.classList.add('delete-message-btn');
     deleteBtn.title = browser.i18n.getMessage('DoubleClickToDelete');
-    deleteBtn.setAttribute('data-msgid', msg.id);
+    deleteBtn.setAttribute('data-msg-id', msg.id);
     deleteBtn.setAttribute('data-action', 'delete');
+    deleteBtn.addEventListener("dblclick", (event) => {
+        event.preventDefault();
+        let commentDolId = deleteBtn.getAttribute('data-msg-id');
+
+        callDolibarrApi(
+            'crmclientconnector/emailusermsgs/'+ commentDolId,
+            {},
+            'DELETE',
+            {},
+            (resData)=>{
+                container.remove();
+            }, (err)=>{
+
+            });
+    });
 
     let deleteBtnIcon = document.createElement("img");
     deleteBtnIcon.src = browser.runtime.getURL("images/trash-icon.svg");
@@ -578,7 +593,9 @@ export function refreshComments(tabs, accountEmail, msgId){
     callDolibarrApi('crmclientconnector/emaillinks/quicksearch', {accountEmail: accountEmail, msgId: msgId}, 'GET', {}, (resData)=>{
         callDolibarrApi('crmclientconnector/emailusermsgs', {sqlfilters: `(fk_email_link:=:${resData.id})`}, 'GET', {}, (resDataMsg)=>{
             let lisMsgContainer = document.getElementById('dolibarr-notes-list-container');
-            updateBadgeMessageDisplayAction(tabs, resDataMsg.length);
+            if(tabs !== false){
+                updateBadgeMessageDisplayAction(tabs, resDataMsg.length);
+            }
             lisMsgContainer.textContent = '';
             resDataMsg.forEach((msg) => {
                 // create a new div element

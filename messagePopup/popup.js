@@ -676,15 +676,26 @@ async function initNotesForMessage(){
     }
 
     let msgId = message.headerMessageId; // ou gFolderDisplay.selectedMessage ?
+    let textArea = document.getElementById("dolibarr-note-input");
+    let sendCommentBTN = document.getElementById('send-comment');
 
     // Display input form
-    displayTpl("dolibarr-notes-container");
+    // Add new note
+    dolLib.callDolibarrApi(
+        'crmclientconnector/emailaccounts',
+        {sqlfilters : `(email_account:=:'${accountEmail}')`},
+        'GET',
+        {},
+        (resData)=>{
+           if(resData.length > 0) {
+               displayTpl("dolibarr-notes-container");
+               textArea.focus();
+               textArea.placeholder = browser.i18n.getMessage("WriteComment");
+               // Get all notes
+               dolLib.refreshComments(tabs, accountEmail, msgId);
+           }
+        });
 
-    let textArea = document.getElementById("dolibarr-note-input");
-    textArea.focus();
-    textArea.placeholder = browser.i18n.getMessage("WriteComment");
-
-    let sendCommentBTN = document.getElementById('send-comment');
 
     sendCommentBTN.addEventListener('click', function() {
         if(textArea.value.length > 0){
@@ -696,7 +707,11 @@ async function initNotesForMessage(){
                 'crmclientconnector/emailusermsgs',
                 {},
                 'POST',
-                JSON.stringify({emailAccount: accountEmail, emailMsgId:msgId, message : textArea.value }),
+                JSON.stringify({
+                    emailAccount: accountEmail,
+                    emailMsgId:msgId,
+                    message : textArea.value
+                }),
                 (resData)=>{
                     textArea.value = ''; // clear input
                     dolLib.refreshComments(tabs, accountEmail, msgId);
@@ -707,8 +722,4 @@ async function initNotesForMessage(){
             });
         }
     })
-
-    // Get all notes
-    dolLib.refreshComments(tabs, accountEmail, msgId);
-
 }
