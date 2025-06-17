@@ -5,21 +5,30 @@
   "default_locale" : "fr-FR",
   "permissions": [
     "storage",
-    "messagesRead"
+    "messagesRead",
+    "activeTab",
+    "accountsRead",
+    "messagesModify",
+    "sensitiveDataUpload"
   ],
   "optional_permissions": [
     "<all_urls>"
   ],
-  "version": "1.7",
+  "version": "1.8.0",
   "author": "THERSANE",
   "homepage_url": "https://www.thersane.fr",
   "browser_specific_settings": {
     "gecko": {
       "id": "doli.connector@therane.fr",
-      "strict_min_version": "78.0"
+      "strict_min_version": "128"
     }
   },
   "message_display_action": {
+    "default_popup": "messagePopup/popup.html",
+    "default_title": "Dolibarr",
+    "default_icon": "images/dolibarr-32.png"
+  },
+  "browser_action": {
     "default_popup": "messagePopup/popup.html",
     "default_title": "Dolibarr",
     "default_icon": "images/dolibarr-32.png"
@@ -33,6 +42,11 @@
     "256": "images/dolibarr.png",
     "32": "images/dolibarr-32.png",
     "16": "images/dolibarr-16.png"
+  },
+  "background": {
+    "type": "module",
+    "scripts": ["background.js"],
+    "persistent": false
   },
   "web_accessible_resources": [
     "exclude-domains.json"

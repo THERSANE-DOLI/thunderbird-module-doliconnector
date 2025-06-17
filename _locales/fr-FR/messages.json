@@ -82,5 +82,38 @@
   "SeeModuleDoc" :{
     "message": "Consulter la page de doc des modules",
     "description": "Options"
+  },
+  "dolibarrOptMainBtnDisplay" :{
+    "message": "Mode d'affichage du bouton Dolibarr",
+    "description": "Options"
+  },
+  "dolibarrOptMainBtnDisplayOptionMenu" :{
+    "message": "Email menu (default)",
+    "description": "Options"
+  },
+  "dolibarrOptMainBtnDisplayOptionTopBar" :{
+    "message": "Top Thunderbird Bar",
+    "description": "Options"
+  },
+  "PleaseSelectAnEmailBefore" :{
+    "message": "Veuillez selectionner un email"
+  },
+  "DolibarrUseNotes" :{
+    "message": "Permettre de voir et saisir des notes partagées sur les emails"
+  },
+  "DolibarrUseNotesDesc" :{
+    "message": "Nécéssite le module CRM client connector d'installé sur votre Dolibarr"
+  },
+  "Comments" :{
+    "message": "Commentaires"
+  },
+  "Submit" :{
+    "message": "Envoyer"
+  },
+  "WriteComment" :{
+    "message": "Écrire une note ou un commentaire..."
+  },
+  "DoubleClickToDelete" :{
+    "message": "Double click pour supprimer"
   }
 }

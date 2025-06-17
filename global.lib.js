@@ -12,7 +12,8 @@ export async function checkConfig(){
     return true;
 }
 
-export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', postData, successCallBackFunction = ()=>{}, errorCallBackFunction = ()=>{}){
+
+export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', postData, successCallBackFunction = ()=>{}, errorCallBackFunction = ()=>{}, cache = false){
 
     let configData = await browser.storage.local.get({dolibarrApiKey:'', dolibarrApiUrl:'', dolibarrApiEntity:1});
 
@@ -52,7 +53,8 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
             'DOLAPIENTITY': apiEntity,
             "Content-Type": "application/json"
         },
-        body: (type.toUpperCase() !== 'GET' && postData) ? postData : undefined
+        body: (type.toUpperCase() !== 'GET' && postData) ? postData : undefined,
+        cache: cache && type == 'GET' ? "force-cache" : "default"
     })
     .then(response => {
         if (!response.ok) {
@@ -461,7 +463,6 @@ export function jsonToTable(JsonTitle, jsonData, container, tableClass = 'doliba
                 }
 
                 if(elem.hasOwnProperty('hightLight') && searchInText && searchInText.length > 0){
-                    console.log(searchInText);
                     if(searchInText.includes(elem.hightLight)){
                         td.classList.add('hightlight');
                     }
@@ -488,4 +489,133 @@ export function jsonToTable(JsonTitle, jsonData, container, tableClass = 'doliba
     if(!appendToTable) {
         container.appendChild(table) // Append the table to the container element
     }
+}
+
+export function updateBadgeMessageDisplayAction(tab, commentCount){
+
+    browser.messageDisplayAction.setBadgeText({
+        tabId: tab.id,
+        text: commentCount > 0 ? `${commentCount}` : ""
+    });
+
+    browser.messageDisplayAction.setBadgeBackgroundColor({
+        tabId: tab.id,
+        color: commentCount > 0 ? "#d31b11" : "#BDC3C7"
+    });
+}
+
+export function getMsgTpl(msg) {
+    // create a new div element
+    let container = document.createElement("div");
+    container.id = 'mail-message-' + msg.id;
+    container.classList.add('mail-msg-box');
+
+    if(typeof msg.user_mail_hash !== undefined) {
+        let imgContainer = document.createElement("div");
+        imgContainer.classList.add('mail-msg-box__img');
+
+        let img = document.createElement("img");
+        img.src = `https://www.gravatar.com/avatar/${msg.user_mail_hash}?d=identicon`;
+        img.classList.add('mail-msg-box__img_user');
+        img.title = msg.user_full_name;
+        imgContainer.appendChild(img);
+
+        container.appendChild(imgContainer);
+    }
+
+
+    let message = document.createElement("div");
+    message.classList.add('mail-msg-box__message');
+
+    // Add Action BTN
+    let messageBtnAction = document.createElement("div");
+    messageBtnAction.classList.add('action-btn-list');
+
+
+    let deleteBtn = document.createElement("button");
+    deleteBtn.classList.add('btn-tiny-action');
+    deleteBtn.classList.add('--delete-btn');
+    deleteBtn.classList.add('delete-message-btn');
+    deleteBtn.title = browser.i18n.getMessage('DoubleClickToDelete');
+    deleteBtn.setAttribute('data-msg-id', msg.id);
+    deleteBtn.setAttribute('data-action', 'delete');
+    deleteBtn.addEventListener("dblclick", (event) => {
+        event.preventDefault();
+        let commentDolId = deleteBtn.getAttribute('data-msg-id');
+
+        callDolibarrApi(
+            'crmclientconnector/emailusermsgs/'+ commentDolId,
+            {},
+            'DELETE',
+            {},
+            (resData)=>{
+                container.remove();
+            }, (err)=>{
+
+            });
+    });
+
+    let deleteBtnIcon = document.createElement("img");
+    deleteBtnIcon.src = browser.runtime.getURL("images/trash-icon.svg");
+    deleteBtnIcon.classList.add('btn-tiny-action-icon');
+    deleteBtn.appendChild(deleteBtnIcon);
+
+    messageBtnAction.appendChild(deleteBtn);
+    message.appendChild(messageBtnAction);
+
+
+
+    let messageTxt = document.createElement("div");
+    messageTxt.classList.add('dolibarr-textarea');
+    messageTxt.disabled = true;
+    messageTxt.innerText = msg.message;
+    message.appendChild(messageTxt);
+
+    let date = document.createElement("div");
+    date.classList.add('time_date');
+    let eventDate = new Date(parseInt(msg.date_creation) * 1000);
+    date.innerText = eventDate.toLocaleDateString(navigator.language || navigator.browserLanguage || (navigator.languages || ["en"])[0], {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+    })
+    message.appendChild(date);
+
+    container.appendChild(message);
+    return container;
+}
+
+export function refreshComments(tabs, accountEmail, msgId){
+    // Get all notes
+    callDolibarrApi('crmclientconnector/emaillinks/quicksearch', {accountEmail: accountEmail, msgId: msgId}, 'GET', {}, (resData)=>{
+        callDolibarrApi('crmclientconnector/emailusermsgs', {sqlfilters: `(fk_email_link:=:${resData.id})`}, 'GET', {}, (resDataMsg)=>{
+            let lisMsgContainer = document.getElementById('dolibarr-notes-list-container');
+            if(tabs !== false){
+                updateBadgeMessageDisplayAction(tabs, resDataMsg.length);
+            }
+            lisMsgContainer.textContent = '';
+            resDataMsg.forEach((msg) => {
+                // create a new div element
+                lisMsgContainer.appendChild(getMsgTpl(msg));
+            });
+        });
+    });
+}
+
+function adjustHeight(input) {
+    input.style.height = 'auto';
+    input.style.height = `${input.scrollHeight}px`;
+}
+
+/**
+ * Ajuste la hauteur du champ par rapport au contenu
+ * @param {NodeList} input Liste d'objets textarea
+ */
+export function textareaAutosize(input) {
+    window.addEventListener('load', () => {adjustHeight(input);});
+    window.addEventListener('resize',() => {adjustHeight(input);});
+    input.addEventListener('input',() => {adjustHeight(input);});
 }

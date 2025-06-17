@@ -34,6 +34,7 @@ function restoreOptions() {
 		document.getElementById("dolibarr-propal-notsigned").checked = data.dolibarrPropalNotSigned;
 		document.getElementById("dolibarr-propal-billed").checked = data.dolibarrPropalBilled;
 		document.getElementById("dolibarr-search-domain").checked = data.dolibarrSearchDomain;
+		document.getElementById("dolibarr-use-notes").checked = data.dolibarrUseNotes;
 	}
 
 
@@ -53,6 +54,8 @@ function restoreOptions() {
     document.getElementById("save-dolibarr-options").textContent = browser.i18n.getMessage("Save");
     document.getElementById("label-for-dolibarr-search-domain").textContent = browser.i18n.getMessage("dolibarrOptSearchDomain");
     document.getElementById("label-for-link-to-modules-doc").textContent = browser.i18n.getMessage("SeeModuleDoc");
+    document.getElementById("label-for-dolibarr-use-notes").textContent = browser.i18n.getMessage("DolibarrUseNotes");
+    document.getElementById("label-for-dolibarr-use-notes_desc").textContent = browser.i18n.getMessage("DolibarrUseNotesDesc");
 
 
 
@@ -67,6 +70,7 @@ function restoreOptions() {
 		dolibarrPropalSigned:  false,
 		dolibarrPropalNotSigned:  false,
 		dolibarrPropalBilled:  false,
+		dolibarrUseNotes:  false,
 		dolibarrSearchDomain:  false
     }).then(setCurrentChoice, onError);
 }
@@ -85,6 +89,7 @@ function saveOptions(e) {
         dolibarrApiKey: document.getElementById("dolibarr-api-key").value,
         dolibarrApiUrl: document.getElementById("dolibarr-api-url").value,
 		dolibarrApiEntity: document.getElementById("dolibarr-api-entity").value,
+		// dolibarrMainBtnDisplay: document.getElementById("dolibarr-toggle-main-btn-display").value,
                 
 		dolibarrPropalCanceled: document.getElementById("dolibarr-propal-canceled").checked,
         dolibarrPropalDraft: document.getElementById("dolibarr-propal-draft").checked,
@@ -92,6 +97,7 @@ function saveOptions(e) {
         dolibarrPropalSigned: document.getElementById("dolibarr-propal-signed").checked,
         dolibarrPropalNotSigned: document.getElementById("dolibarr-propal-notsigned").checked,
         dolibarrPropalBilled: document.getElementById("dolibarr-propal-billed").checked,
+        dolibarrUseNotes: document.getElementById("dolibarr-use-notes").checked,
         dolibarrSearchDomain: document.getElementById("dolibarr-search-domain").checked
     }
     // console.log(objToStore);

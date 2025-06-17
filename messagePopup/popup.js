@@ -2,6 +2,15 @@ import * as dolLib from '../global.lib.js';
 
 import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
+    async function getEmailAccountFromBackground(messageId) {
+        const response = await browser.runtime.sendMessage({
+            type: "getEmailAccount",
+            messageId
+        });
+
+        return response.email;
+    }
+
     // first need to translate page before add dom events
     dolLib.localizeHtmlPage();
 
@@ -13,8 +22,10 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     // messageDisplay API. Note: This needs the messagesRead permission.
     // The returned message is a MessageHeader object with the most relevant
     // information.
+
     let message = await messenger.messageDisplay.getDisplayedMessage(tabs[0].id);
-    let messageBody = await dolLib.getMessageBody(message.id);
+    let messageBody = message ? await dolLib.getMessageBody(message.id) : '';
+
 
     // Request the full message to access its full set of headers.
     // let full = await messenger.messages.getFull(message.id);
@@ -23,13 +34,14 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     let checkConfig = await dolLib.checkConfig();
 
     // Extract email from author
-    let authorEmail = dolLib.extractEmailAddressFromString(message.author)[0];
+    let authorEmail = message ? dolLib.extractEmailAddressFromString(message.author)[0] : '';
 
     //Filter on propal objects status
-     let propalDisplayStatus = await dolLib.filterPropalStatus();
+    let propalDisplayStatus = await dolLib.filterPropalStatus();
 
     let confDolibarUrl = await dolLib.getDolibarrUrl();
 
+    let config = await browser.storage.local.get({dolibarrUseNotes: false});
 
     if(!checkConfig){
         displayTpl("check-module-config");
@@ -37,6 +49,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         displayTpl("main-popup");
 
 
+        initNotesForMessage();
+        document.querySelectorAll('textarea.autosize').forEach(textarea => dolLib.textareaAutosize(textarea))
 
         // Get contact infos
 
@@ -115,47 +129,68 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         });
     }
 
+    async function getExcludedDomains(){
+
+        let domains = await fetch(browser.runtime.getURL("exclude-domains.json"))
+            .then(response => response.json())
+            .catch(error => console.error("Erreur de chargement du JSON :", error));
+
+        let apiDomain =  new Promise((resolve, reject) => {
+
+            // TODO add cache
+            dolLib.callDolibarrApi('crmclientconnector/excludeddomains', {
+                sqlfilters: "(t.active:=:1)"
+            }, 'GET', {}, (resData)=>{
+                resolve(resData);
+            }, (err) => {
+                reject("fail");
+            },true);
+        });
+
+        await apiDomain.then((domainList) => {
+            domains = domains.concat(domainList);
+        });
+
+        return domains;
+    }
+
+
     function searchThirdpartieAndPopulateByEmailDomain(authorEmail){
         console.log("search for same domain soc");
 
         let emailDomain = authorEmail.split('@').pop();
+        getExcludedDomains().then(emailPublicDomains => {
+            if(!emailPublicDomains.includes(emailDomain.toLowerCase())){
+                console.log("not public email " + emailDomain);
 
-        fetch(browser.runtime.getURL("exclude-domains.json"))
-            .then(response => response.json())
-            .then(emailPublicDomains => {
-                if(!emailPublicDomains.includes(emailDomain.toLowerCase())){
-                    console.log("not public email " + emailDomain);
-
-                    // console.error(msg);
-                    dolLib.callDolibarrApi('thirdparties', {
-                        limit : 5,
-                        sortfield: 't.rowid',
-                        sortorder: 'DESC',
-                        sqlfilters: "(t.email:like:'%@"+emailDomain+"')"
-                    }, 'GET', {}, (resData)=>{
-                        resData = resData.pop();
-                        console.log("searchThirdpartieAndPopulateByEmailDomain found ");
-                        // Populate company data
-                        setSocInfos({
-                            id: resData.id,
-                            name: resData.name
-                        });
-
-                        loadDocumentsInfos({
-                            socId : resData.id
-                        })
-
-                    },(errorMsg)=>{
-                        console.log("not found ");
-                        setSocInfos({});
+                // console.error(msg);
+                dolLib.callDolibarrApi('thirdparties', {
+                    limit : 5,
+                    sortfield: 't.rowid',
+                    sortorder: 'DESC',
+                    sqlfilters: "(t.email:like:'%@"+emailDomain+"')"
+                }, 'GET', {}, (resData)=>{
+                    resData = resData.pop();
+                    console.log("searchThirdpartieAndPopulateByEmailDomain found ");
+                    // Populate company data
+                    setSocInfos({
+                        id: resData.id,
+                        name: resData.name
                     });
 
-                }else{
-                    setSocInfos({});
-                }
-            })
-            .catch(error => console.error("Erreur de chargement du JSON :", error));
+                    loadDocumentsInfos({
+                        socId : resData.id
+                    })
 
+                },(errorMsg)=>{
+                    console.log("thirdparties not found ");
+                    setSocInfos({});
+                });
+
+            }else{
+                setSocInfos({});
+            }
+        })
     }
 
 
@@ -619,4 +654,72 @@ function loadDocumentsInfos(data){
     setOrdersInfos(data);
     setInvoicesInfos(data);
     setSupplierordersInfos(data);
+}
+
+/**
+ * INIT Shared notes
+ * need Crm client connector module installed in Dolibarr
+ * @returns {Promise<void>}
+ */
+async function initNotesForMessage(){
+    // console.dir(message, { depth: null })
+    // NOTES
+    // need Crm client connector module installed in Dolibarr
+
+    if (!config.dolibarrUseNotes || !message) {
+        return;
+    }
+
+    const accountEmail = await getEmailAccountFromBackground(message.id);
+    if (!accountEmail) {
+        console.warn("Impossible de déterminer l'adresse du compte.");
+    }
+
+    let msgId = message.headerMessageId; // ou gFolderDisplay.selectedMessage ?
+    let textArea = document.getElementById("dolibarr-note-input");
+    let sendCommentBTN = document.getElementById('send-comment');
+
+    // Display input form
+    // Add new note
+    dolLib.callDolibarrApi(
+        'crmclientconnector/emailaccounts',
+        {sqlfilters : `(email_account:=:'${accountEmail}')`},
+        'GET',
+        {},
+        (resData)=>{
+           if(resData.length > 0) {
+               displayTpl("dolibarr-notes-container");
+               textArea.focus();
+               textArea.placeholder = browser.i18n.getMessage("WriteComment");
+               // Get all notes
+               dolLib.refreshComments(tabs, accountEmail, msgId);
+           }
+        });
+
+
+    sendCommentBTN.addEventListener('click', function() {
+        if(textArea.value.length > 0){
+
+            // TODO : add feedback animation see Dolibarr experimental Doc
+
+            // Add new note
+            dolLib.callDolibarrApi(
+                'crmclientconnector/emailusermsgs',
+                {},
+                'POST',
+                JSON.stringify({
+                    emailAccount: accountEmail,
+                    emailMsgId:msgId,
+                    message : textArea.value
+                }),
+                (resData)=>{
+                    textArea.value = ''; // clear input
+                    dolLib.refreshComments(tabs, accountEmail, msgId);
+            }, (err)=>{
+                // TODO manage error
+                //     console.log(err);
+                //     document.getElementById('dolibarr-note-input-errors').innerText = err.message;
+            });
+        }
+    })
 }

@@ -80,7 +80,25 @@
     "description": "Options"
   },
   "SeeModuleDoc" :{
-    "message": "Consulter la page de doc des modules",
+    "message": "Check out the module documentation page",
     "description": "Options"
+  },
+  "dolibarrOptMainBtnDisplay" :{
+    "message": "Dolibarr button display mode",
+    "description": "Options"
+  },
+  "dolibarrOptMainBtnDisplayOptionMenu" :{
+    "message": "Email menu (default)",
+    "description": "Options"
+  },
+  "dolibarrOptMainBtnDisplayOptionTopBar" :{
+    "message": "Top Thunderbird Bar",
+    "description": "Options"
+  },
+  "PleaseSelectAnEmailBefore" :{
+    "message": "Please select an email"
+  },
+  "DoubleClickToDelete" :{
+    "message": "Double click to delete"
   }
 }

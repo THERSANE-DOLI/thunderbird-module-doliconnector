@@ -9,9 +9,12 @@
 
 <body>
 <div class="grid-container">
-
 	<div id="check-module-config" class="hidden-field alert alert-warning">
 		__MSG_CheckYourModuleConfig__
+	</div>
+
+	<div id="default-page" class="hidden-field">
+		<h4>__MSG_PleaseSelectAnEmailBefore__</h4>
 	</div>
 
 	<div id="main-popup" class="hidden-field">
@@ -24,6 +27,20 @@
 				</td>
 			</tr>
 		</table>
+
+		<div id="dolibarr-notes-container" class="hidden-field">
+			<div id="dolibarr-notes-list-container" class="mail-msg-box-list" ></div>
+			<div class="dolibarr-form-box" >
+				<div class="dolibarr-form-box__body" >
+					<textarea class="dolibarr-textarea" id="dolibarr-note-input" placeholder="__MSG_WriteComment__"></textarea>
+
+					<div id="dolibarr-note-input-errors" class="inputs-errors" ></div>
+				</div>
+				<div class="dolibarr-form-box__footer" >
+					<button id="send-comment" type="button" class="btn --submit" >__MSG_Submit__</button>
+				</div>
+			</div>
+		</div>
 
 		<div id="soc-infos">
 			<div id="soc-not-found-tpl" class="hidden-field" >

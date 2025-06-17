@@ -1,9 +1,73 @@
 @import "dolicons/css/dolicon.css";
 
+:root{
+
+	--color-white: #fff;
+	--text-sm: .875rem;
+	--color-gray-900: #111827;
+	--spacing: .25rem;
+	--webkit-text-size-adjust: 100%;
+	--text-xs: .75rem;
+	--text-xs--line-height: calc(1/.75);
+	--text-sm: .875rem;
+	--text-sm--line-height: calc(1.25/.875);
+	--text-base: 1rem;
+	--text-base--line-height: calc(1.5/1);
+	--text-lg: 1.125rem;
+	--text-lg--line-height: calc(1.75/1.125);
+	--text-xl: 1.25rem;
+	--text-xl--line-height: calc(1.75/1.25);
+
+	--color-blue-50: #eff6ff;
+	--color-blue-100: #dbeafe;
+	--color-blue-200: #bfdbfe;
+	--color-blue-300: #93c5fd;
+	--color-blue-400: #60a5fa;
+	--color-blue-500: #3b82f6;
+	--color-blue-600: #2563eb;
+	--color-blue-700: #1d4ed8;
+	--color-blue-800: #1e40af;
+	--color-blue-900: #1e3a8a;
+
+	--color-delete: #8a1e1e;
+
+	--color-gray-50: #f9fafb;
+	--color-gray-100: #f3f4f6;
+	--color-gray-200: #e5e7eb;
+	--color-gray-300: #d1d5db;
+	--color-gray-400: #9ca3af;
+	--color-gray-500: #6b7280;
+	--color-gray-600: #4b5563;
+	--color-gray-700: #374151;
+	--color-gray-800: #1f2937;
+	--color-gray-900: #111827;
+	--tw-shadow: 0 0 #0000;
+
+	--font-weight-thin: 100;
+	--font-weight-extralight: 200;
+	--font-weight-light: 300;
+	--font-weight-normal: 400;
+	--font-weight-medium: 500;
+	--font-weight-semibold: 600;
+	--font-weight-bold: 700;
+	--font-weight-extrabold: 800;
+	--font-weight-black: 900;
+
+	--radius-xs: .125rem;
+	--radius-sm: .25rem;
+	--radius-md: .375rem;
+	--radius-lg: .5rem;
+	--radius-xl: .75rem;
+	--radius-2xl: 1rem;
+	--radius-3xl: 1.5rem;
+	--radius-4xl: 2rem;
+}
 
 * {
 	box-sizing: border-box;
 }
+
+
 
 .dol-input{
 	color : rgb(35, 38, 44);
@@ -186,4 +250,204 @@ details.dolibarr-connector-detail > :where(div,p) {
 	background-color: #2f63ff;
 	border: 1px solid #1a566f;
 	color: #fff;
+}
+
+.dolibarr-textarea{
+	width: 100%;
+
+
+	tab-size: 4;
+	-webkit-tap-highlight-color: transparent;
+	-webkit-font-smoothing: antialiased;
+	box-sizing: border-box;
+	border: 0 solid;
+	margin: 0;
+	font: inherit;
+	font-feature-settings: inherit;
+	font-variation-settings: inherit;
+	letter-spacing: inherit;
+	opacity: 1;
+	resize: vertical;
+	appearance: none;
+	border-color: var(--color-gray-500);
+	border-radius: 0;
+	padding: .5rem .75rem;
+	width: 100%;
+	border-width: 0;
+	background-color: var(--color-white);
+	padding-inline: calc(var(--spacing)*0);
+	font-size: var(--text-sm);
+	line-height: var(--text-sm--line-height);
+	color: var(--color-gray-900);
+}
+
+.dolibarr-textarea:focus{
+	outline: none !important;
+}
+
+.mail-msg-box-list .dolibarr-textarea{
+	display: block;
+	background-color: #e0bcff;
+	padding: 10px;
+	border-radius: 5px;
+	resize: none;
+	field-sizing:content;
+}
+.autosize{
+	overflow-y: hidden;
+	resize: vertical;
+}
+
+.mail-msg-box-list {
+	display: block;
+	position: relative;
+}
+.mail-msg-box-list:before {
+	content: '';
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 2px;
+	background: #f1f1f1;
+	left: 15px;
+	margin: 0;
+	border-radius: 2px;
+	z-index: -1;
+}
+
+.mail-msg-box-list .dolibarr-textarea:hover{
+	resize: vertical;
+}
+
+.dolibarr-form-box {
+	padding: 0;
+	border-width: 1px;
+	border-color: var(--color-gray-200);
+	border-style: solid;
+	border-radius: var(--radius-lg);
+	width: 100%;
+	background-color: var(--color-gray-50);
+}
+
+.dolibarr-form-box__body {
+	padding: calc(var(--spacing) * 2);
+	background-color: var(--color-white);
+	border-top-left-radius: var(--radius-lg);
+	border-top-right-radius: var(--radius-lg);
+}
+
+
+.dolibarr-form-box__footer {
+	display: flex;
+	padding: calc(var(--spacing) * 2);
+	justify-content: space-between;
+	align-items: center;
+	border-color: var(--color-gray-200);
+
+}
+.btn.--submit{
+	color: var(--color-white);
+	font-weight: 600;
+	font-size: var(--text-xs);
+	line-height: var(--text-xs--line-height);
+	text-align: center;
+	padding: calc(var(--spacing) * 1.5);
+	padding-inline: calc(var(--spacing) * 4);
+	border: none;
+	border-radius: var(--radius-lg);
+	align-items: center;
+	cursor: pointer;
+}
+.btn.--submit:focus {
+	outline: 2px solid rgba(15, 128, 215, 0.29);
+}
+.dolibarr-btn-primary:focus{
+	outline: 4px solid #BFDBFE8D;
+}
+
+.dolibarr-btn-primary:hover{
+	background-color: var(--color-blue-800);
+}
+
+.inputs-errors:empty{
+	display: none;
+}
+.inputs-errors{
+	color: darkred;
+}
+
+.mail-msg-box__img_user{
+	max-width: 100%;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+}
+
+.mail-msg-box {
+	position: relative;
+	margin-bottom: 10px;
+	width: 100%;
+	/** FLEX */
+	display: flex;
+	gap: 10px;
+}
+
+.mail-msg-box__img{
+	display: block;
+}
+
+.mail-msg-box__message{
+	position: relative;
+	display: block;
+	width: 500px;
+	max-width: 100%;
+	flex-grow: 10;
+}
+
+
+.time_date {
+	color: #747474;
+	display: block;
+	font-size: 10px;
+	margin: 3px 0 0;
+	text-align: right;
+}
+
+.action-btn-list {
+	display: block;
+	position: absolute;
+	right: 0;
+	top:0;
+	opacity: 0;
+	transition: opacity 0.5s;
+	text-align: right;
+	background-color: #ffffff;
+	padding: 3px;
+	border-radius: 0 0 0 5px;
+	cursor: pointer;
+	line-height: 16px;
+}
+.mail-msg-box:hover .action-btn-list {
+	opacity: 1;
+}
+
+.btn-tiny-action-icon {
+	height: 16px;
+	max-width: 24px;
+	color: #94acc2;
+	vertical-align: center;
+	fill: currentColor;
+}
+
+.btn-tiny-action{
+	min-height: 16px;
+	background-color: #fff;
+	border: 0px solid #94acc2;
+	color : #94acc2;
+	cursor: pointer;
+}
+
+
+.btn-tiny-action.--delete-btn {
+	color : var(--color-delete);
 }
