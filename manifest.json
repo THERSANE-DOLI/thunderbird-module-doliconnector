@@ -12,13 +12,13 @@
   "optional_permissions": [
     "<all_urls>"
   ],
-  "version": "1.9",
+  "version": "1.9.0",
   "author": "THERSANE",
   "homepage_url": "https://www.thersane.fr",
   "browser_specific_settings": {
     "gecko": {
       "id": "doli.connector@therane.fr",
-      "strict_min_version": "128"
+      "strict_min_version": "128.0"
     }
   },
   "message_display_action": {
