@@ -1,39 +1,6 @@
 // background.js (ES module)
 import * as dolLib from '../global.lib.js';
 
-// Register the message display script for all newly opened message tabs.
-messenger.messageDisplayScripts.register({
-    js: [{ file: "messageDisplay/message-content-script.js" }],
-    css: [{ file: "messageDisplay/message-content-styles.css" }],
-});
-
-// Inject script and CSS in all already open message tabs.
-let openTabs = await messenger.tabs.query();
-let messageTabs = openTabs.filter(
-    tab => ["mail", "messageDisplay"].includes(tab.type)
-);
-for (let messageTab of messageTabs) {
-    // Make sure the tab is displaying a single message. The mail tab could also
-    // display a content page or multiple messages, which will cause an error.
-    if (messageTab.type == "mail") {
-        let messages = await browser.messageDisplay.getDisplayedMessages(
-            messageTab.id
-        );
-        if (messages.length != 1) {
-            continue;
-        }
-    }
-    browser.tabs.executeScript(messageTab.id, {
-        file: "messageDisplay/message-content-script.js"
-    });
-    browser.tabs.insertCSS(messageTab.id, {
-        file: "messageDisplay/message-content-styles.css"
-    });
-}
-
-
-
-
 browser.runtime.onMessage.addListener(async (message, sender) => {
     if (message.type === "getEmailAccount") {
         try {
