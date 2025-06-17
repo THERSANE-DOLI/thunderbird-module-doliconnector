@@ -7,18 +7,20 @@
     "storage",
     "messagesRead",
     "activeTab",
-    "accountsRead"
+    "accountsRead",
+    "messagesModify",
+    "sensitiveDataUpload"
   ],
   "optional_permissions": [
     "<all_urls>"
   ],
-  "version": "1.8",
+  "version": "1.8.0",
   "author": "THERSANE",
   "homepage_url": "https://www.thersane.fr",
   "browser_specific_settings": {
     "gecko": {
       "id": "doli.connector@therane.fr",
-      "strict_min_version": "91.0"
+      "strict_min_version": "128"
     }
   },
   "message_display_action": {
