@@ -6,13 +6,12 @@
   "permissions": [
     "storage",
     "messagesRead",
-    "activeTab",
     "accountsRead"
   ],
   "optional_permissions": [
     "<all_urls>"
   ],
-  "version": "1.9.1",
+  "version": "1.9.2",
   "author": "THERSANE",
   "homepage_url": "https://www.thersane.fr",
   "browser_specific_settings": {
