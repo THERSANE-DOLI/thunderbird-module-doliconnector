@@ -62,7 +62,6 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         }, 'GET', {}, (resData)=>{
 
             resData = resData.pop();
-          
 
             if(parseInt(resData.socid) > 0){
 
@@ -130,28 +129,30 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     }
 
     async function getExcludedDomains(){
+        try {
+            let domains = await fetch(browser.runtime.getURL("exclude-domains.json"))
+                .then(response => response.json())
+                .catch(error => console.error("Erreur de chargement du JSON :", error));
 
-        let domains = await fetch(browser.runtime.getURL("exclude-domains.json"))
-            .then(response => response.json())
-            .catch(error => console.error("Erreur de chargement du JSON :", error));
+            let apiDomain = await new Promise((resolve, reject) => {
 
-        let apiDomain =  new Promise((resolve, reject) => {
+                // TODO add cache
+                dolLib.callDolibarrApi('crmclientconnector/excludeddomains', {
+                    sqlfilters: "(t.active:=:1)"
+                }, 'GET', {}, (resData)=>{
+                    resolve(resData);
+                }, (err) => {
+                    reject("fail call API crmclientconnector/excludeddomains or nothing into");
+                },true);
+            }).then((domainList) => {
+                domains = domains.concat(domainList);
+            });
 
-            // TODO add cache
-            dolLib.callDolibarrApi('crmclientconnector/excludeddomains', {
-                sqlfilters: "(t.active:=:1)"
-            }, 'GET', {}, (resData)=>{
-                resolve(resData);
-            }, (err) => {
-                reject("fail");
-            },true);
-        });
-
-        await apiDomain.then((domainList) => {
-            domains = domains.concat(domainList);
-        });
-
-        return domains;
+            return domains;
+        } catch (error) {
+            console.error("Erreur dans getExcludedDomains :", error);
+            return []; // Retourne un tableau vide en cas d’erreur
+        }
     }
 
 

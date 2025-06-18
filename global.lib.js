@@ -258,7 +258,7 @@ export function parseName(fullName) {
 
     } else {
         person.lastName = ""
-        person.firstName = obj.name
+        person.firstName = fullName
     }
 
     return person
