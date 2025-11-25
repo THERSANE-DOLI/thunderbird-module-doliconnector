@@ -4,6 +4,14 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+.mail-msg-box__img_user{
+    max-width: 100%;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+
 .doli-box {
     background-color: #FFFDE7;
     border: 1px solid #FFF59D;
@@ -48,10 +56,11 @@
 }
 
 .doli-icon-circle {
+    margin-top: 5px;
     background: white;
     border: 1px solid #FFF9C4;
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     display: flex;
     align-items: center;

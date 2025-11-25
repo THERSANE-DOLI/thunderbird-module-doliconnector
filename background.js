@@ -18,7 +18,22 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
 
         return { email: null };
     }
+
+    if (message.action === "openDolibarr") {
+        // Dans le cas d'une ouverture depuis le mail il faut récupérer les infos de la tab source d'ouverture et les envoyer à la popup
+        let tabId = sender.tab.id;
+        let message = await browser.messageDisplay.getDisplayedMessage(tabId);
+        await browser.storage.local.set({dolibarrMsg: message});
+
+        browser.windows.create({
+            url: browser.runtime.getURL("messagePopup/popup.html"),
+            type: "popup",
+            width: 600,
+            height: 500
+        });
+    }
 });
+
 
 browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
 
@@ -84,7 +99,15 @@ browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
                 if (document.body) { document.body.prepend(div); }
                 else if (document.documentElement) { document.documentElement.prepend(div); }
                 console.log("Div injecté avec succès");
+                
+                document.addEventListener("click", (ev) => {
+                  if (ev.target && ev.target.id === "doli-open-btn") {
+                    browser.runtime.sendMessage({action: "openDolibarr"});
+                  }
+                });
             })();
+            
+            
         `
             });
 
@@ -97,32 +120,46 @@ browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
 
 function renderDolibarrBox(messages) {
 
-        let doliData = {
-            found: true,
-            company: "Nom Société",
-            totalEvents: messages.length,
-            lastNote: messages.length > 0 ? messages[messages.length -1] : false
-        };
+    let doliData = {
+        found: true,
+        company: "Nom Société",
+        totalEvents: messages.length,
+        lastNote: messages.length > 0 ? messages[messages.length -1] : false
+    };
 
-        if(doliData.lastNote) {
-            doliData.lastNote.dateLocal = new Date(parseInt(doliData.lastNote.date_creation) * 1000).toLocaleString(undefined, {
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false // mettre true si tu veux AM/PM
-            });
-        }
+    if(doliData.lastNote) {
+        doliData.lastNote.dateLocal = new Date(parseInt(doliData.lastNote.date_creation) * 1000).toLocaleString(undefined, {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false // mettre true si tu veux AM/PM
+        });
+    }
 
-        // Icone SVG simplifiée
-        const noteIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`;
+    // Icone SVG simplifiée
+    let noteIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`;
 
-        const lastNoteContent = doliData.lastNote
-            ? `<div class="doli-last-note">"${doliData.lastNote.message}"</div>
-                <div class="doli-meta">${doliData.lastNote.user_full_name} - ${doliData.lastNote.dateLocal}</div>
-            `
-            : `<div class="doli-last-note" style="color:#999">Aucun historique récent.</div>`;
+    if(typeof doliData.lastNote.user_mail_hash !== undefined) {
+        noteIcon = `
+          <div class="mail-msg-box__img">
+            <img 
+              src="https://www.gravatar.com/avatar/${doliData.lastNote.user_mail_hash}?d=identicon" 
+              class="mail-msg-box__img_user" 
+              title="${doliData.lastNote.user_full_name}"
+            >
+          </div>
+        `;
+    }
+
+    const lastNoteContent = doliData.lastNote
+        ? `<div class="doli-last-note">"${doliData.lastNote.message}"</div>
+            <div class="doli-meta">${doliData.lastNote.user_full_name} - ${doliData.lastNote.dateLocal}</div>
+        `
+        : `<div class="doli-last-note" style="color:#999">${browser.i18n.getMessage("NoCommentHistory")}.</div>`;
+
+
 
     return `
       <div class="doli-box">
@@ -138,11 +175,11 @@ function renderDolibarrBox(messages) {
               </div>
            </div>
         </div>
-        <!-- <div class="doli-actions">
+        <div class="doli-actions">
            <button id="doli-open-btn" class="doli-btn-history">
-              Voir l'historique
+              ${browser.i18n.getMessage("Comments")} &nbsp;
               ${doliData.totalEvents > 0 ? `<span class="doli-counter">${doliData.totalEvents}</span>` : ''}
-           </button> -->
+           </button>
         </div>
       </div>
     `;

@@ -107,6 +107,9 @@
   "Comments" :{
     "message": "Commentaires"
   },
+  "NoCommentHistory" :{
+    "message": "Aucun historique récent"
+  },
   "Submit" :{
     "message": "Envoyer"
   },
