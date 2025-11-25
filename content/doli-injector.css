@@ -1,0 +1,122 @@
+/* css/doli-injector.css */
+.doli-banner-container {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.doli-box {
+    background-color: #FFFDE7;
+    border: 1px solid #FFF59D;
+    border-left: 4px solid #FBC02D;
+    border-radius: 0 6px 6px 0;
+    padding: 3px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.doli-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.doli-badge {
+    background-color: #FBC02D;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.doli-company {
+    font-weight: bold;
+    color: #333;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.doli-content-wrapper {
+    display: flex;
+    gap: 10px;
+    flex: 1;
+}
+
+.doli-icon-circle {
+    background: white;
+    border: 1px solid #FFF9C4;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.doli-last-note {
+    background-color: rgba(255, 253, 231, 0.8);
+    border: 1px solid #FFF9C4;
+    padding: 0px;
+    border-radius: 4px;
+    font-style: italic;
+    color: #444;
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+.doli-meta {
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 2px;
+}
+
+.doli-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    margin-left: 15px;
+}
+
+.doli-btn-history {
+    background: white;
+    border: 1px solid #FBC02D;
+    color: #7F5C09;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.doli-btn-history:hover {
+    background-color: #FFFDE7;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.doli-counter {
+    background-color: #EF4444;
+    color: white;
+    font-size: 9px;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    border: 1px solid white;
+}
