@@ -1,18 +1,91 @@
 import * as dolLib from '../global.lib.js';
+import * as cryptoLib from '../crypto.lib.js';
 
-import {jsonToTable, searchPhonesInString} from "../global.lib.js";
+import {jsonToTable, searchPhonesInString, sanitizeEmail, sanitizeDomain} from "../global.lib.js";
 
-    async function getEmailAccountFromBackground(messageId) {
-        const response = await browser.runtime.sendMessage({
-            type: "getEmailAccount",
-            messageId
+async function getEmailAccountFromBackground(messageId) {
+    const response = await browser.runtime.sendMessage({
+        type: "getEmailAccount",
+        messageId
+    });
+
+    return response.email;
+}
+
+/**
+ * Afficher l'écran de déverrouillage
+ */
+async function showUnlockScreen(configData) {
+        displayTpl("unlock-screen");
+        
+        const unlockButton = document.getElementById("unlock-button");
+        const passwordInput = document.getElementById("unlock-password-input");
+        const errorDiv = document.getElementById("unlock-error");
+        
+        // Permettre de valider avec Entrée
+        passwordInput.addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                unlockButton.click();
+            }
         });
+        
+        unlockButton.addEventListener("click", async function() {
+            const password = passwordInput.value;
+            errorDiv.textContent = "";
+            
+            if (!password || password.length === 0) {
+                errorDiv.textContent = browser.i18n.getMessage("MasterPasswordPlaceholder");
+                return;
+            }
+            
+            try {
+                // Tenter de déchiffrer la clé API pour valider le mot de passe
+                await cryptoLib.decryptData(configData.dolibarrApiKey, password);
+                
+                // Si réussi, stocker le mot de passe en cache
+                dolLib.setMasterPassword(password);
+                
+                // Masquer l'écran de déverrouillage
+                document.getElementById("unlock-screen").classList.add("hidden-field");
+                
+                // Recharger la popup
+                window.location.reload();
+            } catch (error) {
+                errorDiv.textContent = browser.i18n.getMessage("WrongPassword");
+                passwordInput.value = "";
+                passwordInput.focus();
+            }
+        });
+        
+        passwordInput.focus();
+}
 
-        return response.email;
-    }
-
+// Fonction principale async
+(async function initPopup() {
     // first need to translate page before add dom events
     dolLib.localizeHtmlPage();
+    
+    // Vérifier si un mot de passe maître est requis
+    let configData = await browser.storage.local.get({
+        useMasterPassword: false,
+        dolibarrApiKey: ''
+    });
+    
+    console.log('[Dolibarr Popup Debug] Configuration:', {
+        useMasterPassword: configData.useMasterPassword,
+        hasApiKey: !!configData.dolibarrApiKey,
+        apiKeyType: typeof configData.dolibarrApiKey,
+        hasMasterPasswordInCache: !!dolLib.getMasterPassword()
+    });
+    
+    // Si un mot de passe maître est requis et pas encore entré
+    if (configData.useMasterPassword && !dolLib.getMasterPassword()) {
+        console.log('[Dolibarr Popup Debug] Mot de passe maître requis - affichage écran déverrouillage');
+        await showUnlockScreen(configData);
+        return; // Arrêter l'exécution jusqu'au déverrouillage
+    }
+    
+    console.log('[Dolibarr Popup Debug] Pas de mot de passe requis ou déjà déverrouillé - chargement normal');
 
     // The user clicked our button, get the active tab in the current window using
     // the tabs API.
@@ -54,11 +127,20 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
         // Get contact infos
 
+        // Sécuriser l'email contre les injections SQL
+        const safeAuthorEmail = sanitizeEmail(authorEmail);
+        
+        if (!safeAuthorEmail) {
+            console.error('[Dolibarr Security] Email invalide, recherche annulée');
+            setSocInfos({});
+            return;
+        }
+        
         dolLib.callDolibarrApi('contacts', {
             limit : 5,
             sortfield: 't.rowid',
             sortorder: 'DESC',
-            sqlfilters: "(t.email:like:'"+authorEmail+"')"
+            sqlfilters: "(t.email:like:'"+safeAuthorEmail+"')"
         }, 'GET', {}, (resData)=>{
 
             resData = resData.pop();
@@ -93,12 +175,21 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
 
     function searchThirdpartiesAndPopulateByEmail(authorEmail){
+        // Sécuriser l'email contre les injections SQL
+        const safeAuthorEmail = sanitizeEmail(authorEmail);
+        
+        if (!safeAuthorEmail) {
+            console.error('[Dolibarr Security] Email invalide, recherche annulée');
+            setSocInfos({});
+            return;
+        }
+        
         // console.error(msg);
         dolLib.callDolibarrApi('thirdparties', {
             limit : 1,
             sortfield: 't.rowid',
             sortorder: 'DESC',
-            sqlfilters: "(t.email:like:'"+authorEmail+"')"
+            sqlfilters: "(t.email:like:'"+safeAuthorEmail+"')"
         }, 'GET', {}, (resData)=>{
             console.log("searchThirdpartiesAndPopulateByEmail found ");
             resData = resData.pop();
@@ -160,6 +251,16 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         console.log("search for same domain soc");
 
         let emailDomain = authorEmail.split('@').pop();
+        
+        // Sécuriser le domaine contre les injections SQL
+        const safeDomain = sanitizeDomain(emailDomain);
+        
+        if (!safeDomain) {
+            console.error('[Dolibarr Security] Domaine invalide, recherche annulée');
+            setSocInfos({});
+            return;
+        }
+        
         getExcludedDomains().then(emailPublicDomains => {
             if(!emailPublicDomains.includes(emailDomain.toLowerCase())){
                 console.log("not public email " + emailDomain);
@@ -169,7 +270,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                     limit : 5,
                     sortfield: 't.rowid',
                     sortorder: 'DESC',
-                    sqlfilters: "(t.email:like:'%@"+emailDomain+"')"
+                    sqlfilters: "(t.email:like:'%@"+safeDomain+"')"
                 }, 'GET', {}, (resData)=>{
                     resData = resData.pop();
                     console.log("searchThirdpartieAndPopulateByEmailDomain found ");
@@ -724,3 +825,5 @@ async function initNotesForMessage(){
         }
     })
 }
+
+})(); // Fin de la fonction initPopup IIFE

@@ -1,5 +1,6 @@
 // background.js (ES module)
 import * as dolLib from '../global.lib.js';
+import { sanitizeId } from '../global.lib.js';
 
 browser.runtime.onMessage.addListener(async (message, sender) => {
     if (message.type === "getEmailAccount") {
@@ -22,10 +23,18 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
 
 browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
 
-
-    let config = await browser.storage.local.get({dolibarrUseNotes: false});
+    let config = await browser.storage.local.get({
+        dolibarrUseNotes: false,
+        useMasterPassword: false
+    });
 
     if (!config.dolibarrUseNotes) {
+        return;
+    }
+    
+    // Si un mot de passe maître est requis et pas encore fourni, ne pas appeler l'API
+    if (config.useMasterPassword && !dolLib.getMasterPassword()) {
+        console.log('[Dolibarr Background] Mot de passe maître requis - skip API call');
         return;
     }
 
@@ -51,9 +60,19 @@ browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
     // Get all notes
     dolLib.updateBadgeMessageDisplayAction(tab,0);
     dolLib.callDolibarrApi('crmclientconnector/emaillinks/quicksearch', {accountEmail: accountEmail.email, msgId: msgId}, 'GET', {}, (resData)=>{
-        dolLib.callDolibarrApi('crmclientconnector/emailusermsgs', {sqlfilters: `(fk_email_link:=:${resData.id})`}, 'GET', {}, (resDataMsg)=>{
+        // Sécuriser l'ID contre les injections SQL
+        const safeEmailLinkId = sanitizeId(resData.id);
+        
+        if (safeEmailLinkId === 0) {
+            console.error('[Dolibarr Security] ID invalide reçu de l\'API');
+            return;
+        }
+        
+        dolLib.callDolibarrApi('crmclientconnector/emailusermsgs', {sqlfilters: `(fk_email_link:=:${safeEmailLinkId})`}, 'GET', {}, (resDataMsg)=>{
             dolLib.updateBadgeMessageDisplayAction(tab, resDataMsg.length);
         });
+    }, (error) => {
+        console.log('[Dolibarr Background] Erreur API:', error);
     });
 });
 

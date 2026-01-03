@@ -1,6 +1,35 @@
-document.addEventListener("DOMContentLoaded", restoreOptions);
+// Importer le module de chiffrement
+import * as cryptoLib from '../crypto.lib.js';
+import { localizeHtmlPage } from '../global.lib.js';
 
-document.getElementById("save-dolibarr-options").addEventListener("click", saveOptions);
+// Attendre que le DOM soit chargé avant d'initialiser
+document.addEventListener("DOMContentLoaded", function() {
+	// Localiser la page
+	localizeHtmlPage();
+	
+	// Charger les options sauvegardées
+	restoreOptions();
+	
+	// Ajouter le listener pour le bouton de sauvegarde
+	document.getElementById("save-dolibarr-options").addEventListener("click", saveOptions);
+	
+	// Gérer l'affichage des champs de mot de passe maître
+	document.getElementById("use-master-password").addEventListener("change", function() {
+		const masterPasswordRow = document.getElementById("master-password-row");
+		const confirmPasswordRow = document.getElementById("confirm-password-row");
+		
+		if (this.checked) {
+			masterPasswordRow.style.display = "table-row";
+			confirmPasswordRow.style.display = "table-row";
+		} else {
+			masterPasswordRow.style.display = "none";
+			confirmPasswordRow.style.display = "none";
+			document.getElementById("master-password").value = "";
+			document.getElementById("confirm-master-password").value = "";
+			document.getElementById("password-error").textContent = "";
+		}
+	});
+});
 
 
 
@@ -23,8 +52,23 @@ function restoreOptions() {
         console.log(`Error: ${error}`);
     }
 
-    function setCurrentChoice(data) {
-		document.getElementById("dolibarr-api-key").value = data.dolibarrApiKey;
+    async function setCurrentChoice(data) {
+		// Gérer la clé API (peut être chiffrée ou en clair pour migration)
+		let apiKeyValue = '';
+		if (data.dolibarrApiKey) {
+			// Vérifier si la clé est chiffrée
+			if (cryptoLib.isEncrypted(data.dolibarrApiKey)) {
+				// La clé est chiffrée, on affiche juste un placeholder
+				apiKeyValue = '••••••••••••••••'; // Ne pas afficher la clé chiffrée
+				document.getElementById("label-api-key-encrypted-info").textContent = 
+					browser.i18n.getMessage("ApiKeyWillBeEncrypted");
+			} else {
+				// Ancienne clé en clair (pour migration)
+				apiKeyValue = data.dolibarrApiKey;
+			}
+		}
+		
+		document.getElementById("dolibarr-api-key").value = apiKeyValue;
 		document.getElementById("dolibarr-api-url").value = data.dolibarrApiUrl;
 		document.getElementById("dolibarr-api-entity").value = data.dolibarrApiEntity;
 		document.getElementById("dolibarr-propal-canceled").checked = data.dolibarrPropalCanceled;
@@ -35,6 +79,17 @@ function restoreOptions() {
 		document.getElementById("dolibarr-propal-billed").checked = data.dolibarrPropalBilled;
 		document.getElementById("dolibarr-search-domain").checked = data.dolibarrSearchDomain;
 		document.getElementById("dolibarr-use-notes").checked = data.dolibarrUseNotes;
+		document.getElementById("dolibarr-use-gravatar").checked = data.dolibarrUseGravatar;
+		
+		// Gérer le mot de passe maître
+		const useMasterPassword = data.useMasterPassword || false;
+		document.getElementById("use-master-password").checked = useMasterPassword;
+		
+		// Déclencher l'événement pour afficher/masquer les champs
+		if (useMasterPassword) {
+			document.getElementById("master-password-row").style.display = "table-row";
+			document.getElementById("confirm-password-row").style.display = "table-row";
+		}
 	}
 
 
@@ -56,6 +111,17 @@ function restoreOptions() {
     document.getElementById("label-for-link-to-modules-doc").textContent = browser.i18n.getMessage("SeeModuleDoc");
     document.getElementById("label-for-dolibarr-use-notes").textContent = browser.i18n.getMessage("DolibarrUseNotes");
     document.getElementById("label-for-dolibarr-use-notes_desc").textContent = browser.i18n.getMessage("DolibarrUseNotesDesc");
+    document.getElementById("label-for-dolibarr-use-gravatar").textContent = browser.i18n.getMessage("DolibarrUseGravatar");
+    document.getElementById("label-for-dolibarr-use-gravatar_desc").textContent = browser.i18n.getMessage("DolibarrUseGravatarDesc");
+    
+    // Traductions pour la sécurité
+    document.getElementById("security-options-title").textContent = browser.i18n.getMessage("SecurityOptions");
+    document.getElementById("label-for-use-master-password").textContent = browser.i18n.getMessage("UseMasterPassword");
+    document.getElementById("label-for-use-master-password_desc").textContent = browser.i18n.getMessage("UseMasterPasswordDesc");
+    document.getElementById("label-for-master-password").textContent = browser.i18n.getMessage("MasterPassword");
+    document.getElementById("master-password").placeholder = browser.i18n.getMessage("MasterPasswordPlaceholder");
+    document.getElementById("label-for-confirm-master-password").textContent = browser.i18n.getMessage("ConfirmMasterPassword");
+    document.getElementById("confirm-master-password").placeholder = browser.i18n.getMessage("MasterPasswordPlaceholder");
 
 
 
@@ -71,7 +137,9 @@ function restoreOptions() {
 		dolibarrPropalNotSigned:  false,
 		dolibarrPropalBilled:  false,
 		dolibarrUseNotes:  false,
-		dolibarrSearchDomain:  false
+		dolibarrSearchDomain:  false,
+		dolibarrUseGravatar:  false,
+		useMasterPassword:  false
     }).then(setCurrentChoice, onError);
 }
 
@@ -82,11 +150,59 @@ function isInputType(node, type) {
 }
 
 
-function saveOptions(e) {
+async function saveOptions(e) {
     e.preventDefault();
+    
+    const useMasterPassword = document.getElementById("use-master-password").checked;
+    const password1 = document.getElementById("master-password").value;
+    const password2 = document.getElementById("confirm-master-password").value;
+    const passwordError = document.getElementById("password-error");
+    
+    // Vérifier les mots de passe si l'option est activée
+    if (useMasterPassword) {
+        if (password1.length === 0) {
+            passwordError.textContent = browser.i18n.getMessage("MasterPasswordPlaceholder");
+            return;
+        }
+        
+        if (password1 !== password2) {
+            passwordError.textContent = browser.i18n.getMessage("PasswordsDontMatch");
+            return;
+        }
+        
+        if (password1.length < 6) {
+            passwordError.textContent = "Mot de passe trop court (minimum 6 caractères)";
+            return;
+        }
+    }
+    
+    passwordError.textContent = "";
+    
+    // Récupérer la clé API
+    let apiKeyValue = document.getElementById("dolibarr-api-key").value;
+    
+    // Ne pas sauvegarder si c'est le placeholder
+    if (apiKeyValue === '••••••••••••••••') {
+        // Récupérer l'ancienne valeur chiffrée
+        const oldData = await browser.storage.local.get({dolibarrApiKey: ''});
+        apiKeyValue = oldData.dolibarrApiKey;
+    } else if (apiKeyValue && apiKeyValue.length > 0) {
+        // Chiffrer la nouvelle clé API
+        try {
+            const encryptedKey = await cryptoLib.encryptData(
+                apiKeyValue,
+                useMasterPassword ? password1 : null
+            );
+            apiKeyValue = encryptedKey;
+        } catch (error) {
+            console.error("Encryption error:", error);
+            passwordError.textContent = "Erreur lors du chiffrement de la clé API";
+            return;
+        }
+    }
 
     let objToStore = {
-        dolibarrApiKey: document.getElementById("dolibarr-api-key").value,
+        dolibarrApiKey: apiKeyValue,
         dolibarrApiUrl: document.getElementById("dolibarr-api-url").value,
 		dolibarrApiEntity: document.getElementById("dolibarr-api-entity").value,
 		// dolibarrMainBtnDisplay: document.getElementById("dolibarr-toggle-main-btn-display").value,
@@ -98,7 +214,9 @@ function saveOptions(e) {
         dolibarrPropalNotSigned: document.getElementById("dolibarr-propal-notsigned").checked,
         dolibarrPropalBilled: document.getElementById("dolibarr-propal-billed").checked,
         dolibarrUseNotes: document.getElementById("dolibarr-use-notes").checked,
-        dolibarrSearchDomain: document.getElementById("dolibarr-search-domain").checked
+        dolibarrSearchDomain: document.getElementById("dolibarr-search-domain").checked,
+        dolibarrUseGravatar: document.getElementById("dolibarr-use-gravatar").checked,
+        useMasterPassword: useMasterPassword
     }
     // console.log(objToStore);
 

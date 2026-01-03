@@ -18,7 +18,10 @@
 			</tr>
 
 			<tr>
-				<td><label id="label-for-dolibarr-api-key" for="dolibarr-api-key">__MSG_dolibarrApiKey__</label></td>
+				<td>
+					<label id="label-for-dolibarr-api-key" for="dolibarr-api-key">__MSG_dolibarrApiKey__</label>
+					<br/><small id="label-api-key-encrypted-info" style="color: #27ae60;"></small>
+				</td>
 				<td><input class="dol-input" type="password" id="dolibarr-api-key" name="dolibarr-api-key" /></td>
 			</tr>
 			
@@ -49,6 +52,56 @@
 					</label>
 				</td>
 			</tr>
+
+			<tr>
+				<td>
+					<label id="label-for-dolibarr-use-gravatar" for="dolibarr-use-gravatar">__MSG_DolibarrUseGravatar__</label>
+					<br/><small id="label-for-dolibarr-use-gravatar_desc" ></small>
+				</td>
+				<td>
+					<label class="dol-input-swith" >
+						<input type="checkbox" class="dol-input" id="dolibarr-use-gravatar" name="dolibarr-use-gravatar" />
+						<span class="dol-input-slider"></span>
+					</label>
+				</td>
+			</tr>
+		</table>
+
+		<details class="dolibarr-connector-detail" style="margin-top: 20px;">
+			<summary id="security-options-title">
+				__MSG_SecurityOptions__
+			</summary>
+
+			<table class="dolibarr-table" style="margin-top: 10px;">
+				<tr>
+					<td>
+						<label id="label-for-use-master-password" for="use-master-password">__MSG_UseMasterPassword__</label>
+						<br/><small id="label-for-use-master-password_desc" ></small>
+					</td>
+					<td>
+						<label class="dol-input-swith" >
+							<input type="checkbox" class="dol-input" id="use-master-password" name="use-master-password" />
+							<span class="dol-input-slider"></span>
+						</label>
+					</td>
+				</tr>
+
+				<tr id="master-password-row" style="display: none;">
+					<td><label id="label-for-master-password" for="master-password">__MSG_MasterPassword__</label></td>
+					<td><input class="dol-input" type="password" id="master-password" name="master-password" placeholder="" /></td>
+				</tr>
+
+				<tr id="confirm-password-row" style="display: none;">
+					<td><label id="label-for-confirm-master-password" for="confirm-master-password">__MSG_ConfirmMasterPassword__</label></td>
+					<td>
+						<input class="dol-input" type="password" id="confirm-master-password" name="confirm-master-password" placeholder="" />
+						<div id="password-error" style="color: #e74c3c; font-size: 12px; margin-top: 5px;"></div>
+					</td>
+				</tr>
+			</table>
+		</details>
+
+		<table class="dolibarr-table" style="margin-top: 20px;">
 
 <!--			<tr>-->
 <!--				<td><label id="label-for-toggle-main-btn-display" for="dolibarr-toggle-main-btn-display">__MSG_dolibarrOptMainBtnDisplay__</label></td>-->
@@ -119,7 +172,7 @@
 	<button id="save-dolibarr-options" type="submit">__MSG_Save__</button>
 	<div id="save-feed-back"></div>
 	</form>
-	<script src="options.js"></script>
+	<script type="module" src="options.js"></script>
 
 </div>
 </body>
