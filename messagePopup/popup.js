@@ -65,6 +65,12 @@ async function showUnlockScreen(configData) {
     // first need to translate page before add dom events
     dolLib.localizeHtmlPage();
     
+    // Localiser le bouton de création de ticket (doit être fait avant d'afficher le bouton)
+    const createTicketBtn = document.getElementById("create-ticket-btn");
+    if (createTicketBtn) {
+        createTicketBtn.textContent = "🎫 " + browser.i18n.getMessage("CreateTicket");
+    }
+    
     // Vérifier si un mot de passe maître est requis
     let configData = await browser.storage.local.get({
         useMasterPassword: false,
@@ -319,6 +325,7 @@ async function showUnlockScreen(configData) {
 
         if(soc.id == 0 || soc.id == '' || soc.id == null){
             displayTpl("soc-not-found-tpl");
+            displayTpl("create-ticket-btn"); // Afficher le bouton de création de ticket même sans tiers
 
             let newSocieteLink= document.getElementById("new-soc-link");
             let newContactLink= document.getElementById("new-contact-link");
@@ -367,6 +374,7 @@ async function showUnlockScreen(configData) {
         }
 
         displayTpl("soc-link");
+        displayTpl("create-ticket-btn"); // Afficher le bouton de création de ticket
 
         titleDiv.textContent =  soc.name;
         let url = new URL(confDolibarUrl + "societe/card.php");
@@ -824,6 +832,122 @@ async function initNotesForMessage(){
             });
         }
     })
+}
+
+/**
+ * Créer un ticket depuis l'email actuel
+ */
+async function createTicketFromEmail() {
+    const createTicketBtn = document.getElementById("create-ticket-btn");
+    
+    // Désactiver le bouton pendant la création
+    createTicketBtn.disabled = true;
+    createTicketBtn.textContent = "⏳ " + browser.i18n.getMessage("CreateTicket") + "...";
+    
+    try {
+        // Récupérer le tiers si disponible
+        const socLink = document.getElementById("soc-link");
+        let socId = null;
+        
+        if (socLink && !socLink.classList.contains("hidden-field")) {
+            // Extraire l'ID du lien (format: /societe/card.php?socid=123)
+            const href = socLink.getAttribute("href");
+            const match = href.match(/socid=(\d+)/);
+            if (match) {
+                socId = parseInt(match[1]);
+            }
+        }
+        
+        // Préparer le corps du message
+        let messageContent = messageBody.text || messageBody.html || '';
+        
+        // Nettoyer le HTML si nécessaire
+        if (messageBody.html && !messageBody.text) {
+            // Convertir HTML en texte simple (supprimer les balises)
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = messageBody.html;
+            messageContent = tempDiv.textContent || tempDiv.innerText || '';
+        }
+        
+        // Limiter la longueur du message (Dolibarr peut avoir une limite)
+        if (messageContent.length > 5000) {
+            messageContent = messageContent.substring(0, 5000) + "\n\n[...Message tronqué...]";
+        }
+        
+        // Préparer les données du ticket
+        const ticketData = {
+            subject: message.subject || "Email sans objet",
+            message: messageContent,
+            type_code: "SUPPORT", // Type par défaut (peut être configuré)
+            category_code: "OTHER", // Catégorie par défaut
+            severity_code: "NORMAL", // Sévérité normale
+            email: authorEmail,
+            datec: Math.floor(message.date.getTime() / 1000), // Timestamp Unix
+        };
+        
+        // Ajouter le socid si disponible
+        if (socId) {
+            ticketData.socid = socId;
+        }
+        
+        console.log('[Dolibarr Ticket] Création ticket avec données:', ticketData);
+        
+        // Créer le ticket via l'API
+        dolLib.callDolibarrApi(
+            'tickets',
+            {},
+            'POST',
+            JSON.stringify(ticketData),
+            (resData) => {
+                console.log('[Dolibarr Ticket] Ticket créé:', resData);
+                
+                // Afficher un message de succès
+                createTicketBtn.textContent = "✅ " + browser.i18n.getMessage("TicketCreated");
+                createTicketBtn.style.backgroundColor = "#27ae60";
+                
+                // Réinitialiser le bouton après 3 secondes
+                setTimeout(() => {
+                    createTicketBtn.disabled = false;
+                    createTicketBtn.textContent = "🎫 " + browser.i18n.getMessage("CreateTicket");
+                    createTicketBtn.style.backgroundColor = "";
+                }, 3000);
+                
+                // Optionnel : Ouvrir le ticket dans Dolibarr
+                if (resData.id || resData) {
+                    const ticketId = resData.id || resData;
+                    const ticketUrl = confDolibarUrl + "/ticket/card.php?id=" + ticketId;
+                    console.log('[Dolibarr Ticket] URL du ticket:', ticketUrl);
+                    // On pourrait ouvrir l'URL automatiquement si souhaité
+                    // browser.windows.openDefaultBrowser(ticketUrl);
+                }
+            },
+            (error) => {
+                console.error('[Dolibarr Ticket] Erreur création ticket:', error);
+                
+                // Afficher un message d'erreur
+                createTicketBtn.textContent = "❌ " + browser.i18n.getMessage("TicketCreationError");
+                createTicketBtn.style.backgroundColor = "#e74c3c";
+                
+                // Réinitialiser le bouton après 3 secondes
+                setTimeout(() => {
+                    createTicketBtn.disabled = false;
+                    createTicketBtn.textContent = "🎫 " + browser.i18n.getMessage("CreateTicket");
+                    createTicketBtn.style.backgroundColor = "";
+                }, 3000);
+            }
+        );
+        
+    } catch (error) {
+        console.error('[Dolibarr Ticket] Erreur:', error);
+        createTicketBtn.disabled = false;
+        createTicketBtn.textContent = "🎫 " + browser.i18n.getMessage("CreateTicket");
+    }
+}
+
+// Ajouter le listener pour le bouton de création de ticket
+const createTicketBtnListener = document.getElementById("create-ticket-btn");
+if (createTicketBtnListener) {
+    createTicketBtnListener.addEventListener('click', createTicketFromEmail);
 }
 
 })(); // Fin de la fonction initPopup IIFE

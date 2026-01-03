@@ -154,5 +154,20 @@
   },
   "ApiKeyWillBeEncrypted" :{
     "message": "Votre clé API sera automatiquement chiffrée lors de la sauvegarde"
+  },
+  "CreateTicket" :{
+    "message": "Créer un ticket"
+  },
+  "TicketCreated" :{
+    "message": "Ticket créé avec succès"
+  },
+  "TicketCreationError" :{
+    "message": "Erreur lors de la création du ticket"
+  },
+  "TicketSubject" :{
+    "message": "Sujet du ticket"
+  },
+  "TicketMessage" :{
+    "message": "Message du ticket"
   }
 }

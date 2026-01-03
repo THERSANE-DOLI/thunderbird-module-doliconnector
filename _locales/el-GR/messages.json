@@ -139,5 +139,20 @@
   },
   "ApiKeyWillBeEncrypted" :{
     "message": "Το κλειδί API θα κρυπτογραφηθεί αυτόματα κατά την αποθήκευση"
+  },
+  "CreateTicket" :{
+    "message": "Δημιουργία εισιτηρίου"
+  },
+  "TicketCreated" :{
+    "message": "Το εισιτήριο δημιουργήθηκε με επιτυχία"
+  },
+  "TicketCreationError" :{
+    "message": "Σφάλμα κατά τη δημιουργία του εισιτηρίου"
+  },
+  "TicketSubject" :{
+    "message": "Θέμα εισιτηρίου"
+  },
+  "TicketMessage" :{
+    "message": "Μήνυμα εισιτηρίου"
   }
 }

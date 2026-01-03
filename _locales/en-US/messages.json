@@ -154,5 +154,20 @@
   },
   "ApiKeyWillBeEncrypted" :{
     "message": "Your API key will be automatically encrypted when saved"
+  },
+  "CreateTicket" :{
+    "message": "Create a ticket"
+  },
+  "TicketCreated" :{
+    "message": "Ticket created successfully"
+  },
+  "TicketCreationError" :{
+    "message": "Error creating ticket"
+  },
+  "TicketSubject" :{
+    "message": "Ticket subject"
+  },
+  "TicketMessage" :{
+    "message": "Ticket message"
   }
 }
