@@ -154,5 +154,24 @@
   },
   "TicketMessage" :{
     "message": "Μήνυμα εισιτηρίου"
+    "description": "Options"
+  },
+  "dolibarrOptMainBtnDisplay" :{
+    "message": "Τρόπος Εμφάνισης κουμπιού Dolibarr",
+    "description": "Options"
+  },
+  "dolibarrOptMainBtnDisplayOptionMenu" :{
+    "message": "Email μενού (Προεπιλογή)",
+    "description": "Options"
+  },
+  "dolibarrOptMainBtnDisplayOptionTopBar" :{
+    "message": "Top Thunderbird Bar",
+    "description": "Options"
+  },
+  "PleaseSelectAnEmailBefore" :{
+    "message": "Παρακαλώ επιλέξτε ενα email"
+  },
+  "DoubleClickToDelete" :{
+    "message": "Διπλό κλικ για διαγραφή"
   }
 }
