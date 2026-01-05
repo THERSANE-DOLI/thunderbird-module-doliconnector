@@ -100,5 +100,74 @@
   },
   "DoubleClickToDelete" :{
     "message": "Double click to delete"
+  },
+  "DolibarrUseNotes" :{
+    "message": "Allow viewing and adding shared notes on emails"
+  },
+  "DolibarrUseNotesDesc" :{
+    "message": "Requires the CRM client connector module installed on your Dolibarr"
+  },
+  "Comments" :{
+    "message": "Comments"
+  },
+  "Submit" :{
+    "message": "Submit"
+  },
+  "WriteComment" :{
+    "message": "Write a note or comment..."
+  },
+  "DolibarrUseGravatar" :{
+    "message": "Use Gravatar to display profile pictures"
+  },
+  "DolibarrUseGravatarDesc" :{
+    "message": "If enabled, avatars will be loaded from gravatar.com (external service)"
+  },
+  "SecurityOptions" :{
+    "message": "Security options"
+  },
+  "UseMasterPassword" :{
+    "message": "Use a master password to protect the API key"
+  },
+  "UseMasterPasswordDesc" :{
+    "message": "Recommended: Your API key will be encrypted and require a password at each startup"
+  },
+  "MasterPassword" :{
+    "message": "Master password"
+  },
+  "MasterPasswordPlaceholder" :{
+    "message": "Enter a secure password"
+  },
+  "ConfirmMasterPassword" :{
+    "message": "Confirm password"
+  },
+  "PasswordsDontMatch" :{
+    "message": "Passwords do not match"
+  },
+  "EnterMasterPassword" :{
+    "message": "Enter your master password"
+  },
+  "WrongPassword" :{
+    "message": "Wrong password"
+  },
+  "UnlockExtension" :{
+    "message": "Unlock extension"
+  },
+  "ApiKeyWillBeEncrypted" :{
+    "message": "Your API key will be automatically encrypted when saved"
+  },
+  "CreateTicket" :{
+    "message": "Create a ticket"
+  },
+  "TicketCreated" :{
+    "message": "Ticket created successfully"
+  },
+  "TicketCreationError" :{
+    "message": "Error creating ticket"
+  },
+  "TicketSubject" :{
+    "message": "Ticket subject"
+  },
+  "TicketMessage" :{
+    "message": "Ticket message"
   }
 }

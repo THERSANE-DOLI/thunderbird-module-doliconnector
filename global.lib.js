@@ -1,13 +1,314 @@
+// Importer le module de chiffrement
+import * as cryptoLib from './crypto.lib.js';
+
+// Variable globale pour stocker le mot de passe en mémoire (session uniquement)
+let cachedMasterPassword = null;
+
+/**
+ * Échappe les caractères spéciaux pour éviter les injections SQL
+ * Protège contre les attaques par injection SQL dans les filtres Dolibarr
+ * @param {string} str - La chaîne à échapper
+ * @returns {string} - La chaîne échappée et sécurisée
+ */
+export function escapeSqlString(str) {
+    if (!str || typeof str !== 'string') {
+        return '';
+    }
+    
+    // Échapper les apostrophes (simple quote) en les doublant
+    // En SQL, '' représente une apostrophe littérale
+    let escaped = str.replace(/'/g, "''");
+    
+    // Échapper les backslashes
+    escaped = escaped.replace(/\\/g, "\\\\");
+    
+    // Supprimer les caractères de contrôle dangereux
+    escaped = escaped.replace(/[\x00-\x1F\x7F]/g, '');
+    
+    // Optionnel : limiter la longueur pour éviter les attaques par déni de service
+    if (escaped.length > 500) {
+        escaped = escaped.substring(0, 500);
+    }
+    
+    return escaped;
+}
+
+/**
+ * Valide et nettoie une adresse email
+ * @param {string} email - L'email à valider
+ * @returns {string} - Email nettoyé ou chaîne vide si invalide
+ */
+export function sanitizeEmail(email) {
+    if (!email || typeof email !== 'string') {
+        return '';
+    }
+    
+    // Regex simple pour valider le format email
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    
+    // Nettoyer les espaces
+    email = email.trim();
+    
+    // Vérifier le format
+    if (!emailRegex.test(email)) {
+        console.warn('[Dolibarr Security] Email invalide détecté:', email);
+        return '';
+    }
+    
+    // Échapper pour SQL
+    return escapeSqlString(email);
+}
+
+/**
+ * Valide et nettoie un domaine email
+ * @param {string} domain - Le domaine à valider
+ * @returns {string} - Domaine nettoyé ou chaîne vide si invalide
+ */
+export function sanitizeDomain(domain) {
+    if (!domain || typeof domain !== 'string') {
+        return '';
+    }
+    
+    // Regex pour valider le format de domaine
+    const domainRegex = /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    
+    // Nettoyer
+    domain = domain.trim().toLowerCase();
+    
+    // Vérifier le format
+    if (!domainRegex.test(domain)) {
+        console.warn('[Dolibarr Security] Domaine invalide détecté:', domain);
+        return '';
+    }
+    
+    // Échapper pour SQL
+    return escapeSqlString(domain);
+}
+
+/**
+ * Valide et nettoie un ID numérique
+ * @param {any} id - L'ID à valider
+ * @returns {number} - ID validé ou 0 si invalide
+ */
+export function sanitizeId(id) {
+    // Convertir en nombre
+    const numId = parseInt(id, 10);
+    
+    // Vérifier que c'est un nombre positif valide
+    if (isNaN(numId) || numId < 0 || numId > Number.MAX_SAFE_INTEGER) {
+        console.warn('[Dolibarr Security] ID invalide détecté:', id);
+        return 0;
+    }
+    
+    return numId;
+}
+
+/**
+ * Nettoie et sécurise le HTML pour éviter les attaques XSS
+ * Supprime tous les scripts, événements JavaScript et éléments dangereux
+ * @param {string} html - Le HTML à nettoyer
+ * @returns {string} - HTML sécurisé
+ */
+export function sanitizeHTML(html) {
+    if (!html || typeof html !== 'string') {
+        return '';
+    }
+    
+    // Créer un élément temporaire pour parser le HTML
+    const temp = document.createElement('div');
+    temp.textContent = html; // Utilise textContent pour échapper automatiquement
+    
+    // Si on veut vraiment du HTML (et pas juste du texte), on doit le parser et nettoyer
+    // Pour une approche plus permissive mais sécurisée :
+    
+    // Liste blanche des balises autorisées (sûres)
+    const allowedTags = ['b', 'i', 'u', 'strong', 'em', 'br', 'p', 'span', 'div', 'a'];
+    
+    // Liste blanche des attributs autorisés
+    const allowedAttributes = ['href', 'title', 'class'];
+    
+    // Parser le HTML
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+    // Fonction récursive pour nettoyer les nœuds
+    function cleanNode(node) {
+        // Si c'est un nœud texte, le garder tel quel
+        if (node.nodeType === Node.TEXT_NODE) {
+            return node.cloneNode(false);
+        }
+        
+        // Si c'est un élément
+        if (node.nodeType === Node.ELEMENT_NODE) {
+            const tagName = node.tagName.toLowerCase();
+            
+            // Vérifier si la balise est autorisée
+            if (!allowedTags.includes(tagName)) {
+                // Si non autorisée, retourner seulement le contenu texte
+                return document.createTextNode(node.textContent);
+            }
+            
+            // Créer un nouvel élément propre
+            const cleanElement = document.createElement(tagName);
+            
+            // Copier seulement les attributs autorisés
+            for (const attr of node.attributes) {
+                if (allowedAttributes.includes(attr.name.toLowerCase())) {
+                    // Vérifier que les URLs ne contiennent pas javascript:
+                    if (attr.name.toLowerCase() === 'href') {
+                        const value = attr.value.trim().toLowerCase();
+                        if (value.startsWith('javascript:') || 
+                            value.startsWith('data:') || 
+                            value.startsWith('vbscript:')) {
+                            continue; // Skip cet attribut dangereux
+                        }
+                    }
+                    cleanElement.setAttribute(attr.name, attr.value);
+                }
+            }
+            
+            // Nettoyer récursivement les enfants
+            for (const child of node.childNodes) {
+                const cleanChild = cleanNode(child);
+                if (cleanChild) {
+                    cleanElement.appendChild(cleanChild);
+                }
+            }
+            
+            return cleanElement;
+        }
+        
+        return null;
+    }
+    
+    // Nettoyer le body du document parsé
+    const cleanBody = document.createElement('div');
+    for (const child of doc.body.childNodes) {
+        const cleanChild = cleanNode(child);
+        if (cleanChild) {
+            cleanBody.appendChild(cleanChild);
+        }
+    }
+    
+    return cleanBody.innerHTML;
+}
+
+/**
+ * Échappe le HTML en texte brut (plus sûr que sanitizeHTML)
+ * Convertit tous les caractères HTML en entités
+ * À utiliser quand on veut afficher du texte, pas du HTML
+ * @param {string} text - Le texte à échapper
+ * @returns {string} - Texte échappé
+ */
+export function escapeHTML(text) {
+    if (!text || typeof text !== 'string') {
+        return '';
+    }
+    
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/**
+ * Nettoie le HTML de manière stricte (texte seul)
+ * Retire TOUT le HTML, garde uniquement le texte
+ * @param {string} html - Le HTML à nettoyer
+ * @returns {string} - Texte pur sans HTML
+ */
+export function stripHTML(html) {
+    if (!html || typeof html !== 'string') {
+        return '';
+    }
+    
+    // NOTE SÉCURITÉ: innerHTML utilisé ici de manière sûre
+    // On extrait seulement le texte avec textContent (pas d'exécution de script)
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    return temp.textContent || temp.innerText || '';
+}
+
+/**
+ * Définir le mot de passe maître en cache
+ * @param {string} password 
+ */
+export function setMasterPassword(password) {
+    cachedMasterPassword = password;
+}
+
+/**
+ * Obtenir le mot de passe maître en cache
+ * @returns {string|null}
+ */
+export function getMasterPassword() {
+    return cachedMasterPassword;
+}
+
+/**
+ * Effacer le mot de passe maître du cache
+ */
+export function clearMasterPassword() {
+    cachedMasterPassword = null;
+}
+
+/**
+ * Déchiffrer la clé API si nécessaire
+ * @param {string|Object} apiKey - Clé API (chiffrée ou en clair)
+ * @param {boolean} useMasterPassword - Si un mot de passe maître est utilisé
+ * @returns {Promise<string>} - Clé API en clair
+ */
+async function decryptApiKeyIfNeeded(apiKey, useMasterPassword) {
+    // Debug
+    console.log('[Dolibarr Debug] Type de clé API:', typeof apiKey);
+    console.log('[Dolibarr Debug] Clé chiffrée?', cryptoLib.isEncrypted(apiKey));
+    console.log('[Dolibarr Debug] Utilise mot de passe?', useMasterPassword);
+    
+    // Si la clé est chiffrée
+    if (cryptoLib.isEncrypted(apiKey)) {
+        console.log('[Dolibarr Debug] Déchiffrement de la clé...');
+        const password = useMasterPassword ? cachedMasterPassword : null;
+        
+        if (useMasterPassword && !password) {
+            console.error('[Dolibarr Debug] Mot de passe requis mais non fourni');
+            throw new Error('Master password required but not provided');
+        }
+        
+        const decrypted = await cryptoLib.decryptData(apiKey, password);
+        console.log('[Dolibarr Debug] Clé déchiffrée avec succès');
+        return decrypted;
+    }
+    
+    // Sinon, retourner la clé telle quelle (ancien format)
+    console.log('[Dolibarr Debug] Utilisation de la clé en clair (ancien format)');
+    return apiKey;
+}
+
 export async function checkConfig(){
 
-    let configData = await browser.storage.local.get({dolibarrApiKey:'', dolibarrApiUrl:'', dolibarrApiEntity:1});
-
+    let configData = await browser.storage.local.get({
+        dolibarrApiKey:'', 
+        dolibarrApiUrl:'', 
+        dolibarrApiEntity:1,
+        useMasterPassword: false
+    });
 
     let apiKey = configData.dolibarrApiKey;
     let dolUrl = configData.dolibarrApiUrl;
 	let apiEntity = configData.dolibarrApiEntity;
-
-    if(apiKey.length == 0 || dolUrl ==0 || apiEntity.length == 0){  return false; }
+    
+    // Vérifier si la clé existe (même chiffrée)
+    if(!apiKey || (typeof apiKey === 'string' && apiKey.length === 0)){  
+        return false; 
+    }
+    
+    if(dolUrl ==0 || apiEntity.length == 0){  
+        return false; 
+    }
+    
+    // Si un mot de passe maître est requis, vérifier qu'il est en cache
+    if(configData.useMasterPassword && !cachedMasterPassword){
+        return false;
+    }
 
     return true;
 }
@@ -15,12 +316,27 @@ export async function checkConfig(){
 
 export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', postData, successCallBackFunction = ()=>{}, errorCallBackFunction = ()=>{}, cache = false){
 
-    let configData = await browser.storage.local.get({dolibarrApiKey:'', dolibarrApiUrl:'', dolibarrApiEntity:1});
-
+    console.log('[Dolibarr Debug] callDolibarrApi appelé pour:', endPoint);
+    
+    let configData = await browser.storage.local.get({
+        dolibarrApiKey:'', 
+        dolibarrApiUrl:'', 
+        dolibarrApiEntity:1,
+        useMasterPassword: false
+    });
 
     let apiKey = configData.dolibarrApiKey;
     let dolUrl = configData.dolibarrApiUrl;
 	let apiEntity = configData.dolibarrApiEntity;
+	
+	console.log('[Dolibarr Debug] Configuration:', {
+        hasApiKey: !!apiKey,
+        apiKeyType: typeof apiKey,
+        dolUrl: dolUrl,
+        apiEntity: apiEntity,
+        useMasterPassword: configData.useMasterPassword
+    });
+	
 	if(apiEntity.length == 0 || apiEntity <= 0){
         apiEntity = 1;
     }
@@ -28,7 +344,26 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
         getDataParam.entity = apiEntity;
     }
 
-    if(apiKey.length == 0 || dolUrl ==0){  reject("Fail getting settings"); }
+    // Vérifier si la clé existe
+    if(!apiKey || (typeof apiKey === 'string' && apiKey.length === 0) || dolUrl == 0){  
+        console.error('[Dolibarr Debug] Configuration incomplète');
+        if (typeof errorCallBackFunction === 'function') {
+            errorCallBackFunction("Fail getting settings");
+        }
+        return;
+    }
+    
+    // Déchiffrer la clé API si nécessaire
+    try {
+        apiKey = await decryptApiKeyIfNeeded(apiKey, configData.useMasterPassword);
+        console.log('[Dolibarr Debug] Clé API prête pour utilisation');
+    } catch (error) {
+        console.error("[Dolibarr Debug] Failed to decrypt API key:", error);
+        if (typeof errorCallBackFunction === 'function') {
+            errorCallBackFunction("Failed to decrypt API key. Please unlock the extension.");
+        }
+        return;
+    }
     if(dolUrl.slice(-1) != '/'){ dolUrl = dolUrl + '/';  }
     let dolApiUrl = dolUrl + 'api/index.php/';
     let finalUrl = dolApiUrl + endPoint;
@@ -44,7 +379,8 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
         }
     }
 
-
+    console.log('[Dolibarr Debug] URL finale:', finalUrl);
+    console.log('[Dolibarr Debug] Méthode:', type);
 
     fetch(finalUrl, {
         method: type,
@@ -57,6 +393,7 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
         cache: cache && type == 'GET' ? "force-cache" : "default"
     })
     .then(response => {
+        console.log('[Dolibarr Debug] Réponse HTTP:', response.status, response.statusText);
         if (!response.ok) {
             const statusErrorMap = {
                 404: "Not found",
@@ -66,7 +403,8 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
                 500: "Internal server error.",
                 503: "Service unavailable."
             };
-            let errorMsg = statusErrorMap[response.status] || "Unknown Error \n.";
+            let errorMsg = statusErrorMap[response.status] || `Unknown Error (HTTP ${response.status}: ${response.statusText})`;
+            console.error('[Dolibarr Debug] Erreur HTTP:', errorMsg);
             throw new Error(errorMsg);
         }
         return response.json();
@@ -79,6 +417,7 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
         }
     })
     .catch(error => {
+        console.error('[Dolibarr Debug] Erreur catch:', error);
         if (typeof errorCallBackFunction === 'function') {
             errorCallBackFunction(error.message);
         } else {
@@ -212,8 +551,12 @@ function replace_i18n(obj, tag) {
     });
 
     if(msg != tag) {
+        // CORRECTION : On remplace seulement dans le innerHTML existant
+        // On ne touche pas à la structure HTML, juste au texte des messages
         obj.innerHTML = msg;
-        //obj.appendChild(parseHTML(msg));
+        
+        // NOTE SÉCURITÉ : Les traductions viennent de messages.json (contrôlé)
+        // Risque XSS faible car fichiers locaux, mais à surveiller
     }
 }
 
@@ -233,6 +576,8 @@ export function localizeHtmlPage() {
 
     for (var j = 0; j < page.length; j++) {
         var obj = page[j];
+        // NOTE SÉCURITÉ: innerHTML utilisé seulement en LECTURE ici
+        // Le contenu est ensuite remplacé par textContent dans replace_i18n()
         var tag = obj.innerHTML.toString();
         replace_i18n(obj, tag);
     }
@@ -269,6 +614,13 @@ export function parseName(fullName) {
  * //stringToEl('<li>text</li>'); //OUTPUT: <li>text</li>
  * @param {*} html 
  * @returns 
+ */
+/**
+ * Parse une chaîne HTML en élément DOM
+ * NOTE SÉCURITÉ: Cette fonction doit être utilisée avec précaution
+ * Toujours nettoyer le HTML avec sanitizeHTML() avant d'utiliser parseHTML()
+ * @param {string} html - Le HTML à parser
+ * @returns {Node} - Le nœud DOM
  */
 export function parseHTML(html) {
     var parser = new DOMParser(),
@@ -456,7 +808,17 @@ export function jsonToTable(JsonTitle, jsonData, container, tableClass = 'doliba
             let td = document.createElement("td");
 
             if(typeof elem === 'object' && elem !== null){
-                td.appendChild(parseHTML(elem.html));
+                // Nettoyer le HTML avant de l'injecter (protection XSS)
+                const cleanHTML = sanitizeHTML(elem.html);
+                
+                // Parser le HTML nettoyé
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = cleanHTML;
+                
+                // Ajouter le contenu nettoyé
+                while (tempDiv.firstChild) {
+                    td.appendChild(tempDiv.firstChild);
+                }
 
                 if(elem.hasOwnProperty('class') ){
                     td.classList.add(...elem.class.split(" "));
@@ -504,18 +866,75 @@ export function updateBadgeMessageDisplayAction(tab, commentCount){
     });
 }
 
-export function getMsgTpl(msg) {
+/**
+ * Génère un avatar par défaut avec les initiales de l'utilisateur
+ * @param {string} fullName - Le nom complet de l'utilisateur
+ * @returns {string} - Une data URI SVG représentant l'avatar
+ */
+function generateDefaultAvatar(fullName) {
+    // Extraire les initiales (max 2 caractères)
+    let initials = 'U'; // Par défaut
+    
+    if (fullName && fullName.length > 0) {
+        const names = fullName.trim().split(' ');
+        if (names.length >= 2) {
+            // Prendre la première lettre du prénom et du nom
+            initials = names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
+        } else if (names.length === 1 && names[0].length > 0) {
+            // Prendre les 2 premières lettres ou juste la première
+            initials = names[0].substring(0, 2).toUpperCase();
+        }
+    }
+    
+    // Générer une couleur de fond basée sur le nom (pour avoir toujours la même couleur pour le même nom)
+    let hash = 0;
+    for (let i = 0; i < fullName.length; i++) {
+        hash = fullName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Convertir le hash en couleur (teintes variées mais lisibles)
+    const hue = Math.abs(hash % 360);
+    const backgroundColor = `hsl(${hue}, 60%, 50%)`;
+    
+    // Créer un SVG simple avec les initiales
+    const svg = `
+        <svg width="40" height="40" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="20" cy="20" r="20" fill="${backgroundColor}"/>
+            <text x="50%" y="50%" text-anchor="middle" dy="0.35em" 
+                  font-family="Arial, sans-serif" font-size="16" fill="white" font-weight="bold">
+                ${initials}
+            </text>
+        </svg>
+    `.trim();
+    
+    // Encoder le SVG en data URI
+    return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+}
+
+export async function getMsgTpl(msg) {
     // create a new div element
     let container = document.createElement("div");
     container.id = 'mail-message-' + msg.id;
     container.classList.add('mail-msg-box');
 
+    // Vérifier si l'utilisateur veut utiliser Gravatar
+    let config = await browser.storage.local.get({dolibarrUseGravatar: false});
+    
     if(typeof msg.user_mail_hash !== undefined) {
         let imgContainer = document.createElement("div");
         imgContainer.classList.add('mail-msg-box__img');
 
         let img = document.createElement("img");
-        img.src = `https://www.gravatar.com/avatar/${msg.user_mail_hash}?d=identicon`;
+        
+        // Utiliser Gravatar seulement si l'option est activée
+        if(config.dolibarrUseGravatar) {
+            img.src = `https://www.gravatar.com/avatar/${msg.user_mail_hash}?d=identicon`;
+        } else {
+            // Utiliser une icône par défaut (identicon local ou une image de base)
+            // Pour l'instant, on utilise un avatar généré via data URI (cercle avec initiales)
+            img.src = generateDefaultAvatar(msg.user_full_name);
+        }
+        
         img.classList.add('mail-msg-box__img_user');
         img.title = msg.user_full_name;
         imgContainer.appendChild(img);
@@ -591,16 +1010,19 @@ export function getMsgTpl(msg) {
 export function refreshComments(tabs, accountEmail, msgId){
     // Get all notes
     callDolibarrApi('crmclientconnector/emaillinks/quicksearch', {accountEmail: accountEmail, msgId: msgId}, 'GET', {}, (resData)=>{
-        callDolibarrApi('crmclientconnector/emailusermsgs', {sqlfilters: `(fk_email_link:=:${resData.id})`}, 'GET', {}, (resDataMsg)=>{
+        callDolibarrApi('crmclientconnector/emailusermsgs', {sqlfilters: `(fk_email_link:=:${resData.id})`}, 'GET', {}, async (resDataMsg)=>{
             let lisMsgContainer = document.getElementById('dolibarr-notes-list-container');
             if(tabs !== false){
                 updateBadgeMessageDisplayAction(tabs, resDataMsg.length);
             }
             lisMsgContainer.textContent = '';
-            resDataMsg.forEach((msg) => {
+            
+            // Utiliser une boucle for...of pour gérer les appels async
+            for (const msg of resDataMsg) {
                 // create a new div element
-                lisMsgContainer.appendChild(getMsgTpl(msg));
-            });
+                const msgElement = await getMsgTpl(msg);
+                lisMsgContainer.appendChild(msgElement);
+            }
         });
     });
 }

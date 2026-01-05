@@ -81,6 +81,79 @@
   },
   "SeeModuleDoc" :{
     "message": "Δείτε τη σελίδα τεκμηρίωσης του module",
+    "description": "Επιλογές"
+  },
+  "DolibarrUseNotes" :{
+    "message": "Επιτρέψτε την προβολή και την προσθήκη κοινόχρηστων σημειώσεων σε email"
+  },
+  "DolibarrUseNotesDesc" :{
+    "message": "Απαιτεί την εγκατάσταση του module CRM client connector στο Dolibarr σας"
+  },
+  "Comments" :{
+    "message": "Σχόλια"
+  },
+  "Submit" :{
+    "message": "Υποβολή"
+  },
+  "WriteComment" :{
+    "message": "Γράψτε μια σημείωση ή σχόλιο..."
+  },
+  "PleaseSelectAnEmailBefore" :{
+    "message": "Παρακαλώ επιλέξτε ένα email"
+  },
+  "DolibarrUseGravatar" :{
+    "message": "Χρήση Gravatar για εμφάνιση φωτογραφιών προφίλ"
+  },
+  "DolibarrUseGravatarDesc" :{
+    "message": "Εάν ενεργοποιηθεί, τα avatar θα φορτώνονται από το gravatar.com (εξωτερική υπηρεσία)"
+  },
+  "SecurityOptions" :{
+    "message": "Επιλογές ασφαλείας"
+  },
+  "UseMasterPassword" :{
+    "message": "Χρήση κύριου κωδικού πρόσβασης για προστασία του κλειδιού API"
+  },
+  "UseMasterPasswordDesc" :{
+    "message": "Συνιστάται: Το κλειδί API θα κρυπτογραφηθεί και θα απαιτεί κωδικό σε κάθε εκκίνηση"
+  },
+  "MasterPassword" :{
+    "message": "Κύριος κωδικός πρόσβασης"
+  },
+  "MasterPasswordPlaceholder" :{
+    "message": "Εισάγετε έναν ασφαλή κωδικό"
+  },
+  "ConfirmMasterPassword" :{
+    "message": "Επιβεβαίωση κωδικού"
+  },
+  "PasswordsDontMatch" :{
+    "message": "Οι κωδικοί δεν ταιριάζουν"
+  },
+  "EnterMasterPassword" :{
+    "message": "Εισάγετε τον κύριο κωδικό πρόσβασης"
+  },
+  "WrongPassword" :{
+    "message": "Λάθος κωδικός"
+  },
+  "UnlockExtension" :{
+    "message": "Ξεκλείδωμα επέκτασης"
+  },
+  "ApiKeyWillBeEncrypted" :{
+    "message": "Το κλειδί API θα κρυπτογραφηθεί αυτόματα κατά την αποθήκευση"
+  },
+  "CreateTicket" :{
+    "message": "Δημιουργία εισιτηρίου"
+  },
+  "TicketCreated" :{
+    "message": "Το εισιτήριο δημιουργήθηκε με επιτυχία"
+  },
+  "TicketCreationError" :{
+    "message": "Σφάλμα κατά τη δημιουργία του εισιτηρίου"
+  },
+  "TicketSubject" :{
+    "message": "Θέμα εισιτηρίου"
+  },
+  "TicketMessage" :{
+    "message": "Μήνυμα εισιτηρίου"
     "description": "Options"
   },
   "dolibarrOptMainBtnDisplay" :{

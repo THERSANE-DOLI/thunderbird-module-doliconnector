@@ -1,18 +1,97 @@
 import * as dolLib from '../global.lib.js';
+import * as cryptoLib from '../crypto.lib.js';
 
-import {jsonToTable, searchPhonesInString} from "../global.lib.js";
+import {jsonToTable, searchPhonesInString, sanitizeEmail, sanitizeDomain} from "../global.lib.js";
 
-    async function getEmailAccountFromBackground(messageId) {
-        const response = await browser.runtime.sendMessage({
-            type: "getEmailAccount",
-            messageId
+async function getEmailAccountFromBackground(messageId) {
+    const response = await browser.runtime.sendMessage({
+        type: "getEmailAccount",
+        messageId
+    });
+
+    return response.email;
+}
+
+/**
+ * Afficher l'écran de déverrouillage
+ */
+async function showUnlockScreen(configData) {
+        displayTpl("unlock-screen");
+        
+        const unlockButton = document.getElementById("unlock-button");
+        const passwordInput = document.getElementById("unlock-password-input");
+        const errorDiv = document.getElementById("unlock-error");
+        
+        // Permettre de valider avec Entrée
+        passwordInput.addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                unlockButton.click();
+            }
         });
+        
+        unlockButton.addEventListener("click", async function() {
+            const password = passwordInput.value;
+            errorDiv.textContent = "";
+            
+            if (!password || password.length === 0) {
+                errorDiv.textContent = browser.i18n.getMessage("MasterPasswordPlaceholder");
+                return;
+            }
+            
+            try {
+                // Tenter de déchiffrer la clé API pour valider le mot de passe
+                await cryptoLib.decryptData(configData.dolibarrApiKey, password);
+                
+                // Si réussi, stocker le mot de passe en cache
+                dolLib.setMasterPassword(password);
+                
+                // Masquer l'écran de déverrouillage
+                document.getElementById("unlock-screen").classList.add("hidden-field");
+                
+                // Recharger la popup
+                window.location.reload();
+            } catch (error) {
+                errorDiv.textContent = browser.i18n.getMessage("WrongPassword");
+                passwordInput.value = "";
+                passwordInput.focus();
+            }
+        });
+        
+        passwordInput.focus();
+}
 
-        return response.email;
-    }
-
+// Fonction principale async
+(async function initPopup() {
     // first need to translate page before add dom events
     dolLib.localizeHtmlPage();
+    
+    // Localiser le bouton de création de ticket (doit être fait avant d'afficher le bouton)
+    const createTicketBtn = document.getElementById("create-ticket-btn");
+    if (createTicketBtn) {
+        createTicketBtn.textContent = "🎫 " + browser.i18n.getMessage("CreateTicket");
+    }
+    
+    // Vérifier si un mot de passe maître est requis
+    let configData = await browser.storage.local.get({
+        useMasterPassword: false,
+        dolibarrApiKey: ''
+    });
+    
+    console.log('[Dolibarr Popup Debug] Configuration:', {
+        useMasterPassword: configData.useMasterPassword,
+        hasApiKey: !!configData.dolibarrApiKey,
+        apiKeyType: typeof configData.dolibarrApiKey,
+        hasMasterPasswordInCache: !!dolLib.getMasterPassword()
+    });
+    
+    // Si un mot de passe maître est requis et pas encore entré
+    if (configData.useMasterPassword && !dolLib.getMasterPassword()) {
+        console.log('[Dolibarr Popup Debug] Mot de passe maître requis - affichage écran déverrouillage');
+        await showUnlockScreen(configData);
+        return; // Arrêter l'exécution jusqu'au déverrouillage
+    }
+    
+    console.log('[Dolibarr Popup Debug] Pas de mot de passe requis ou déjà déverrouillé - chargement normal');
 
     // The user clicked our button, get the active tab in the current window using
     // the tabs API.
@@ -54,11 +133,20 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
         // Get contact infos
 
+        // Sécuriser l'email contre les injections SQL
+        const safeAuthorEmail = sanitizeEmail(authorEmail);
+        
+        if (!safeAuthorEmail) {
+            console.error('[Dolibarr Security] Email invalide, recherche annulée');
+            setSocInfos({});
+            return;
+        }
+        
         dolLib.callDolibarrApi('contacts', {
             limit : 5,
             sortfield: 't.rowid',
             sortorder: 'DESC',
-            sqlfilters: "(t.email:like:'"+authorEmail+"')"
+            sqlfilters: "(t.email:like:'"+safeAuthorEmail+"')"
         }, 'GET', {}, (resData)=>{
 
             resData = resData.pop();
@@ -93,12 +181,21 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
 
     function searchThirdpartiesAndPopulateByEmail(authorEmail){
+        // Sécuriser l'email contre les injections SQL
+        const safeAuthorEmail = sanitizeEmail(authorEmail);
+        
+        if (!safeAuthorEmail) {
+            console.error('[Dolibarr Security] Email invalide, recherche annulée');
+            setSocInfos({});
+            return;
+        }
+        
         // console.error(msg);
         dolLib.callDolibarrApi('thirdparties', {
             limit : 1,
             sortfield: 't.rowid',
             sortorder: 'DESC',
-            sqlfilters: "(t.email:like:'"+authorEmail+"')"
+            sqlfilters: "(t.email:like:'"+safeAuthorEmail+"')"
         }, 'GET', {}, (resData)=>{
             console.log("searchThirdpartiesAndPopulateByEmail found ");
             resData = resData.pop();
@@ -160,6 +257,16 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         console.log("search for same domain soc");
 
         let emailDomain = authorEmail.split('@').pop();
+        
+        // Sécuriser le domaine contre les injections SQL
+        const safeDomain = sanitizeDomain(emailDomain);
+        
+        if (!safeDomain) {
+            console.error('[Dolibarr Security] Domaine invalide, recherche annulée');
+            setSocInfos({});
+            return;
+        }
+        
         getExcludedDomains().then(emailPublicDomains => {
             if(!emailPublicDomains.includes(emailDomain.toLowerCase())){
                 console.log("not public email " + emailDomain);
@@ -169,7 +276,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                     limit : 5,
                     sortfield: 't.rowid',
                     sortorder: 'DESC',
-                    sqlfilters: "(t.email:like:'%@"+emailDomain+"')"
+                    sqlfilters: "(t.email:like:'%@"+safeDomain+"')"
                 }, 'GET', {}, (resData)=>{
                     resData = resData.pop();
                     console.log("searchThirdpartieAndPopulateByEmailDomain found ");
@@ -218,6 +325,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
         if(soc.id == 0 || soc.id == '' || soc.id == null){
             displayTpl("soc-not-found-tpl");
+            displayTpl("create-ticket-btn"); // Afficher le bouton de création de ticket même sans tiers
 
             let newSocieteLink= document.getElementById("new-soc-link");
             let newContactLink= document.getElementById("new-contact-link");
@@ -266,6 +374,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         }
 
         displayTpl("soc-link");
+        displayTpl("create-ticket-btn"); // Afficher le bouton de création de ticket
 
         titleDiv.textContent =  soc.name;
         let url = new URL(confDolibarUrl + "societe/card.php");
@@ -724,3 +833,121 @@ async function initNotesForMessage(){
         }
     })
 }
+
+/**
+ * Créer un ticket depuis l'email actuel
+ */
+async function createTicketFromEmail() {
+    const createTicketBtn = document.getElementById("create-ticket-btn");
+    
+    // Désactiver le bouton pendant la création
+    createTicketBtn.disabled = true;
+    createTicketBtn.textContent = "⏳ " + browser.i18n.getMessage("CreateTicket") + "...";
+    
+    try {
+        // Récupérer le tiers si disponible
+        const socLink = document.getElementById("soc-link");
+        let socId = null;
+        
+        if (socLink && !socLink.classList.contains("hidden-field")) {
+            // Extraire l'ID du lien (format: /societe/card.php?socid=123)
+            const href = socLink.getAttribute("href");
+            const match = href.match(/socid=(\d+)/);
+            if (match) {
+                socId = parseInt(match[1]);
+            }
+        }
+        
+        // Préparer le corps du message
+        let messageContent = messageBody.text || messageBody.html || '';
+        
+        // Nettoyer le HTML si nécessaire
+        if (messageBody.html && !messageBody.text) {
+            // Convertir HTML en texte simple (supprimer les balises)
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = messageBody.html;
+            messageContent = tempDiv.textContent || tempDiv.innerText || '';
+        }
+        
+        // Limiter la longueur du message (Dolibarr peut avoir une limite)
+        if (messageContent.length > 5000) {
+            messageContent = messageContent.substring(0, 5000) + "\n\n[...Message tronqué...]";
+        }
+        
+        // Préparer les données du ticket
+        const ticketData = {
+            subject: message.subject || "Email sans objet",
+            message: messageContent,
+            type_code: "SUPPORT", // Type par défaut (peut être configuré)
+            category_code: "OTHER", // Catégorie par défaut
+            severity_code: "NORMAL", // Sévérité normale
+            email: authorEmail,
+            datec: Math.floor(message.date.getTime() / 1000), // Timestamp Unix
+        };
+        
+        // Ajouter le socid si disponible
+        if (socId) {
+            ticketData.socid = socId;
+        }
+        
+        console.log('[Dolibarr Ticket] Création ticket avec données:', ticketData);
+        
+        // Créer le ticket via l'API
+        dolLib.callDolibarrApi(
+            'tickets',
+            {},
+            'POST',
+            JSON.stringify(ticketData),
+            (resData) => {
+                console.log('[Dolibarr Ticket] Ticket créé:', resData);
+                
+                // Afficher un message de succès
+                createTicketBtn.textContent = "✅ " + browser.i18n.getMessage("TicketCreated");
+                createTicketBtn.style.backgroundColor = "#27ae60";
+                
+                // Réinitialiser le bouton après 3 secondes
+                setTimeout(() => {
+                    createTicketBtn.disabled = false;
+                    createTicketBtn.textContent = "🎫 " + browser.i18n.getMessage("CreateTicket");
+                    createTicketBtn.style.backgroundColor = "";
+                }, 3000);
+                
+                // Optionnel : Ouvrir le ticket dans Dolibarr
+                if (resData.id || resData) {
+                    const ticketId = resData.id || resData;
+                    const ticketUrl = confDolibarUrl + "/ticket/card.php?id=" + ticketId;
+                    console.log('[Dolibarr Ticket] URL du ticket:', ticketUrl);
+                    // On pourrait ouvrir l'URL automatiquement si souhaité
+                    // browser.windows.openDefaultBrowser(ticketUrl);
+                }
+            },
+            (error) => {
+                console.error('[Dolibarr Ticket] Erreur création ticket:', error);
+                
+                // Afficher un message d'erreur
+                createTicketBtn.textContent = "❌ " + browser.i18n.getMessage("TicketCreationError");
+                createTicketBtn.style.backgroundColor = "#e74c3c";
+                
+                // Réinitialiser le bouton après 3 secondes
+                setTimeout(() => {
+                    createTicketBtn.disabled = false;
+                    createTicketBtn.textContent = "🎫 " + browser.i18n.getMessage("CreateTicket");
+                    createTicketBtn.style.backgroundColor = "";
+                }, 3000);
+            }
+        );
+        
+    } catch (error) {
+        console.error('[Dolibarr Ticket] Erreur:', error);
+        createTicketBtn.disabled = false;
+        createTicketBtn.textContent = "🎫 " + browser.i18n.getMessage("CreateTicket");
+    }
+}
+
+// Ajouter le listener pour le bouton de création de ticket
+const createTicketBtnListener = document.getElementById("create-ticket-btn");
+if (createTicketBtnListener) {
+    createTicketBtnListener.addEventListener('click', createTicketFromEmail);
+}
+
+})(); // Fin de la fonction initPopup IIFE
