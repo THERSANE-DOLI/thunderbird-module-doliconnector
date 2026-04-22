@@ -12,7 +12,7 @@
   "optional_permissions": [
     "<all_urls>"
   ],
-  "version": "1.10.2",
+  "version": "1.11.0",
   "author": "THERSANE",
   "homepage_url": "https://www.thersane.fr",
   "browser_specific_settings": {
