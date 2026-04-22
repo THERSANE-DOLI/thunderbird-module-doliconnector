@@ -14,25 +14,25 @@
   "dolibarrApiEntity": {
     "message": "Environnement de Dolibarr (default 1)"
   },
-   "dolibarrPropal": {
+  "dolibarrPropal": {
     "message": "Afficher uniquement les proposition commerciales  (aucune selection = tout afficher)"
-  }, 
-    "dolibarrCanceled": {
+  },
+  "dolibarrCanceled": {
     "message": "Annulées"
   },
   "dolibarrDraft": {
     "message": "Brouillons"
   },
-    "dolibarrValidated": {
+  "dolibarrValidated": {
     "message": "Validées"
   },
-    "dolibarrSigned": {
+  "dolibarrSigned": {
     "message": "Signées"
   },
-    "dolibarrNotSigned": {
+  "dolibarrNotSigned": {
     "message": "Non signées"
   },
-    "dolibarrBilled": {
+  "dolibarrBilled": {
     "message": "Facturées"
   },
   "dolibarrUrl": {
@@ -65,55 +65,160 @@
   "Total": {
     "message": "Total"
   },
-  "options.options": {
+  "options": {
     "message": "Options",
     "description": "Options"
   },
-  "MorePropalOptions" :{
+  "MorePropalOptions": {
     "message": "Plus d'option pour les devis"
   },
-  "Saved" :{
+  "Saved": {
     "message": "Sauvegardé"
   },
-  "dolibarrOptSearchDomain" :{
+  "dolibarrOptSearchDomain": {
     "message": "Rechercher aussi les tiers grâce aux domaines des emails, ex. : @nomdedomaine.fr",
     "description": "Options"
   },
-  "SeeModuleDoc" :{
+  "SeeModuleDoc": {
     "message": "Consulter la page de doc des modules",
     "description": "Options"
   },
-  "dolibarrOptMainBtnDisplay" :{
+  "dolibarrOptMainBtnDisplay": {
     "message": "Mode d'affichage du bouton Dolibarr",
     "description": "Options"
   },
-  "dolibarrOptMainBtnDisplayOptionMenu" :{
+  "dolibarrOptMainBtnDisplayOptionMenu": {
     "message": "Email menu (default)",
     "description": "Options"
   },
-  "dolibarrOptMainBtnDisplayOptionTopBar" :{
+  "dolibarrOptMainBtnDisplayOptionTopBar": {
     "message": "Top Thunderbird Bar",
     "description": "Options"
   },
-  "PleaseSelectAnEmailBefore" :{
+  "PleaseSelectAnEmailBefore": {
     "message": "Veuillez selectionner un email"
   },
-  "DolibarrUseNotes" :{
+  "DolibarrUseNotes": {
     "message": "Permettre de voir et saisir des notes partagées sur les emails"
   },
-  "DolibarrUseNotesDesc" :{
+  "DolibarrUseNotesDesc": {
     "message": "Nécéssite le module CRM client connector d'installé sur votre Dolibarr"
   },
-  "Comments" :{
+  "Comments": {
     "message": "Commentaires"
   },
-  "Submit" :{
+  "Submit": {
     "message": "Envoyer"
   },
-  "WriteComment" :{
+  "WriteComment": {
     "message": "Écrire une note ou un commentaire..."
   },
-  "DoubleClickToDelete" :{
+  "DoubleClickToDelete": {
     "message": "Double click pour supprimer"
+  },
+  "DolibarrUseGravatar" :{
+    "message": "Utiliser Gravatar pour afficher les photos de profil"
+  },
+  "DolibarrUseGravatarDesc" :{
+    "message": "Si activé, les avatars seront chargés depuis gravatar.com (service externe)"
+  },
+  "SecurityOptions" :{
+    "message": "Options de sécurité"
+  },
+  "UseMasterPassword" :{
+    "message": "Utiliser un mot de passe maître pour protéger la clé API"
+  },
+  "UseMasterPasswordDesc" :{
+    "message": "Recommandé : Votre clé API sera chiffrée et nécessitera un mot de passe à chaque démarrage"
+  },
+  "MasterPassword" :{
+    "message": "Mot de passe maître"
+  },
+  "MasterPasswordPlaceholder" :{
+    "message": "Entrez un mot de passe sécurisé"
+  },
+  "ConfirmMasterPassword" :{
+    "message": "Confirmer le mot de passe"
+  },
+  "PasswordsDontMatch" :{
+    "message": "Les mots de passe ne correspondent pas"
+  },
+  "EnterMasterPassword" :{
+    "message": "Entrez votre mot de passe maître"
+  },
+  "WrongPassword" :{
+    "message": "Mot de passe incorrect"
+  },
+  "UnlockExtension" :{
+    "message": "Déverrouiller l'extension"
+  },
+  "ApiKeyWillBeEncrypted" :{
+    "message": "Votre clé API sera automatiquement chiffrée lors de la sauvegarde"
+  },
+  "CreateTicket" :{
+    "message": "Créer un ticket"
+  },
+  "TicketCreated" :{
+    "message": "Ticket créé avec succès"
+  },
+  "TicketCreationError" :{
+    "message": "Erreur lors de la création du ticket"
+  },
+  "TicketSubject" :{
+    "message": "Sujet du ticket"
+  },
+  "TicketMessage" :{
+    "message": "Message du ticket"
+  },
+  "StatusCanceledShort": {
+    "message": "Annulée"
+  },
+  "StatusDraftShort": {
+    "message": "Brouillon"
+  },
+  "StatusValidatedShort": {
+    "message": "Validée"
+  },
+  "StatusSignedShort": {
+    "message": "Signée"
+  },
+  "StatusDelivered": {
+    "message": "Livré"
+  },
+  "StatusNotSignedShort": {
+    "message": "Non signée"
+  },
+  "StatusBilledShort": {
+    "message": "Facturée"
+  },
+  "statusshipmentonprocess": {
+    "message": "Livraison en cours"
+  },
+  "StatusOrderDeliveredShort": {
+    "message": "Livré"
+  },
+  "Status": {
+    "message": "Statut"
+  },
+  "StatusClosed": {
+    "message": "Clos"
+  },
+  "StatusAbandoned": {
+    "message": "Abandonné"
+  },
+  "StatusSupplierOrderOnProcessShort": {
+    "message": "Commandé"
+  },
+  "StatusSupplierOrderReceivedPartiallyShort": {
+    "message": "Reçue partiellement"
+  },
+  "StatusSupplierOrderReceivedAllShort": {
+    "message": "Produits reçus"
+  },
+  "StatusSupplierOrderCanceledShort": {
+    "message": "Annulé"
+  },
+  "StatusSupplierOrderRefusedShort": {
+    "message": "Refusé"
   }
 }
