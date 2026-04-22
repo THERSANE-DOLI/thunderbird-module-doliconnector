@@ -18,3 +18,145 @@
 .text-center {
 	text-align: center;
 }
+
+/*  BADGFES */
+
+.badge {
+	display: inline-block;
+	padding: .1em .35em;
+	font-size: 0.8em;
+	font-weight: 700 !important;
+	line-height: 1em;
+	text-align: center;
+	white-space: nowrap;
+	vertical-align: middle;
+	border-radius: .25rem;
+	transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+	border-width: 2px;
+	border-style: solid;
+	border-color: rgba(255,255,255,0);
+	box-sizing: border-box;
+}
+
+.badge-dot {
+	padding: 0;
+	border-radius: 50%;
+	padding: 0.45em;
+	vertical-align: text-top;
+}
+
+/* PRIMARY */
+.badge-primary{
+	color: #fff !important;
+	background-color: #007bff;
+}
+
+/* SECONDARY */
+.badge-secondary, :where(.tabs .badge)  {
+	color: #fff !important;
+	background-color: #aaaabb;
+}
+
+/* SUCCESS */
+.badge-success {
+	color: #fff !important;
+	background-color: #55a580;
+}
+
+/* DANGER */
+.badge-danger {
+	color: #fff !important;
+	background-color: #af4705;
+}
+
+/* WARNING */
+.badge-warning {
+	color: #fff !important;
+	background-color: #bc9526;
+}
+
+/* INFO */
+.badge-info {
+	color: #fff !important;
+	background-color: #aaaabb;
+}
+
+/* LIGHT */
+.badge-light {
+	color: #212529 !important;
+	background-color: #f8f9fa;
+}
+
+/* DARK */
+.badge-dark {
+	color: #fff !important;
+	background-color: #343a40;
+}
+
+/* STATUS BADGES */
+
+/* STATUS0 */
+.badge-status0 {
+	color: #999999 !important;
+	border-color: #cbd3d3 !important;
+}
+
+/* STATUS1 */
+.badge-status1 {
+	color: #ffffff !important;
+	background-color: #bc9526 !important;
+}
+
+/* STATUS2 */
+.badge-status2 {
+	color: #ffffff !important;
+	background-color: #9c9c26 !important;
+}
+
+/* STATUS3 */
+.badge-status3 {
+	color: #212529 !important;
+	border-color: #bca52b !important;
+}
+
+/* STATUS4 */
+.badge-status4 {
+	color: #ffffff !important;
+	background-color: #25a580 !important;
+}
+
+/* STATUS5 */
+.badge-status5 {
+	color: #999999 !important;
+	border-color: #cad2d2 !important;
+}
+
+/* STATUS6 */
+.badge-status6 {
+	color: #777777 !important;
+	background-color: #cad2d2 !important;
+}
+
+/* STATUS7 */
+.badge-status7 {
+	color: #212529 !important;
+	border-color: #25a580 !important;
+}
+
+/* STATUS8 */
+.badge-status8 {
+	color: #ffffff !important;
+	background-color: #993013 !important;
+}
+
+/* STATUS9 */
+.badge-status9 {
+	color: #999999 !important;
+	background-color: #e7f0f0 !important;
+}
+
+/* STATUS10 */
+.badge-status10 {
+	color: #212529 !important;
+	border-color: #993013 !important;
+}

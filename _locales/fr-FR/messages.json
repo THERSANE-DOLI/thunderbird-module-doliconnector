@@ -118,5 +118,110 @@
   },
   "DoubleClickToDelete" :{
     "message": "Double click pour supprimer"
+  },
+  "DolibarrUseGravatar" :{
+    "message": "Utiliser Gravatar pour afficher les photos de profil"
+  },
+  "DolibarrUseGravatarDesc" :{
+    "message": "Si activé, les avatars seront chargés depuis gravatar.com (service externe)"
+  },
+  "SecurityOptions" :{
+    "message": "Options de sécurité"
+  },
+  "UseMasterPassword" :{
+    "message": "Utiliser un mot de passe maître pour protéger la clé API"
+  },
+  "UseMasterPasswordDesc" :{
+    "message": "Recommandé : Votre clé API sera chiffrée et nécessitera un mot de passe à chaque démarrage"
+  },
+  "MasterPassword" :{
+    "message": "Mot de passe maître"
+  },
+  "MasterPasswordPlaceholder" :{
+    "message": "Entrez un mot de passe sécurisé"
+  },
+  "ConfirmMasterPassword" :{
+    "message": "Confirmer le mot de passe"
+  },
+  "PasswordsDontMatch" :{
+    "message": "Les mots de passe ne correspondent pas"
+  },
+  "EnterMasterPassword" :{
+    "message": "Entrez votre mot de passe maître"
+  },
+  "WrongPassword" :{
+    "message": "Mot de passe incorrect"
+  },
+  "UnlockExtension" :{
+    "message": "Déverrouiller l'extension"
+  },
+  "ApiKeyWillBeEncrypted" :{
+    "message": "Votre clé API sera automatiquement chiffrée lors de la sauvegarde"
+  },
+  "CreateTicket" :{
+    "message": "Créer un ticket"
+  },
+  "TicketCreated" :{
+    "message": "Ticket créé avec succès"
+  },
+  "TicketCreationError" :{
+    "message": "Erreur lors de la création du ticket"
+  },
+  "TicketSubject" :{
+    "message": "Sujet du ticket"
+  },
+  "TicketMessage" :{
+    "message": "Message du ticket"
+  },
+  "StatusCanceledShort": {
+    "message": "Annulée"
+  },
+  "StatusDraftShort": {
+    "message": "Brouillon"
+  },
+  "StatusValidatedShort": {
+    "message": "Validée"
+  },
+  "StatusSignedShort": {
+    "message": "Signée"
+  },
+  "StatusDelivered": {
+    "message": "Livré"
+  },
+  "StatusNotSignedShort": {
+    "message": "Non signée"
+  },
+  "StatusBilledShort": {
+    "message": "Facturée"
+  },
+  "statusshipmentonprocess": {
+    "message": "Livraison en cours"
+  },
+  "StatusOrderDeliveredShort": {
+    "message": "Livré"
+  },
+  "Status": {
+    "message": "Statut"
+  },
+  "StatusClosed": {
+    "message": "Clos"
+  },
+  "StatusAbandoned": {
+    "message": "Abandonné"
+  },
+  "StatusSupplierOrderOnProcessShort": {
+    "message": "Commandé"
+  },
+  "StatusSupplierOrderReceivedPartiallyShort": {
+    "message": "Reçue partiellement"
+  },
+  "StatusSupplierOrderReceivedAllShort": {
+    "message": "Produits reçus"
+  },
+  "StatusSupplierOrderCanceledShort": {
+    "message": "Annulé"
+  },
+  "StatusSupplierOrderRefusedShort": {
+    "message": "Refusé"
   }
 }

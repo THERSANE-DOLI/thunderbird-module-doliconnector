@@ -319,7 +319,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                     'ref': '',
                     'refClient': '',
                     'date': '',
-                    'total_ht': ''
+                    'total_ht': '',
+                    'status': ''
                 }
 
                 item.ref = {
@@ -327,6 +328,41 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                     hightLight : propal.ref,
                     class : 'text-center'
                 };
+
+                if(parseInt(propal.status) === -1) {
+                    item.status = {
+                        html: `<span class="badge badge-status9">${chrome.i18n.getMessage('StatusCanceledShort')}</span>`,
+                        class : 'text-center'
+                    };
+                } else if(parseInt(propal.status) === 0) {
+                    item.status = {
+                        html: `<span class="badge badge-status0">${chrome.i18n.getMessage('StatusDraftShort')}</span>`,
+                        class : 'text-center'
+                    };
+                } else if(parseInt(propal.status) === 1) {
+                    item.status = {
+                        html: `<span class="badge badge-status1">${chrome.i18n.getMessage('StatusValidatedShort')}</span>`,
+                        class : 'text-center'
+                    };
+                }
+                else if(parseInt(propal.status) === 2) {
+                    item.status = {
+                        html: `<span class="badge badge-status4">${chrome.i18n.getMessage('StatusSignedShort')}</span>`,
+                        class : 'text-center'
+                    };
+                }
+                else if(parseInt(propal.status) === 3) {
+                    item.status = {
+                        html: `<span class="badge badge-status6">${chrome.i18n.getMessage('StatusNotSignedShort')}</span>`,
+                        class : 'text-center'
+                    };
+                }
+                else if(parseInt(propal.status) === 4) {
+                    item.status = {
+                        html: `<span class="badge badge-status6">${chrome.i18n.getMessage('StatusBilledShort')}</span>`,
+                        class : 'text-center'
+                    };
+                }
 
                 if(typeof propal.ref_client != undefined && propal.ref_client != null &&  propal.ref_client.length > 0){
                     item.refClient = {
@@ -365,7 +401,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                     'ref': chrome.i18n.getMessage('Ref'),
                     'refClient': chrome.i18n.getMessage('RefClient'),
                     'date': chrome.i18n.getMessage('Date'),
-                    'total_ht': chrome.i18n.getMessage('Total')
+                    'total_ht': chrome.i18n.getMessage('Total'),
+                    'status': chrome.i18n.getMessage('Status')
                 },
                 tableItems,
                 document.getElementById("data-from-dolibarr"),
@@ -409,7 +446,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                     'ref': '',
                     'refClient': '',
                     'date': '',
-                    'total_ht': ''
+                    'total_ht': '',
+                    'status': ''
                 }
 
                 item.ref = {
@@ -417,6 +455,35 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                     hightLight : order.ref,
                     class : 'text-center'
                 };
+
+                if(parseInt(order.status) === -1) {
+                    item.status = {
+                        html: `<span class="badge badge-status9">${chrome.i18n.getMessage('StatusCanceledShort')}</span>`,
+                        class : 'text-center'
+                    };
+                } else if(parseInt(order.status) === 0) {
+                    item.status = {
+                        html: `<span class="badge badge-status0">${chrome.i18n.getMessage('StatusDraftShort')}</span>`,
+                        class : 'text-center'
+                    };
+                } else if(parseInt(order.status) === 1) {
+                    item.status = {
+                        html: `<span class="badge badge-status1">${chrome.i18n.getMessage('StatusValidatedShort')}</span>`,
+                        class : 'text-center'
+                    };
+                }
+                else if(parseInt(order.status) === 2) {
+                    item.status = {
+                        html: `<span class="badge badge-status4">${chrome.i18n.getMessage('StatusOrderSentShort')}</span>`,
+                        class : 'text-center'
+                    };
+                }
+                else if(parseInt(order.status) === 3) {
+                    item.status = {
+                        html: `<span class="badge badge-status6">${chrome.i18n.getMessage('StatusDelivered')}</span>`,
+                        class : 'text-center'
+                    };
+                }
 
                 if(typeof order.ref_client != undefined && order.ref_client != null && order.ref_client.length > 0){
                     item.refClient = {
@@ -455,7 +522,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                     'ref': chrome.i18n.getMessage('Ref'),
                     'refClient': chrome.i18n.getMessage('RefClient'),
                     'date': chrome.i18n.getMessage('Date'),
-                    'total_ht': chrome.i18n.getMessage('Total')
+                    'total_ht': chrome.i18n.getMessage('Total'),
+                    'status': chrome.i18n.getMessage('Status')
                 },
                 tableItems,
                 document.getElementById("data-from-dolibarr"),
@@ -500,7 +568,8 @@ function setInvoicesInfos(confData){
                 'ref': '',
                 'refClient': '',
                 'date': '',
-                'total_ht': ''
+                'total_ht': '',
+                'status': ''
             }
 
             item.ref = {
@@ -509,6 +578,34 @@ function setInvoicesInfos(confData){
                 class : 'text-center'
             };
 
+            if(parseInt(invoice.status) === -1) {
+                item.status = {
+                    html: `<span class="badge badge-status9">${chrome.i18n.getMessage('StatusCanceledShort')}</span>`,
+                    class : 'text-center'
+                };
+            } else if(parseInt(invoice.status) === 0) {
+                item.status = {
+                    html: `<span class="badge badge-status0">${chrome.i18n.getMessage('StatusDraftShort')}</span>`,
+                    class : 'text-center'
+                };
+            } else if(parseInt(invoice.status) === 1) {
+                item.status = {
+                    html: `<span class="badge badge-status1">${chrome.i18n.getMessage('StatusValidatedShort')}</span>`,
+                    class : 'text-center'
+                };
+            }
+            else if(parseInt(invoice.status) === 2) {
+                item.status = {
+                    html: `<span class="badge badge-status4">${chrome.i18n.getMessage('StatusClosed')}</span>`,
+                    class : 'text-center'
+                };
+            }
+            else if(parseInt(invoice.status) === 3) {
+                item.status = {
+                    html: `<span class="badge badge-status6">${chrome.i18n.getMessage('StatusAbandoned')}</span>`,
+                    class : 'text-center'
+                };
+            }
             
             if(typeof invoice.ref_client != undefined  && invoice.ref_client != null && invoice.ref_client.length > 0){
                 item.refClient = {
@@ -547,7 +644,8 @@ function setInvoicesInfos(confData){
                 'ref': chrome.i18n.getMessage('Ref'),
                 'refClient': chrome.i18n.getMessage('RefClient'),
                 'date': chrome.i18n.getMessage('Date'),
-                'total_ht': chrome.i18n.getMessage('Total')
+                'total_ht': chrome.i18n.getMessage('Total'),
+                'status': chrome.i18n.getMessage('Status')
             },
             tableItems,
             document.getElementById("data-from-dolibarr"),
@@ -591,7 +689,8 @@ function setSupplierordersInfos(confData){
                 'ref': '',
                 'refFourn': '',//todo translate
                 'date': '',
-                'total_ht': ''
+                'total_ht': '',
+                'status': ''
             }
 
             item.ref = {
@@ -599,6 +698,54 @@ function setSupplierordersInfos(confData){
                 hightLight : supplierorder.ref,
                 class : 'text-center'
             };
+
+
+            if(parseInt(supplierorder.status) === 6 || parseInt(supplierorder.status) === 7) {
+                item.status = {
+                    html: `<span class="badge badge-status9">${chrome.i18n.getMessage('StatusCanceledShort')}</span>`,
+                    class : 'text-center'
+                };
+            } else if(parseInt(supplierorder.status) === 0) {
+                item.status = {
+                    html: `<span class="badge badge-status0">${chrome.i18n.getMessage('StatusDraftShort')}</span>`,
+                    class : 'text-center'
+                };
+            } else if(parseInt(supplierorder.status) === 1) {
+                item.status = {
+                    html: `<span class="badge badge-status1">${chrome.i18n.getMessage('StatusValidatedShort')}</span>`,
+                    class : 'text-center'
+                };
+            }
+            else if(parseInt(supplierorder.status) === 2) {
+                item.status = {
+                    html: `<span class="badge badge-status1">${chrome.i18n.getMessage('StatusSupplierOrderDraftShort')}</span>`,
+                    class : 'text-center'
+                };
+            }
+            else if(parseInt(supplierorder.status) === 3) {
+                item.status = {
+                    html: `<span class="badge badge-status4">${chrome.i18n.getMessage('StatusSupplierOrderOnProcessShort')}</span>`,
+                    class : 'text-center'
+                };
+            }
+            else if(parseInt(supplierorder.status) === 4) {
+                item.status = {
+                    html: `<span class="badge badge-status4">${chrome.i18n.getMessage('StatusSupplierOrderReceivedPartiallyShort')}</span>`,
+                    class : 'text-center'
+                };
+            }
+            else if(parseInt(supplierorder.status) === 5) {
+                item.status = {
+                    html: `<span class="badge badge-status6">${chrome.i18n.getMessage('StatusSupplierOrderReceivedAllShort')}</span>`,
+                    class : 'text-center'
+                };
+            }
+            else if(parseInt(supplierorder.status) === 9) {
+                item.status = {
+                    html: `<span class="badge badge-status9">${chrome.i18n.getMessage('StatusSupplierOrderRefusedShort')}</span>`,
+                    class : 'text-center'
+                };
+            }
 
             if(typeof supplierorder.ref_supplier != undefined && supplierorder.ref_supplier != null && supplierorder.ref_supplier.length > 0){
                 item.refFourn= {
@@ -635,7 +782,8 @@ function setSupplierordersInfos(confData){
                 'ref': chrome.i18n.getMessage('Ref'),
                 'refClient': chrome.i18n.getMessage('RefClient'),
                 'date': chrome.i18n.getMessage('Date'),
-                'total_ht': chrome.i18n.getMessage('Total')
+                'total_ht': chrome.i18n.getMessage('Total'),
+                'status': chrome.i18n.getMessage('Status')
             },
             tableItems,
             document.getElementById("data-from-dolibarr")
