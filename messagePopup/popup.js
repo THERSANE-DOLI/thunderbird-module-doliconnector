@@ -24,6 +24,13 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     // information.
 
     let message = await messenger.messageDisplay.getDisplayedMessage(tabs[0].id);
+
+    if(!message){
+        // dans le cas d'une ouverture depuis le mail il faut récupérer les infos de la tab source d'ouverture
+        let {dolibarrMsg} = await browser.storage.local.get("dolibarrMsg");
+        message = dolibarrMsg;
+    }
+
     let messageBody = message ? await dolLib.getMessageBody(message.id) : '';
 
 
