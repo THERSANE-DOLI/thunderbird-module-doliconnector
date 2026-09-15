@@ -1,6 +1,7 @@
 # Quotation form
 
-Voici un descriptif des entêtes email ajouté par le module de devis de Prestashop "tsquotationform".
+Voici une description des en-têtes d’e-mails ajoutés par le module de devis Prestashop « tsquotationform ».
+Ils peuvent également être utilisés dans d’autres contextes ou avec d’autres outils.
 
 Implémenté : si ces entêtes sont présentes et que l'expéditeur du mail fait partie de la liste des
 "Expéditeurs de confiance pour les en-têtes de devis" (options du module), la recherche/création du
