@@ -174,6 +174,71 @@ export function extractEmailAddressFromString(text){
 }
 
 
+/**
+ * Read the X-Quotation-Mail / X-Quotation-Data headers added by the Prestashop
+ * "tsquotationform" module notification email, if present on the message.
+ * @param {number} id message id
+ * @returns {Promise<{email: string, data: (object|null)}|null>}
+ */
+export async function getQuotationHeaders(id){
+    let full = await messenger.messages.getFull(id);
+    if(!full || !full.headers){
+        return null;
+    }
+
+    let mailHeader = full.headers['x-quotation-mail'];
+    if(!Array.isArray(mailHeader) || mailHeader.length === 0){
+        return null;
+    }
+
+    let quotation = {
+        email: mailHeader[0].trim(),
+        data: null
+    };
+
+    let dataHeader = full.headers['x-quotation-data'];
+    if(Array.isArray(dataHeader) && dataHeader.length > 0){
+        try {
+            // folded headers (RFC 2822) may contain line breaks, unfold before parsing
+            let raw = dataHeader[0].replace(/\r?\n/g, '');
+            quotation.data = JSON.parse(raw);
+        } catch (error) {
+            console.error("Erreur de parsing de l'en-tête X-Quotation-Data :", error);
+        }
+    }
+
+    return quotation;
+}
+
+/**
+ * List of sender email addresses (or "@domain.tld" domains) allowed to have
+ * their X-Quotation-* headers trusted to override the sender-based thirdparty
+ * search. Kept empty by default for security : an attacker able to send a mail
+ * with a forged X-Quotation-Mail header must not be able to hijack the search.
+ * @returns {Promise<string[]>}
+ */
+export async function getQuotationTrustedSenders(){
+    let config = await browser.storage.local.get({dolibarrQuotationTrustedSenders: ''});
+    return config.dolibarrQuotationTrustedSenders
+        .split(/[\n,;]+/)
+        .map(sender => sender.trim().toLowerCase())
+        .filter(sender => sender.length > 0);
+}
+
+/**
+ * @param {string} email
+ * @param {string[]} trustedSenders list from getQuotationTrustedSenders()
+ * @returns {boolean}
+ */
+export function isQuotationTrustedSender(email, trustedSenders){
+    if(!email || !Array.isArray(trustedSenders) || trustedSenders.length === 0){
+        return false;
+    }
+    email = email.trim().toLowerCase();
+    return trustedSenders.some(sender => sender === email || (sender.startsWith('@') && email.endsWith(sender)));
+}
+
+
 export async function getDolibarrUrl() {
     let configData = await messenger.storage.local.get({
         dolibarrApiUrl: '',

@@ -35,6 +35,7 @@ function restoreOptions() {
 		document.getElementById("dolibarr-propal-billed").checked = data.dolibarrPropalBilled;
 		document.getElementById("dolibarr-search-domain").checked = data.dolibarrSearchDomain;
 		document.getElementById("dolibarr-use-notes").checked = data.dolibarrUseNotes;
+		document.getElementById("dolibarr-quotation-trusted-senders").value = data.dolibarrQuotationTrustedSenders;
 	}
 
 
@@ -56,6 +57,9 @@ function restoreOptions() {
     document.getElementById("label-for-link-to-modules-doc").textContent = browser.i18n.getMessage("SeeModuleDoc");
     document.getElementById("label-for-dolibarr-use-notes").textContent = browser.i18n.getMessage("DolibarrUseNotes");
     document.getElementById("label-for-dolibarr-use-notes_desc").textContent = browser.i18n.getMessage("DolibarrUseNotesDesc");
+    document.getElementById("label-for-dolibarr-quotation-trusted-senders").textContent = browser.i18n.getMessage("dolibarrQuotationTrustedSenders");
+    document.getElementById("label-for-dolibarr-quotation-trusted-senders_desc").textContent = browser.i18n.getMessage("dolibarrQuotationTrustedSendersDesc");
+    document.getElementById("dolibarr-quotation-trusted-senders").placeholder = browser.i18n.getMessage("dolibarrQuotationTrustedSendersPlaceholder");
 
 
 
@@ -71,7 +75,8 @@ function restoreOptions() {
 		dolibarrPropalNotSigned:  false,
 		dolibarrPropalBilled:  false,
 		dolibarrUseNotes:  false,
-		dolibarrSearchDomain:  false
+		dolibarrSearchDomain:  false,
+		dolibarrQuotationTrustedSenders: ''
     }).then(setCurrentChoice, onError);
 }
 
@@ -98,7 +103,8 @@ function saveOptions(e) {
         dolibarrPropalNotSigned: document.getElementById("dolibarr-propal-notsigned").checked,
         dolibarrPropalBilled: document.getElementById("dolibarr-propal-billed").checked,
         dolibarrUseNotes: document.getElementById("dolibarr-use-notes").checked,
-        dolibarrSearchDomain: document.getElementById("dolibarr-search-domain").checked
+        dolibarrSearchDomain: document.getElementById("dolibarr-search-domain").checked,
+        dolibarrQuotationTrustedSenders: document.getElementById("dolibarr-quotation-trusted-senders").value
     }
     // console.log(objToStore);
 

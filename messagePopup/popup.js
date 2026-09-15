@@ -43,6 +43,17 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     // Extract email from author
     let authorEmail = message ? dolLib.extractEmailAddressFromString(message.author)[0] : '';
 
+    // Quotation form headers (X-Quotation-Mail / X-Quotation-Data) : only trusted when the
+    // sender is in the configured trusted senders list, to avoid a forged header hijacking
+    // the thirdparty search.
+    let quotation = message ? await dolLib.getQuotationHeaders(message.id) : null;
+    let quotationTrustedSenders = await dolLib.getQuotationTrustedSenders();
+    let quotationActive = !!(quotation && quotation.email && dolLib.isQuotationTrustedSender(authorEmail, quotationTrustedSenders));
+
+    // Email to use to search/create the thirdparty : the quotation requester's email when
+    // the quotation headers are trusted, the mail sender's email otherwise.
+    let searchEmail = quotationActive ? quotation.email : authorEmail;
+
     //Filter on propal objects status
     let propalDisplayStatus = await dolLib.filterPropalStatus();
 
@@ -65,7 +76,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             limit : 5,
             sortfield: 't.rowid',
             sortorder: 'DESC',
-            sqlfilters: "(t.email:like:'"+authorEmail+"')"
+            sqlfilters: "(t.email:like:'"+searchEmail+"')"
         }, 'GET', {}, (resData)=>{
 
             resData = resData.pop();
@@ -91,8 +102,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             
 
         },(errorMsg)=>{
-            console.log("contacts not found now search Thirdparties And Populate By Email " + authorEmail);
-            searchThirdpartiesAndPopulateByEmail(authorEmail);
+            console.log("contacts not found now search Thirdparties And Populate By Email " + searchEmail);
+            searchThirdpartiesAndPopulateByEmail(searchEmail);
         });
 
 
@@ -229,40 +240,59 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             let newSocieteLink= document.getElementById("new-soc-link");
             let newContactLink= document.getElementById("new-contact-link");
 
-            // societe not found
-            soc.name = message.author.replace(authorEmail,'');
-            soc.name = soc.name.replace(/[^a-zA-Z0-9áàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ ]/g, '');
-            soc.name = soc.name.trim();
+            let quotationData = quotationActive ? (quotation.data || {}) : {};
 
-            // let phones = dolLib.searchPhonesInString(messageBody.html, true);
-            let phones = dolLib.searchPhonesInString(messageBody.txt);
-            if(phones.length>0){
-                soc.phone_pro = phones[0];
-            }
-            if(phones.length>1){
-                // TODO detect who is mobile
-                soc.phone_mobile = phones[1];
-            }
-            if(phones.length>2){
-                soc.phone_perso = phones[2];
+            if(quotationActive && (quotationData.firstname || quotationData.lastname)){
+                // societe not found - prefill from the trusted X-Quotation-Data header
+                soc.name = (quotationData.is_pro === '1' && quotationData.company)
+                    ? quotationData.company
+                    : [quotationData.firstname, quotationData.lastname].filter(Boolean).join(' ');
+
+                soc.phone_pro = quotationData.phone || '';
+            }else{
+                // societe not found
+                soc.name = message.author.replace(authorEmail,'');
+                soc.name = soc.name.replace(/[^a-zA-Z0-9áàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ ]/g, '');
+                soc.name = soc.name.trim();
+
+                // let phones = dolLib.searchPhonesInString(messageBody.html, true);
+                let phones = dolLib.searchPhonesInString(messageBody.txt);
+                if(phones.length>0){
+                    soc.phone_pro = phones[0];
+                }
+                if(phones.length>1){
+                    // TODO detect who is mobile
+                    soc.phone_mobile = phones[1];
+                }
+                if(phones.length>2){
+                    soc.phone_perso = phones[2];
+                }
             }
 
-
+            let contactName = quotationActive && (quotationData.firstname || quotationData.lastname)
+                ? {firstName: quotationData.firstname || '', lastName: quotationData.lastname || ''}
+                : dolLib.parseName(soc.name);
 
             let newThirdURL = new URL(confDolibarUrl + "societe/card.php");
             newThirdURL.searchParams.set('action', "create");
-            newThirdURL.searchParams.set('email', authorEmail);
+            newThirdURL.searchParams.set('email', searchEmail);
             newThirdURL.searchParams.set('name', soc.name);
             newThirdURL.searchParams.set('phone',  soc.phone_pro);
+            if(quotationData.siren){
+                newThirdURL.searchParams.set('idprof1', quotationData.siren);
+            }
+            if(quotationData.vat_number){
+                newThirdURL.searchParams.set('tva_intra', quotationData.vat_number);
+            }
             newSocieteLink.href = newThirdURL;
 
             titleDiv.textContent =  soc.name;
 
             let newContactURL = new URL(confDolibarUrl + "contact/card.php");
             newContactURL.searchParams.set('action', "create");
-            newContactURL.searchParams.set('email', authorEmail);
-            newContactURL.searchParams.set('firstname', dolLib.parseName(soc.name).firstName);
-            newContactURL.searchParams.set('lastname', dolLib.parseName(soc.name).lastName);
+            newContactURL.searchParams.set('email', searchEmail);
+            newContactURL.searchParams.set('firstname', contactName.firstName);
+            newContactURL.searchParams.set('lastname', contactName.lastName);
             newContactURL.searchParams.set('phone_pro',  soc.phone_pro);
             newContactURL.searchParams.set('phone_mobile',  soc.phone_mobile);
             newContactURL.searchParams.set('phone_perso',  soc.phone_perso);
@@ -278,6 +308,15 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         let url = new URL(confDolibarUrl + "societe/card.php");
         url.searchParams.set('socid', soc.id);
         linkSociete.href = url;
+
+        if(quotationActive){
+            displayTpl("new-quotation-link");
+            let newQuotationLink = document.getElementById("new-quotation-link");
+            let newQuotationURL = new URL(confDolibarUrl + "comm/propal/card.php");
+            newQuotationURL.searchParams.set('action', "create");
+            newQuotationURL.searchParams.set('socid', soc.id);
+            newQuotationLink.href = newQuotationURL;
+        }
 
     }
 

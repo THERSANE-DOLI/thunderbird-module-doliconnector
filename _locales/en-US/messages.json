@@ -44,6 +44,9 @@
   "CreateNewContact": {
     "message": "Create a new contact"
   },
+  "CreateNewQuotation": {
+    "message": "Create a quotation"
+  },
   "FicheDolibarr": {
     "message": "Show thirdparty"
   },
@@ -106,6 +109,15 @@
   },
   "DolibarrUseNotesDesc" :{
     "message": "Requires the CRM client connector module installed on your Dolibarr"
+  },
+  "dolibarrQuotationTrustedSenders" :{
+    "message": "Trusted senders for quotation headers"
+  },
+  "dolibarrQuotationTrustedSendersDesc" :{
+    "message": "If an email comes from one of these senders (exact address or domain, e.g. : @myshop.com) and contains the X-Quotation-Mail / X-Quotation-Data headers (Prestashop tsquotationform module), the thirdparty will be searched/created from these headers instead of the mail sender."
+  },
+  "dolibarrQuotationTrustedSendersPlaceholder" :{
+    "message": "One address or domain per line, e.g.:\nshop@example.com\n@myshop.com"
   },
   "Comments" :{
     "message": "Comments"

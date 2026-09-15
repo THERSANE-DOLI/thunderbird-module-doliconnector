@@ -44,6 +44,9 @@
   "CreateNewContact": {
     "message": "Créer un nouveau contact"
   },
+  "CreateNewQuotation": {
+    "message": "Créer un devis"
+  },
   "FicheDolibarr": {
     "message": "Voir Fiche"
   },
@@ -103,6 +106,15 @@
   },
   "DolibarrUseNotesDesc" :{
     "message": "Nécéssite le module CRM client connector d'installé sur votre Dolibarr"
+  },
+  "dolibarrQuotationTrustedSenders" :{
+    "message": "Expéditeurs de confiance pour les en-têtes de devis"
+  },
+  "dolibarrQuotationTrustedSendersDesc" :{
+    "message": "Si un email provient d'un de ces expéditeurs (adresse exacte ou domaine, ex. : @maboutique.fr) et contient les en-têtes X-Quotation-Mail / X-Quotation-Data (module Prestashop tsquotationform), le tiers sera recherché/créé à partir de ces en-têtes plutôt que de l'expéditeur du mail."
+  },
+  "dolibarrQuotationTrustedSendersPlaceholder" :{
+    "message": "Une adresse ou un domaine par ligne, ex. :\nboutique@example.com\n@maboutique.fr"
   },
   "Comments" :{
     "message": "Commentaires"
