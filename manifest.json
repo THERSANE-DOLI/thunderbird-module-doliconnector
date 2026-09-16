@@ -45,8 +45,5 @@
     "type": "module",
     "scripts": ["background.js"],
     "persistent": false
-  },
-  "web_accessible_resources": [
-    "exclude-domains.json"
-  ]
+  }
 }

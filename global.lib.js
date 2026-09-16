@@ -271,15 +271,10 @@ export async function getDolibarrUrl() {
 
 
 
-function replace_i18n(obj, tag) {
-    var msg = tag.replace(/__MSG_(\w+)__/g, function(match, v1) {
+function localizeMsgTags(text) {
+    return text.replace(/__MSG_(\w+)__/g, function(match, v1) {
         return v1 ? chrome.i18n.getMessage(v1) : '';
     });
-
-    if(msg != tag) {
-        obj.innerHTML = msg;
-        //obj.appendChild(parseHTML(msg));
-    }
 }
 
 export function localizeHtmlPage() {
@@ -289,18 +284,29 @@ export function localizeHtmlPage() {
     for (var i in data) if (data.hasOwnProperty(i)) {
         var obj = data[i];
         var tag = obj.getAttribute('data-localize').toString();
+        var msg = localizeMsgTags(tag);
 
-        replace_i18n(obj, tag);
+        if (msg != tag) {
+            obj.textContent = msg;
+        }
     }
 
-    // Localize everything else by replacing all __MSG_***__ tags
-    var page = document.getElementsByTagName('html');
-
-    for (var j = 0; j < page.length; j++) {
-        var obj = page[j];
-        var tag = obj.innerHTML.toString();
-        replace_i18n(obj, tag);
+    // Localize everything else by replacing __MSG_***__ tags in text nodes and attributes
+    var walker = document.createTreeWalker(document.documentElement, NodeFilter.SHOW_TEXT);
+    var node;
+    while ((node = walker.nextNode())) {
+        if (node.nodeValue.includes('__MSG_')) {
+            node.nodeValue = localizeMsgTags(node.nodeValue);
+        }
     }
+
+    document.querySelectorAll('*').forEach(function(el) {
+        for (var attr of Array.from(el.attributes)) {
+            if (attr.value.includes('__MSG_')) {
+                el.setAttribute(attr.name, localizeMsgTags(attr.value));
+            }
+        }
+    });
 }
 
 /**

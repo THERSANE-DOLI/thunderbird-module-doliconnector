@@ -1,37 +1,44 @@
 // background.js (ES module)
 import * as dolLib from '../global.lib.js';
 
-browser.runtime.onMessage.addListener(async (message, sender) => {
+browser.runtime.onMessage.addListener((message, sender) => {
     if (message.type === "getEmailAccount") {
-        try {
-            const msg = await browser.messages.get(message.messageId);
-            const folder = msg.folder;
-            const accounts = await browser.accounts.list();
-            const account = accounts.find(acc => acc.id === folder.accountId);
+        return (async () => {
+            try {
+                const msg = await browser.messages.get(message.messageId);
+                const folder = msg.folder;
+                const accounts = await browser.accounts.list();
+                const account = accounts.find(acc => acc.id === folder.accountId);
 
-            if (account && account.identities.length > 0) {
-                return { email: account.identities[0].email };
+                if (account && account.identities.length > 0) {
+                    return { email: account.identities[0].email };
+                }
+            } catch (err) {
+                console.error("Erreur récupération compte :", err);
             }
-        } catch (err) {
-            console.error("Erreur récupération compte :", err);
-        }
 
-        return { email: null };
+            return { email: null };
+        })();
     }
 
     if (message.action === "openDolibarr") {
-        // Dans le cas d'une ouverture depuis le mail il faut récupérer les infos de la tab source d'ouverture et les envoyer à la popup
-        let tabId = sender.tab.id;
-        let message = await browser.messageDisplay.getDisplayedMessage(tabId);
-        await browser.storage.local.set({dolibarrMsg: message});
+        return (async () => {
+            // Dans le cas d'une ouverture depuis le mail il faut récupérer les infos de la tab source d'ouverture et les envoyer à la popup
+            let tabId = sender.tab.id;
+            let message = await browser.messageDisplay.getDisplayedMessage(tabId);
+            await browser.storage.local.set({dolibarrMsg: message});
 
-        browser.windows.create({
-            url: browser.runtime.getURL("messagePopup/popup.html"),
-            type: "popup",
-            width: 600,
-            height: 500
-        });
+            browser.windows.create({
+                url: browser.runtime.getURL("messagePopup/popup.html"),
+                type: "popup",
+                width: 600,
+                height: 500
+            });
+        })();
     }
+
+    // Not handled by this listener - do not claim the message so other listeners can respond.
+    return undefined;
 });
 
 
