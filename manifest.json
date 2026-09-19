@@ -12,7 +12,7 @@
   "optional_permissions": [
     "<all_urls>"
   ],
-  "version": "1.11.0",
+  "version": "1.13.0",
   "author": "THERSANE",
   "homepage_url": "https://www.thersane.fr",
   "browser_specific_settings": {
@@ -45,8 +45,5 @@
     "type": "module",
     "scripts": ["background.js"],
     "persistent": false
-  },
-  "web_accessible_resources": [
-    "exclude-domains.json"
-  ]
+  }
 }

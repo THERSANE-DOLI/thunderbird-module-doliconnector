@@ -232,5 +232,44 @@
   },
   "StatusSupplierOrderRefusedShort": {
     "message": "Refused"
+  },
+  "DolibarrRefDetected": {
+    "message": "Reference detected in this email:"
+  },
+  "OpenDocument": {
+    "message": "Show record"
+  },
+  "DolibarrTypeOrder": {
+    "message": "Order"
+  },
+  "DolibarrTypeProposal": {
+    "message": "Proposal"
+  },
+  "DolibarrTypeInvoice": {
+    "message": "Invoice"
+  },
+  "DolibarrTypeSupplierOrder": {
+    "message": "Supplier order"
+  },
+  "DolibarrTypeSupplierInvoice": {
+    "message": "Supplier invoice"
+  },
+  "DolibarrTypeShipment": {
+    "message": "Shipment"
+  },
+  "DolibarrTypeContract": {
+    "message": "Contract"
+  },
+  "DolibarrTypeTicket": {
+    "message": "Ticket"
+  },
+  "DolibarrTypeProject": {
+    "message": "Project"
+  },
+  "DolibarrTypeIntervention": {
+    "message": "Intervention sheet"
+  },
+  "DolibarrTypeMember": {
+    "message": "Member"
   }
 }

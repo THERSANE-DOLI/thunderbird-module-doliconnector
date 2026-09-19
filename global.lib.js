@@ -238,6 +238,108 @@ export function isQuotationTrustedSender(email, trustedSenders){
     return trustedSenders.some(sender => sender === email || (sender.startsWith('@') && email.endsWith(sender)));
 }
 
+/**
+ * Dolibarr object types that can appear in an email trackid, keyed by the
+ * short prefix Dolibarr puts in front of the object id (see e.g.
+ * htdocs/commande/card.php: `$trackid = 'ord'.$object->id;`, and the
+ * equivalent line in each other object's card.php).
+ */
+export const DOLIBARR_OBJECT_TYPES = {
+    ord:  { api: 'orders',           card: 'commande/card.php',       labelKey: 'DolibarrTypeOrder' },
+    pro:  { api: 'proposals',        card: 'comm/propal/card.php',    labelKey: 'DolibarrTypeProposal' },
+    inv:  { api: 'invoices',         card: 'compta/facture/card.php', labelKey: 'DolibarrTypeInvoice' },
+    sord: { api: 'supplierorders',   card: 'fourn/commande/card.php', labelKey: 'DolibarrTypeSupplierOrder' },
+    sinv: { api: 'supplierinvoices', card: 'fourn/facture/card.php',  labelKey: 'DolibarrTypeSupplierInvoice' },
+    shi:  { api: 'shipments',        card: 'expedition/card.php',     labelKey: 'DolibarrTypeShipment' },
+    con:  { api: 'contracts',        card: 'contrat/card.php',        labelKey: 'DolibarrTypeContract' },
+    tic:  { api: 'tickets',          card: 'ticket/card.php',         labelKey: 'DolibarrTypeTicket' },
+    proj: { api: 'projects',         card: 'projet/card.php',         labelKey: 'DolibarrTypeProject' },
+    int:  { api: 'interventions',    card: 'fichinter/card.php',      labelKey: 'DolibarrTypeIntervention' },
+    mem:  { api: 'members',          card: 'adherents/card.php',      labelKey: 'DolibarrTypeMember' },
+};
+
+export function getDolibarrObjectTypeMeta(type){
+    if(!type){
+        return null;
+    }
+    return DOLIBARR_OBJECT_TYPES[type.toLowerCase()] || null;
+}
+
+export function getDolibarrCardUrl(dolUrl, type, id){
+    let meta = getDolibarrObjectTypeMeta(type);
+    if(!meta || !dolUrl){
+        return null;
+    }
+    let url = new URL(dolUrl + meta.card);
+    url.searchParams.set('id', id);
+    return url.toString();
+}
+
+/**
+ * Dolibarr embeds a trackid ("<prefix><id>@<sha1>") in outgoing emails as
+ * X-Dolibarr-TRACKID and Feedback-ID, and swiftmailer reuses it inside the
+ * Message-ID it generates. That Message-ID then shows up in References/
+ * In-Reply-To on any reply, which is how we can link a reply back to the
+ * Dolibarr record that originated the thread.
+ * @param {Object} headers headers map as returned by messenger.messages.getFull() (lower-case header names, array of raw values)
+ * @returns {{type: string, id: string}|null}
+ */
+export function extractDolibarrRef(headers){
+    if(!headers){
+        return null;
+    }
+
+    const trackIdPattern = /([a-z]{2,6})(\d+)@[0-9a-f]{20,64}/i;
+
+    let trackIdHeader = headers['x-dolibarr-trackid'];
+    if(Array.isArray(trackIdHeader) && trackIdHeader.length > 0){
+        let match = trackIdHeader[0].match(trackIdPattern);
+        if(match){
+            return { type: match[1].toLowerCase(), id: match[2] };
+        }
+    }
+
+    let feedbackIdHeader = headers['feedback-id'];
+    if(Array.isArray(feedbackIdHeader) && feedbackIdHeader.length > 0){
+        let match = feedbackIdHeader[0].match(/^([a-z]{2,6})(\d+):[0-9a-f]{20,64}:/i);
+        if(match){
+            return { type: match[1].toLowerCase(), id: match[2] };
+        }
+    }
+
+    let headersToScan = ['references', 'in-reply-to', 'message-id'];
+    for (const headerName of headersToScan) {
+        let values = headers[headerName];
+        if(!Array.isArray(values)){
+            continue;
+        }
+        for (const value of values) {
+            let match = value.match(/dolibarr-([a-z]{2,6})(\d+)@[0-9a-f]{20,64}/i);
+            if(match){
+                return { type: match[1].toLowerCase(), id: match[2] };
+            }
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Read the trackid off a message's headers (X-Dolibarr-TRACKID, Feedback-ID,
+ * or embedded in References/In-Reply-To on a reply) and resolve it against
+ * DOLIBARR_OBJECT_TYPES. Mirrors getQuotationHeaders()'s style: fetches the
+ * full message itself so callers don't need to.
+ * @param {number} id message id
+ * @returns {Promise<{type: string, id: string}|null>}
+ */
+export async function getDolibarrTrackIdFromMessage(id){
+    let full = await messenger.messages.getFull(id);
+    if(!full || !full.headers){
+        return null;
+    }
+    return extractDolibarrRef(full.headers);
+}
+
 
 export async function getDolibarrUrl() {
     let configData = await messenger.storage.local.get({
@@ -271,15 +373,10 @@ export async function getDolibarrUrl() {
 
 
 
-function replace_i18n(obj, tag) {
-    var msg = tag.replace(/__MSG_(\w+)__/g, function(match, v1) {
+function localizeMsgTags(text) {
+    return text.replace(/__MSG_(\w+)__/g, function(match, v1) {
         return v1 ? chrome.i18n.getMessage(v1) : '';
     });
-
-    if(msg != tag) {
-        obj.innerHTML = msg;
-        //obj.appendChild(parseHTML(msg));
-    }
 }
 
 export function localizeHtmlPage() {
@@ -289,18 +386,29 @@ export function localizeHtmlPage() {
     for (var i in data) if (data.hasOwnProperty(i)) {
         var obj = data[i];
         var tag = obj.getAttribute('data-localize').toString();
+        var msg = localizeMsgTags(tag);
 
-        replace_i18n(obj, tag);
+        if (msg != tag) {
+            obj.textContent = msg;
+        }
     }
 
-    // Localize everything else by replacing all __MSG_***__ tags
-    var page = document.getElementsByTagName('html');
-
-    for (var j = 0; j < page.length; j++) {
-        var obj = page[j];
-        var tag = obj.innerHTML.toString();
-        replace_i18n(obj, tag);
+    // Localize everything else by replacing __MSG_***__ tags in text nodes and attributes
+    var walker = document.createTreeWalker(document.documentElement, NodeFilter.SHOW_TEXT);
+    var node;
+    while ((node = walker.nextNode())) {
+        if (node.nodeValue.includes('__MSG_')) {
+            node.nodeValue = localizeMsgTags(node.nodeValue);
+        }
     }
+
+    document.querySelectorAll('*').forEach(function(el) {
+        for (var attr of Array.from(el.attributes)) {
+            if (attr.value.includes('__MSG_')) {
+                el.setAttribute(attr.name, localizeMsgTags(attr.value));
+            }
+        }
+    });
 }
 
 /**

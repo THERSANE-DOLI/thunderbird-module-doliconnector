@@ -100,5 +100,44 @@
   },
   "DoubleClickToDelete" :{
     "message": "Διπλό κλικ για διαγραφή"
+  },
+  "DolibarrRefDetected": {
+    "message": "Εντοπίστηκε αναφορά σε αυτό το email:"
+  },
+  "OpenDocument": {
+    "message": "Εμφάνιση καταχώρησης"
+  },
+  "DolibarrTypeOrder": {
+    "message": "Παραγγελία"
+  },
+  "DolibarrTypeProposal": {
+    "message": "Προσφορά"
+  },
+  "DolibarrTypeInvoice": {
+    "message": "Τιμολόγιο"
+  },
+  "DolibarrTypeSupplierOrder": {
+    "message": "Παραγγελία προμηθευτή"
+  },
+  "DolibarrTypeSupplierInvoice": {
+    "message": "Τιμολόγιο προμηθευτή"
+  },
+  "DolibarrTypeShipment": {
+    "message": "Αποστολή"
+  },
+  "DolibarrTypeContract": {
+    "message": "Σύμβαση"
+  },
+  "DolibarrTypeTicket": {
+    "message": "Ticket"
+  },
+  "DolibarrTypeProject": {
+    "message": "Έργο"
+  },
+  "DolibarrTypeIntervention": {
+    "message": "Δελτίο επέμβασης"
+  },
+  "DolibarrTypeMember": {
+    "message": "Μέλος"
   }
 }
