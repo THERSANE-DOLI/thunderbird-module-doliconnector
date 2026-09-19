@@ -62,6 +62,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     let quotation = message ? await dolLib.getQuotationHeaders(message.id) : null;
     let quotationTrustedSenders = await dolLib.getQuotationTrustedSenders();
     let quotationActive = !!(quotation && quotation.email && dolLib.isQuotationTrustedSender(authorEmail, quotationTrustedSenders));
+    LOG('quotation headers', quotation, 'authorEmail', authorEmail, 'trustedSenders', quotationTrustedSenders, 'quotationActive', quotationActive);
 
     // Email to use to search/create the thirdparty : the quotation requester's email when
     // the quotation headers are trusted, the mail sender's email otherwise.
