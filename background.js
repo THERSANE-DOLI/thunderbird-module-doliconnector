@@ -44,6 +44,9 @@ browser.runtime.onMessage.addListener((message, sender) => {
 
 browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
 
+    // Independent of the notes feature below: if this message carries a
+    // Dolibarr trackid, show a banner linking to the record it's about.
+    checkAndInjectTrackidBanner(tab, message);
 
     let config = await browser.storage.local.get({dolibarrUseNotes: false});
 
@@ -77,22 +80,7 @@ browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
             dolLib.updateBadgeMessageDisplayAction(tab, resDataMsg.length);
 
 
-            // Dans ton background.js ou callback
-            const cssPath = browser.runtime.getURL("content/doli-injector.css");
-            fetch(cssPath)
-                .then(res => res.text())
-                .then(css => {
-                    browser.tabs.executeScript(tab.id, {
-                        code: `
-                          (function() {
-                              const style = document.createElement("style");
-                              style.type = "text/css";
-                              style.innerHTML = ${JSON.stringify(css)};
-                              (document.head || document.documentElement).appendChild(style);
-                          })();
-                        `
-                    });
-                });
+            injectDoliCss(tab.id);
 
             let html = renderDolibarrBox(resDataMsg);
 
@@ -124,6 +112,116 @@ browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
 
 });
 
+
+/**
+ * Injects content/doli-injector.css into the message tab, once. Both the
+ * "last comment" banner and the trackid banner rely on it.
+ * @param tabId
+ */
+function injectDoliCss(tabId){
+    const cssPath = browser.runtime.getURL("content/doli-injector.css");
+    fetch(cssPath)
+        .then(res => res.text())
+        .then(css => {
+            browser.tabs.executeScript(tabId, {
+                code: `
+                  (function() {
+                      if (document.getElementById('doli-injected-css')) { return; }
+                      const style = document.createElement("style");
+                      style.id = 'doli-injected-css';
+                      style.type = "text/css";
+                      style.innerHTML = ${JSON.stringify(css)};
+                      (document.head || document.documentElement).appendChild(style);
+                  })();
+                `
+            });
+        });
+}
+
+/**
+ * If the displayed message carries a Dolibarr trackid (X-Dolibarr-TRACKID,
+ * Feedback-ID, or embedded in References/In-Reply-To on a reply), inject a
+ * banner in the message body linking to the Dolibarr record it's about -
+ * same visual treatment as the "last comment" banner above.
+ * @param tab
+ * @param message
+ */
+async function checkAndInjectTrackidBanner(tab, message){
+    let ref = await dolLib.getDolibarrTrackIdFromMessage(message.id);
+    if(!ref){
+        return;
+    }
+
+    let meta = dolLib.getDolibarrObjectTypeMeta(ref.type);
+    if(!meta){
+        console.log("[DoliConnector background] trackid type is unknown/unmapped, ignoring", ref.type);
+        return;
+    }
+
+    let hasConfig = await dolLib.checkConfig();
+    if(!hasConfig){
+        return;
+    }
+
+    let dolUrl = await dolLib.getDolibarrUrl();
+    let cardUrl = dolLib.getDolibarrCardUrl(dolUrl, ref.type, ref.id);
+    if(!cardUrl){
+        return;
+    }
+
+    dolLib.callDolibarrApi(meta.api + '/' + ref.id, {}, 'GET', {}, (objData) => {
+        injectTrackidBanner(tab.id, {
+            typeLabel: browser.i18n.getMessage(meta.labelKey),
+            refLabel: (objData && objData.ref) ? objData.ref : ('#' + ref.id),
+            cardUrl: cardUrl
+        });
+    }, (errorMsg) => {
+        console.log("[DoliConnector background] failed to fetch referenced object, showing a generic link", errorMsg);
+        injectTrackidBanner(tab.id, {
+            typeLabel: browser.i18n.getMessage(meta.labelKey),
+            refLabel: '#' + ref.id,
+            cardUrl: cardUrl
+        });
+    });
+}
+
+function injectTrackidBanner(tabId, info){
+    injectDoliCss(tabId);
+
+    let html = renderDolibarrTrackidBox(info);
+
+    browser.tabs.executeScript(tabId, {
+        code: `
+            (function() {
+                const div = document.createElement("div");
+                div.className = 'doli-banner-container doli-trackid-banner-container';
+                div.innerHTML = ${JSON.stringify(html)};
+                if (document.body) { document.body.prepend(div); }
+                else if (document.documentElement) { document.documentElement.prepend(div); }
+            })();
+        `
+    });
+}
+
+function renderDolibarrTrackidBox(info) {
+    let linkIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FBC02D" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
+
+    return `
+      <div class="doli-box">
+        <div class="doli-content-wrapper">
+           <div class="doli-icon-circle">${linkIcon}</div>
+           <div style="flex:1">
+              <div class="doli-last-note" style="font-style:normal">${info.typeLabel} ${info.refLabel}</div>
+           </div>
+        </div>
+        <div class="doli-actions">
+           <a href="${info.cardUrl}" target="_blank" rel="noopener noreferrer" class="doli-btn-history">
+              ${browser.i18n.getMessage("OpenDocument")}
+           </a>
+        </div>
+      </div>
+    `;
+}
 
 function renderDolibarrBox(messages) {
 

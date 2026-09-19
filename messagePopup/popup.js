@@ -2,6 +2,19 @@ import * as dolLib from '../global.lib.js';
 
 import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
+    const LOG = (...args) => console.log('[DoliConnector popup]', ...args);
+
+    // Workaround for a Linux/GTK bug: when this UI is shown in a detached "popup" type
+    // window (see browser.windows.create in background.js), pressing Ctrl or Alt on its
+    // own is interpreted by the window manager as a request to close the window, which
+    // also interrupts Ctrl+C / Ctrl+V while typing. Ctrl+letter / Alt+letter combos fire
+    // their own keydown event for the letter and are not affected by this.
+    window.addEventListener('keydown', (event) => {
+        if (event.key === 'Control' || event.key === 'Alt') {
+            event.preventDefault();
+        }
+    });
+
     async function getEmailAccountFromBackground(messageId) {
         const response = await browser.runtime.sendMessage({
             type: "getEmailAccount",
@@ -54,6 +67,29 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     // the quotation headers are trusted, the mail sender's email otherwise.
     let searchEmail = quotationActive ? quotation.email : authorEmail;
 
+    // Dolibarr trackid (X-Dolibarr-TRACKID, Feedback-ID, or embedded in
+    // References/In-Reply-To on a reply) : tells us exactly which Dolibarr
+    // record this email is about, so it takes priority over both the
+    // quotation headers and the sender's email for finding the thirdparty.
+    let detectedRef = message ? await dolLib.getDolibarrTrackIdFromMessage(message.id) : null;
+    let detectedRefMeta = detectedRef ? dolLib.getDolibarrObjectTypeMeta(detectedRef.type) : null;
+    if(!detectedRefMeta){
+        if(detectedRef){
+            LOG('trackid found but type is unknown/unmapped, ignoring', detectedRef);
+        }
+        detectedRef = null;
+    }
+    LOG('detected trackid', detectedRef, detectedRefMeta);
+    const DETECTED_REF_TABLE_BACKED_TYPES = ['ord', 'pro', 'inv', 'sord'];
+    let detectedRefTableResolved = false;
+    let detectedRefShouldShowBlock = false;
+    let detectedRefObjectData = null;
+    let detectedRefObjectFetchDone = false;
+    // Fed into jsonToTable()'s highlight search once the referenced object's
+    // ref is known, so its row lights up the same way a ref mentioned in the
+    // message body/subject already does.
+    let detectedRefSearchText = '';
+
     //Filter on propal objects status
     let propalDisplayStatus = await dolLib.filterPropalStatus();
 
@@ -62,6 +98,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     let config = await browser.storage.local.get({dolibarrUseNotes: false});
 
     if(!checkConfig){
+        LOG('module not configured, showing check-module-config template');
         displayTpl("check-module-config");
     }else{
         displayTpl("main-popup");
@@ -70,8 +107,81 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         initNotesForMessage();
         document.querySelectorAll('textarea.autosize').forEach(textarea => dolLib.textareaAutosize(textarea))
 
-        // Get contact infos
+        if(detectedRef){
+            LOG('trackid detected, fetching referenced object', detectedRefMeta.api + '/' + detectedRef.id);
+            dolLib.callDolibarrApi(detectedRefMeta.api + '/' + detectedRef.id, {}, 'GET', {}, (objData)=>{
+                LOG('referenced object fetched OK', objData);
+                detectedRefObjectData = objData;
+                detectedRefObjectFetchDone = true;
+                if(objData && objData.ref){
+                    detectedRefSearchText += ' ' + objData.ref;
+                }
+                maybeRenderDetectedRefBlock();
 
+                let socId = parseInt(objData.socid || objData.fk_soc || 0);
+                if(socId > 0){
+                    LOG('thirdparty id found on referenced object, resolving company from it', socId);
+                    resolveSocFromId(socId);
+                }else{
+                    LOG('referenced object has no thirdparty id, falling back to email-based search');
+                    searchCompanyByEmail();
+                }
+            },(errorMsg)=>{
+                LOG('failed to fetch referenced object, falling back to email-based search', errorMsg);
+                detectedRefObjectFetchDone = true;
+                maybeRenderDetectedRefBlock();
+                searchCompanyByEmail();
+            });
+
+            if(!DETECTED_REF_TABLE_BACKED_TYPES.includes(detectedRef.type)){
+                // No table will ever be checked for this type, so we already
+                // know the fallback block is what needs to be shown.
+                LOG('type has no matching table, resolving fallback block immediately', detectedRef.type);
+                resolveDetectedRefTableCheck(false);
+            }
+        }else{
+            LOG('no trackid detected, using quotation/email-based search only');
+            searchCompanyByEmail();
+        }
+    }
+
+    /**
+     * Populate company + documents from a thirdparty id we already know
+     * (typically resolved from the detected trackid's object), fetching its
+     * name for display.
+     * @param socId
+     */
+    function resolveSocFromId(socId){
+        dolLib.callDolibarrApi('thirdparties/' + socId, {}, 'GET', {}, (socData)=>{
+            LOG('thirdparty resolved from trackid', socData);
+            setSocInfos({
+                id: socData.id,
+                name: socData.name
+            });
+
+            loadDocumentsInfos({
+                socId : socData.id
+            });
+        },(errorMsg)=>{
+            LOG('failed to fetch thirdparty name for id ' + socId + ', using id only', errorMsg);
+            setSocInfos({
+                id: socId,
+                name: ''
+            });
+
+            loadDocumentsInfos({
+                socId : socId
+            });
+        });
+    }
+
+    /**
+     * Original flow: find the thirdparty via searchEmail (the quotation
+     * requester's email when trusted X-Quotation-Mail headers are present,
+     * the sender's email otherwise).
+     */
+    function searchCompanyByEmail(){
+        LOG('searching company by email', searchEmail);
         dolLib.callDolibarrApi('contacts', {
             limit : 5,
             sortfield: 't.rowid',
@@ -82,6 +192,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             resData = resData.pop();
 
             if(parseInt(resData.socid) > 0){
+                LOG('contact found and attached to a thirdparty', resData);
 
                 // Populate company data
                 setSocInfos({
@@ -94,19 +205,18 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                 })
 
             }else{
+                LOG('contact found but not attached to a thirdparty', resData);
                 setSocInfos({
                     id: 0, // In this case contact is probaly not attached to soc
                     name: 'Contact found but not attached to company'
                 })
             }
-            
+
 
         },(errorMsg)=>{
-            console.log("contacts not found now search Thirdparties And Populate By Email " + searchEmail);
+            LOG("contacts not found now search Thirdparties And Populate By Email " + searchEmail, errorMsg);
             searchThirdpartiesAndPopulateByEmail(searchEmail);
         });
-
-
     }
 
 
@@ -219,6 +329,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
      * @param socData
      */
     async function setSocInfos(socData){
+        LOG('setSocInfos', socData);
         let soc = Object.assign({
             id: 0,
             name: '',
@@ -298,10 +409,15 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             newContactURL.searchParams.set('phone_perso',  soc.phone_perso);
             newContactLink.href = newContactURL;
 
+            LOG('no thirdparty found for this contact/email');
+            // No thirdparty found means loadDocumentsInfos() never runs, so
+            // no table will ever be able to confirm/deny a match.
+            resolveDetectedRefTableCheck(false);
 
             return;
         }
 
+        LOG('thirdparty displayed', soc);
         displayTpl("soc-link");
 
         titleDiv.textContent =  soc.name;
@@ -318,6 +434,70 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             newQuotationLink.href = newQuotationURL;
         }
 
+    }
+
+    /**
+     * Called once we know whether the detected trackid's object was found
+     * among the rows of its matching table (and therefore already
+     * highlighted via detectedRefSearchText). Only the first call counts.
+     * @param matchedInTable
+     */
+    function resolveDetectedRefTableCheck(matchedInTable){
+        if(!detectedRef || detectedRefTableResolved){
+            return;
+        }
+        detectedRefTableResolved = true;
+        LOG('detected ref table check resolved, matchedInTable =', matchedInTable);
+
+        if(!matchedInTable){
+            detectedRefShouldShowBlock = true;
+            maybeRenderDetectedRefBlock();
+        }
+    }
+
+    /**
+     * Renders the "detected reference" fallback block, but only once we both
+     * know it needs to be shown (the referenced object didn't show up in its
+     * matching table - too old, or a type with no table at all) and have the
+     * API response for the referenced object (for its ref name).
+     */
+    function maybeRenderDetectedRefBlock(){
+        if(!detectedRefShouldShowBlock || !detectedRefObjectFetchDone){
+            LOG('maybeRenderDetectedRefBlock: not ready yet', { detectedRefShouldShowBlock, detectedRefObjectFetchDone });
+            return;
+        }
+
+        LOG('rendering detected ref block', detectedRef, detectedRefObjectData);
+        let block = document.getElementById("dolibarr-detected-ref");
+        let textEl = document.getElementById("dolibarr-detected-ref-text");
+        let linkEl = document.getElementById("dolibarr-detected-ref-link");
+        if(!block || !textEl || !linkEl){
+            return;
+        }
+
+        let typeLabel = chrome.i18n.getMessage(detectedRefMeta.labelKey);
+        let refLabel = (detectedRefObjectData && detectedRefObjectData.ref) ? detectedRefObjectData.ref : ('#' + detectedRef.id);
+
+        textEl.textContent = chrome.i18n.getMessage('DolibarrRefDetected') + ' ' + typeLabel + ' ' + refLabel;
+        linkEl.href = dolLib.getDolibarrCardUrl(confDolibarUrl, detectedRef.type, detectedRef.id);
+
+        block.classList.remove('hidden-field');
+    }
+
+    /**
+     * Called by each setXInfos() once its list of objects came back from the
+     * API, to check whether it contains the detected ref, or resolve that it
+     * doesn't (letting the fallback block show).
+     * @param type one of DETECTED_REF_TABLE_BACKED_TYPES
+     * @param list the raw API list for that type (e.g. dataLastOrders)
+     */
+    function checkDetectedRefAgainstList(type, list){
+        if(!detectedRef || detectedRef.type !== type){
+            return;
+        }
+        let match = list.find((item) => String(item.id) === String(detectedRef.id));
+        LOG('checkDetectedRefAgainstList', type, 'listSize=' + list.length, match ? 'MATCH' : 'no match');
+        resolveDetectedRefTableCheck(!!match);
     }
 
 
@@ -345,9 +525,11 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             thirdparty_ids: conf.socId,
             sqlfilters: sqlfilters
         }, 'GET', {}, (dataLastPropals)=>{
+            LOG('setQuotationsInfos received', dataLastPropals);
 
             if(!Array.isArray(dataLastPropals) || dataLastPropals.length == 0){
                 // No contact found in database
+                checkDetectedRefAgainstList('pro', []);
                 return;
             }
 
@@ -446,11 +628,14 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                 tableItems,
                 document.getElementById("data-from-dolibarr"),
                 'dolibarr-table dolibarr-table-stripped',
-                message.subject  + ' ' + messageBody.html
+                message.subject + ' ' + messageBody.html + detectedRefSearchText
             );
+
+            checkDetectedRefAgainstList('pro', dataLastPropals);
 
         },(errorMsg)=>{
             console.error("setQuotationsInfos" + errorMsg);
+            checkDetectedRefAgainstList('pro', []);
         });
 
     }
@@ -472,9 +657,11 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             limit:5,
             thirdparty_ids: conf.socId
         }, 'GET', {}, (dataLastOrders)=>{
+            LOG('setOrdersInfos received', dataLastOrders);
 
             if(!Array.isArray(dataLastOrders) || dataLastOrders.length == 0){
                 // No contact found in database
+                checkDetectedRefAgainstList('ord', []);
                 return;
             }
 
@@ -567,12 +754,14 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                 tableItems,
                 document.getElementById("data-from-dolibarr"),
                 'dolibarr-table dolibarr-table-stripped',
-                message.subject  + ' ' + messageBody.html
+                message.subject + ' ' + messageBody.html + detectedRefSearchText
             );
 
+            checkDetectedRefAgainstList('ord', dataLastOrders);
 
         },(errorMsg)=>{
             console.error("setQuotationsInfos" + errorMsg);
+            checkDetectedRefAgainstList('ord', []);
         });
 
     }
@@ -594,9 +783,11 @@ function setInvoicesInfos(confData){
         limit:5,
         thirdparty_ids: conf.socId
     }, 'GET', {}, (dataLastInvoices)=>{
+        LOG('setInvoicesInfos received', dataLastInvoices);
 
         if(!Array.isArray(dataLastInvoices) || dataLastInvoices.length == 0){
             // No contact found in database
+            checkDetectedRefAgainstList('inv', []);
             return;
         }
 
@@ -689,12 +880,14 @@ function setInvoicesInfos(confData){
             tableItems,
             document.getElementById("data-from-dolibarr"),
             'dolibarr-table dolibarr-table-stripped',
-            message.subject  + ' ' + messageBody.html
+            message.subject + ' ' + messageBody.html + detectedRefSearchText
         );
 
+        checkDetectedRefAgainstList('inv', dataLastInvoices);
 
     },(errorMsg)=>{
         console.error("setQuotationsInfos " + errorMsg);
+        checkDetectedRefAgainstList('inv', []);
     });
 
 }
@@ -715,9 +908,11 @@ function setSupplierordersInfos(confData){
         limit:5,
         thirdparty_ids: conf.socId
     }, 'GET', {}, (dataLastSupplierorders)=>{
+        LOG('setSupplierordersInfos received', dataLastSupplierorders);
 
         if(!Array.isArray(dataLastSupplierorders) || dataLastSupplierorders.length == 0){
             // No contact found in database
+            checkDetectedRefAgainstList('sord', []);
             return;
         }
 
@@ -828,9 +1023,11 @@ function setSupplierordersInfos(confData){
             document.getElementById("data-from-dolibarr")
         );
 
+        checkDetectedRefAgainstList('sord', dataLastSupplierorders);
 
     },(errorMsg)=>{
         console.error("setQuotationsInfos : " + errorMsg);
+        checkDetectedRefAgainstList('sord', []);
     });
 
 }
