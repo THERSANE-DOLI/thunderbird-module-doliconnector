@@ -4,6 +4,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
     const LOG = (...args) => console.log('[DoliConnector popup]', ...args);
 
+    const POPUP_TABS = ['info', 'documents', 'link'];
+
     // Workaround for a Linux/GTK bug: when this UI is shown in a detached "popup" type
     // window (see browser.windows.create in background.js), pressing Ctrl or Alt on its
     // own is interpreted by the window manager as a request to close the window, which
@@ -56,6 +58,15 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     // Extract email from author
     let authorEmail = message ? dolLib.extractEmailAddressFromString(message.author)[0] : '';
 
+    // Identity of the account this mail was received on, and its Message-Id : sent along when
+    // creating a devis/commande from this popup (see setSocInfos()'s new-quotation-link), so the
+    // crmclientconnector module's PROPAL_CREATE/ORDER_CREATE trigger can auto-link the newly
+    // created object back to this mail. Same values/convention already used for notes (see
+    // initNotesForMessage() below : accountEmail via getEmailAccountFromBackground(), msgId via
+    // message.headerMessageId).
+    let ownerAccountEmail = message ? await getEmailAccountFromBackground(message.id) : null;
+    let ownerMsgId = message ? message.headerMessageId : null;
+
     // Quotation form headers (X-Quotation-Mail / X-Quotation-Data) : only trusted when the
     // sender is in the configured trusted senders list, to avoid a forged header hijacking
     // the thirdparty search.
@@ -107,6 +118,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
         initNotesForMessage();
         document.querySelectorAll('textarea.autosize').forEach(textarea => dolLib.textareaAutosize(textarea))
+        initPopupTabs();
+        initDocumentsTabBadge();
 
         if(detectedRef){
             LOG('trackid detected, fetching referenced object', detectedRefMeta.api + '/' + detectedRef.id);
@@ -432,6 +445,10 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             let newQuotationURL = new URL(confDolibarUrl + "comm/propal/card.php");
             newQuotationURL.searchParams.set('action', "create");
             newQuotationURL.searchParams.set('socid', soc.id);
+            if(ownerAccountEmail && ownerMsgId){
+                newQuotationURL.searchParams.set('accountEmail', ownerAccountEmail);
+                newQuotationURL.searchParams.set('msgId', ownerMsgId);
+            }
             newQuotationLink.href = newQuotationURL;
         }
 
@@ -1115,4 +1132,488 @@ async function initNotesForMessage(){
             });
         }
     })
+}
+
+/**
+ * "Lier" tab : search/link/unlink a devis/commande/facture/... to the mail currently displayed,
+ * using the crmclientconnector emaillinks/linkedobjects, emaillinks/link endpoints (needs
+ * crmclientconnector module installed in Dolibarr, same as the notes feature above).
+ */
+
+let linkTabInitialized = false;
+// type+':'+id keys of documents already linked to this mail, so the search results can hide
+// them (linking the same document twice hits Dolibarr's unique index and returns a 500).
+let linkedDocumentKeys = new Set();
+
+function initPopupTabs(){
+    POPUP_TABS.forEach((tab) => {
+        let btn = document.getElementById('tab-btn-'+tab);
+        if(btn){
+            btn.addEventListener('click', () => switchPopupTab(tab));
+        }
+    });
+}
+
+function switchPopupTab(tab){
+    POPUP_TABS.forEach((otherTab) => {
+        document.getElementById('tab-btn-'+otherTab)?.classList.toggle('active', otherTab === tab);
+        document.getElementById('tab-panel-'+otherTab)?.classList.toggle('hidden-field', otherTab !== tab);
+    });
+
+    if(tab === 'link' && !linkTabInitialized){
+        linkTabInitialized = true;
+        initLinkTab();
+    }
+}
+
+/**
+ * Badge on the "Documents" tab button showing how many recent documents it holds (capped at
+ * "9+"). The table is filled by 4 independent async calls (quotations/orders/invoices/supplier
+ * orders, see loadDocumentsInfos()) that each append their own rows whenever their own request
+ * resolves, so rather than threading a counter through all of them, just watch the table itself
+ * and recompute the total whenever it changes.
+ */
+function initDocumentsTabBadge(){
+    let table = document.getElementById('data-from-dolibarr');
+    let badge = document.getElementById('tab-documents-badge');
+    if(!table || !badge){
+        return;
+    }
+
+    let update = () => {
+        let count = table.querySelectorAll('tr:not(.table-title)').length;
+        if(count <= 0){
+            badge.classList.add('hidden-field');
+            return;
+        }
+        badge.textContent = count > 9 ? '9+' : String(count);
+        badge.classList.remove('hidden-field');
+    };
+
+    new MutationObserver(update).observe(table, {childList: true, subtree: true});
+    update();
+}
+
+function initLinkTab(){
+    if(!ownerAccountEmail || !ownerMsgId){
+        LOG('link tab: no accountEmail/msgId available, cannot link/search');
+        return;
+    }
+
+    populateLinkSearchTypeSelect();
+    loadLinkedDocuments();
+    initDetectedRefsSuggestions();
+
+    let searchInput = document.getElementById('link-search-input');
+    let typeSelect = document.getElementById('link-search-type');
+    let searchTimer = null;
+
+    searchInput.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => searchDocumentsToLink(searchInput.value.trim()), 400);
+    });
+
+    typeSelect.addEventListener('change', () => searchDocumentsToLink(searchInput.value.trim()));
+}
+
+function populateLinkSearchTypeSelect(){
+    let select = document.getElementById('link-search-type');
+    if(!select){
+        return;
+    }
+
+    let allOption = document.createElement('option');
+    allOption.value = '';
+    allOption.textContent = chrome.i18n.getMessage('LinkAllTypes');
+    select.appendChild(allOption);
+
+    Object.entries(dolLib.DOLIBARR_OBJECT_TYPES).forEach(([type, meta]) => {
+        let option = document.createElement('option');
+        option.value = type;
+        option.textContent = chrome.i18n.getMessage(meta.labelKey);
+        select.appendChild(option);
+    });
+}
+
+function loadLinkedDocuments(){
+    dolLib.callDolibarrApi(
+        'crmclientconnector/emaillinks/linkedobjects',
+        {accountEmail: ownerAccountEmail, msgId: ownerMsgId},
+        'GET',
+        {},
+        (resData)=>{
+            renderLinkedDocuments(Array.isArray(resData) ? resData : []);
+        },
+        (errorMsg)=>{
+            LOG('loadLinkedDocuments failed', errorMsg);
+            renderLinkedDocuments([]);
+        }
+    );
+}
+
+function renderLinkedDocuments(list){
+    let emptyEl = document.getElementById('link-linked-empty');
+    let listEl = document.getElementById('link-linked-list');
+    listEl.innerHTML = '';
+
+    linkedDocumentKeys = new Set(list.map((item) => item.type+':'+item.id));
+
+    if(list.length === 0){
+        emptyEl.classList.remove('hidden-field');
+        listEl.classList.add('hidden-field');
+        return;
+    }
+
+    emptyEl.classList.add('hidden-field');
+    listEl.classList.remove('hidden-field');
+
+    list.forEach((item) => listEl.appendChild(buildLinkedDocCard(item)));
+}
+
+/**
+ * One linked document, as a card : ref/type/status up top, then whichever of ref client/
+ * supplier/date/total the backend sent for that document type (not every field applies to
+ * every type - see getEmailLinkLinkedObjects() on the Dolibarr side), and an unlink action.
+ * @param {{type:string, id:number, ref:string, refClient:?string, refSupplier:?string, status:?string, statusCode:?number, date:?number, totalTtc:?number}} item
+ */
+function buildLinkedDocCard(item){
+    let meta = dolLib.getDolibarrObjectTypeMeta(item.type);
+    let locale = navigator.language || navigator.browserLanguage || (navigator.languages || ['en'])[0];
+
+    let card = document.createElement('div');
+    card.classList.add('linked-doc-card');
+
+    let header = document.createElement('div');
+    header.classList.add('linked-doc-card__header');
+
+    let type = document.createElement('span');
+    type.classList.add('linked-doc-card__type');
+    type.textContent = meta ? chrome.i18n.getMessage(meta.labelKey) : item.type;
+    header.appendChild(type);
+
+    let ref = document.createElement('span');
+    ref.classList.add('linked-doc-card__ref');
+    ref.textContent = item.ref || ('#'+item.id);
+    header.appendChild(ref);
+
+    if(item.status){
+        let status = document.createElement('span');
+        status.classList.add('badge');
+        if(Number.isInteger(item.statusCode) && item.statusCode >= 0 && item.statusCode <= 10){
+            status.classList.add('badge-status'+item.statusCode);
+        }
+        status.textContent = item.status;
+        header.appendChild(status);
+    }
+
+    card.appendChild(header);
+
+    let fields = document.createElement('div');
+    fields.classList.add('linked-doc-card__fields');
+
+    let addField = (label, value) => {
+        if(value === null || value === undefined || value === ''){
+            return;
+        }
+        let field = document.createElement('span');
+        field.classList.add('linked-doc-card__field');
+        let fieldLabel = document.createElement('span');
+        fieldLabel.classList.add('linked-doc-card__field-label');
+        fieldLabel.textContent = label+' : ';
+        field.appendChild(fieldLabel);
+        field.append(value);
+        fields.appendChild(field);
+    };
+
+    if(item.refSupplier){
+        addField(chrome.i18n.getMessage('RefSupplier'), item.refSupplier);
+    }else if(item.refClient){
+        addField(chrome.i18n.getMessage('RefClient'), item.refClient);
+    }
+    if(item.date){
+        addField(chrome.i18n.getMessage('Date'), new Date(item.date * 1000).toLocaleDateString(locale));
+    }
+    if(item.totalTtc !== null && item.totalTtc !== undefined){
+        addField(chrome.i18n.getMessage('Total'), new Intl.NumberFormat(locale, {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(item.totalTtc));
+    }
+
+    if(fields.childNodes.length > 0){
+        card.appendChild(fields);
+    }
+
+    let actions = document.createElement('div');
+    actions.classList.add('linked-doc-card__actions');
+    actions.appendChild(dolLib.buildConfirmDropdown({
+        triggerLabel: '⋯',
+        triggerTitle: chrome.i18n.getMessage('Actions'),
+        confirmLabel: chrome.i18n.getMessage('Unlink'),
+        danger: true,
+        onConfirm: () => {
+            unlinkDocument(item.type, item.id, (success) => {
+                if(success){
+                    card.remove();
+                    let listEl = document.getElementById('link-linked-list');
+                    if(listEl.children.length === 0){
+                        document.getElementById('link-linked-empty').classList.remove('hidden-field');
+                        listEl.classList.add('hidden-field');
+                    }
+                }
+            });
+        }
+    }));
+    card.appendChild(actions);
+
+    return card;
+}
+
+function unlinkDocument(type, elementid, onDone){
+    let endpoint = 'crmclientconnector/emaillinks/link'
+        + '?accountEmail=' + encodeURIComponent(ownerAccountEmail)
+        + '&msgId=' + encodeURIComponent(ownerMsgId)
+        + '&type=' + encodeURIComponent(type)
+        + '&elementid=' + encodeURIComponent(elementid);
+
+    dolLib.callDolibarrApi(endpoint, {}, 'DELETE', {}, ()=>{
+        LOG('document unlinked', type, elementid);
+        loadLinkedDocuments();
+        dolLib.showToast(chrome.i18n.getMessage('UnlinkSuccess'), 'success');
+        if(onDone){ onDone(true); }
+    }, (errorMsg)=>{
+        LOG('unlink failed', errorMsg);
+        dolLib.showToast(chrome.i18n.getMessage('UnlinkError')+' ('+errorMsg+')', 'error');
+        if(onDone){ onDone(false); }
+    });
+}
+
+function linkDocument(type, elementid, onDone){
+    dolLib.callDolibarrApi(
+        'crmclientconnector/emaillinks/link',
+        {},
+        'POST',
+        JSON.stringify({
+            accountEmail: ownerAccountEmail,
+            msgId: ownerMsgId,
+            type: type,
+            elementid: elementid
+        }),
+        ()=>{
+            LOG('document linked', type, elementid);
+            loadLinkedDocuments();
+            if(onDone){ onDone(true); }
+        },
+        (errorMsg)=>{
+            LOG('link failed', errorMsg);
+            // The document may in fact already be linked (e.g. a stale search result, or
+            // linked from another window) - Dolibarr's unique index rejects the duplicate with
+            // a 500. Refresh the linked list either way so the UI reflects reality.
+            loadLinkedDocuments();
+            if(onDone){ onDone(false, errorMsg); }
+        }
+    );
+}
+
+function searchDocumentsToLink(term){
+    let resultsEl = document.getElementById('link-search-results');
+    resultsEl.innerHTML = '';
+
+    if(!term || term.length < 2){
+        return;
+    }
+
+    let selectedType = document.getElementById('link-search-type').value;
+    let typesToSearch = selectedType
+        ? [[selectedType, dolLib.DOLIBARR_OBJECT_TYPES[selectedType]]]
+        : Object.entries(dolLib.DOLIBARR_OBJECT_TYPES);
+
+    let allResults = [];
+    let errors = [];
+    let pending = typesToSearch.length;
+
+    typesToSearch.forEach(([type, meta]) => {
+        dolLib.callDolibarrApi(meta.api, {
+            limit: 10,
+            sqlfilters: "(t.ref:like:'%"+term+"%')"
+        }, 'GET', {}, (resData)=>{
+            if(Array.isArray(resData)){
+                resData.forEach((item) => {
+                    if(!linkedDocumentKeys.has(type+':'+item.id)){
+                        allResults.push({type: type, id: item.id, ref: item.ref});
+                    }
+                });
+            }
+            pending--;
+            if(pending === 0){
+                renderSearchResults(allResults, term, errors);
+            }
+        }, (errorMsg)=>{
+            LOG('searchDocumentsToLink: '+meta.api+' failed', errorMsg);
+            errors.push({type: type, errorMsg: errorMsg});
+            pending--;
+            if(pending === 0){
+                renderSearchResults(allResults, term, errors);
+            }
+        });
+    });
+}
+
+function renderSearchResults(results, term, errors){
+    let resultsEl = document.getElementById('link-search-results');
+    resultsEl.innerHTML = '';
+
+    if(results.length === 0){
+        let empty = document.createElement('div');
+        empty.classList.add('opacitymedium');
+        if(errors && errors.length > 0){
+            empty.textContent = chrome.i18n.getMessage('SearchDocumentToLinkError')+' ('+errors[0].errorMsg+')';
+        }else{
+            empty.textContent = chrome.i18n.getMessage('SearchDocumentToLinkNoResults');
+        }
+        resultsEl.appendChild(empty);
+        return;
+    }
+
+    let tableItems = results.map((item) => {
+        let meta = dolLib.getDolibarrObjectTypeMeta(item.type);
+        return {
+            type: meta ? chrome.i18n.getMessage(meta.labelKey) : item.type,
+            ref: item.ref || ('#'+item.id),
+            action: {
+                html: '<button type="button" class="btn-tiny-action link-link-btn" '
+                    +'data-type="'+item.type+'" data-id="'+item.id+'">'
+                    +chrome.i18n.getMessage('Link')+'</button>'
+            }
+        };
+    });
+
+    dolLib.jsonToTable(
+        {type: chrome.i18n.getMessage('Type'), ref: chrome.i18n.getMessage('Ref'), action: ''},
+        tableItems,
+        resultsEl,
+        'dolibarr-table dolibarr-table-stripped',
+        term
+    );
+
+    resultsEl.querySelectorAll('.link-link-btn').forEach((btn) => {
+        btn.addEventListener('click', (event) => {
+            event.preventDefault();
+            btn.disabled = true;
+            linkDocument(btn.getAttribute('data-type'), btn.getAttribute('data-id'), (success, errorMsg) => {
+                if(success || (errorMsg && errorMsg.indexOf('Duplicate entry') !== -1)){
+                    btn.closest('tr')?.remove();
+                    dolLib.showToast(chrome.i18n.getMessage('LinkSuccess'), 'success');
+                }else{
+                    btn.disabled = false;
+                    dolLib.showToast(chrome.i18n.getMessage('LinkError')+' ('+errorMsg+')', 'error');
+                }
+            });
+        });
+    });
+}
+
+/**
+ * Point 3 : scan the mail's subject/body for ref-shaped strings matching Dolibarr's active
+ * numbering patterns (crmclientconnector numberingpatterns/ endpoint), and suggest linking any
+ * match that corresponds to a real, existing document.
+ */
+function initDetectedRefsSuggestions(){
+    let container = document.getElementById('link-detected-refs');
+    if(!message){
+        return;
+    }
+
+    dolLib.callDolibarrApi('crmclientconnector/numberingpatterns', {}, 'GET', {}, (numberingData)=>{
+        let patterns = dolLib.buildRefDetectionPatterns(numberingData);
+        let text = (message.subject || '') + ' ' + (messageBody && messageBody.txt ? messageBody.txt : '');
+        let detected = dolLib.detectDolibarrRefsInText(text, patterns);
+
+        // De-duplicate by type+ref
+        let seen = new Set();
+        detected = detected.filter((entry) => {
+            let key = entry.type+':'+entry.ref;
+            if(seen.has(key)){ return false; }
+            seen.add(key);
+            return true;
+        });
+
+        populateDetectedRefsDatalist(detected);
+
+        if(container){
+            detected.forEach((entry) => verifyAndSuggestDetectedRef(entry, container));
+        }
+    }, (errorMsg)=>{
+        LOG('numberingpatterns fetch failed', errorMsg);
+    }, true);
+}
+
+/**
+ * Feed the refs detected in the mail into the search input's <datalist>, so the user can pick
+ * one from the native autocomplete instead of retyping/copy-pasting it - regardless of whether
+ * it was verified to match a real document (unlike the inline suggestion banner above, this is
+ * just a typing aid for the search box).
+ * @param {Array<{type: string, ref: string}>} detected
+ */
+function populateDetectedRefsDatalist(detected){
+    let datalist = document.getElementById('link-detected-refs-datalist');
+    if(!datalist){
+        return;
+    }
+
+    datalist.innerHTML = '';
+    detected.forEach((entry) => {
+        let option = document.createElement('option');
+        option.value = entry.ref;
+        datalist.appendChild(option);
+    });
+}
+
+function verifyAndSuggestDetectedRef(entry, container){
+    let meta = dolLib.getDolibarrObjectTypeMeta(entry.type);
+    if(!meta){
+        return;
+    }
+
+    dolLib.callDolibarrApi(meta.api, {
+        limit: 1,
+        sqlfilters: "(t.ref:='"+entry.ref+"')"
+    }, 'GET', {}, (resData)=>{
+        if(!Array.isArray(resData) || resData.length === 0){
+            return; // Ref-shaped string but no matching document, not worth suggesting
+        }
+
+        let matchedId = resData[0].id;
+        if(linkedDocumentKeys.has(entry.type+':'+matchedId)){
+            return; // already linked to this mail, nothing to suggest
+        }
+
+        let suggestion = document.createElement('div');
+        suggestion.classList.add('alert', 'alert-info');
+
+        let text = document.createElement('span');
+        text.textContent = chrome.i18n.getMessage('DolibarrRefDetected')+' '+chrome.i18n.getMessage(meta.labelKey)+' '+entry.ref;
+        suggestion.appendChild(text);
+
+        let linkBtn = document.createElement('button');
+        linkBtn.type = 'button';
+        linkBtn.classList.add('btn', 'btn-primary');
+        linkBtn.textContent = chrome.i18n.getMessage('Link');
+        linkBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            linkBtn.disabled = true;
+            linkDocument(entry.type, matchedId, (success, errorMsg) => {
+                if(success || (errorMsg && errorMsg.indexOf('Duplicate entry') !== -1)){
+                    suggestion.remove();
+                    dolLib.showToast(chrome.i18n.getMessage('LinkSuccess'), 'success');
+                }else{
+                    linkBtn.disabled = false;
+                    dolLib.showToast(chrome.i18n.getMessage('LinkError')+' ('+errorMsg+')', 'error');
+                }
+            });
+        });
+        suggestion.appendChild(linkBtn);
+
+        container.appendChild(suggestion);
+        container.classList.remove('hidden-field');
+    }, (errorMsg)=>{
+        LOG('verifyAndSuggestDetectedRef failed for', entry, errorMsg);
+    });
 }

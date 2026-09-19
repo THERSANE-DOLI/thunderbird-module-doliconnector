@@ -34,31 +34,77 @@
 			<a id="dolibarr-detected-ref-link" href="" target="_blank" class="btn btn-primary">__MSG_OpenDocument__</a>
 		</div>
 
-		<div id="dolibarr-notes-container" class="hidden-field">
-			<div id="dolibarr-notes-list-container" class="mail-msg-box-list" ></div>
-			<div class="dolibarr-form-box" >
-				<div class="dolibarr-form-box__body" >
-					<textarea class="dolibarr-textarea" id="dolibarr-note-input" placeholder="__MSG_WriteComment__"></textarea>
+		<div class="popup-body-layout">
 
-					<div id="dolibarr-note-input-errors" class="inputs-errors" ></div>
-				</div>
-				<div class="dolibarr-form-box__footer" >
-					<button id="send-comment" type="button" class="btn --submit" >__MSG_Submit__</button>
-				</div>
+			<div id="popup-tabs" class="popup-tabs">
+				<button type="button" id="tab-btn-info" class="popup-tab-btn active">__MSG_TabInfo__</button>
+				<button type="button" id="tab-btn-documents" class="popup-tab-btn">__MSG_TabDocuments__<span id="tab-documents-badge" class="popup-tab-badge hidden-field"></span></button>
+				<button type="button" id="tab-btn-link" class="popup-tab-btn">__MSG_TabLinkDocument__</button>
 			</div>
-		</div>
 
-		<div id="soc-infos">
-			<div id="soc-not-found-tpl" class="hidden-field" >
-				<hr/>
-				<div class="row" >
-					<a id="new-soc-link" class="btn btn-primary" href="" ><i class="icon-plus"></i> __MSG_CreateNewCompany__</a>
-					<a id="new-contact-link"  class="btn btn-primary" href=""><i class="icon-user-plus"></i> __MSG_CreateNewContact__</a>
+			<div class="popup-tab-panels">
+
+				<div id="tab-panel-info" class="popup-tab-panel">
+
+					<div id="dolibarr-notes-container" class="hidden-field">
+						<div id="dolibarr-notes-list-container" class="mail-msg-box-list" ></div>
+						<div class="dolibarr-form-box" >
+							<div class="dolibarr-form-box__body" >
+								<textarea class="dolibarr-textarea" id="dolibarr-note-input" placeholder="__MSG_WriteComment__"></textarea>
+
+								<div id="dolibarr-note-input-errors" class="inputs-errors" ></div>
+							</div>
+							<div class="dolibarr-form-box__footer" >
+								<button id="send-comment" type="button" class="btn --submit" >__MSG_Submit__</button>
+							</div>
+						</div>
+					</div>
+
+					<div id="soc-infos">
+						<div id="soc-not-found-tpl" class="hidden-field" >
+							<hr/>
+							<div class="row" >
+								<a id="new-soc-link" class="btn btn-primary" href="" ><i class="icon-plus"></i> __MSG_CreateNewCompany__</a>
+								<a id="new-contact-link"  class="btn btn-primary" href=""><i class="icon-user-plus"></i> __MSG_CreateNewContact__</a>
+							</div>
+						</div>
+					</div>
+
 				</div>
-			</div>
-		</div>
 
-		<table id="data-from-dolibarr" class="dolibarr-table dolibarr-table-stripped"></table>
+				<div id="tab-panel-documents" class="popup-tab-panel hidden-field">
+
+					<table id="data-from-dolibarr" class="dolibarr-table dolibarr-table-stripped"></table>
+
+				</div>
+
+				<div id="tab-panel-link" class="popup-tab-panel hidden-field">
+
+					<div id="link-detected-refs" class="hidden-field"></div>
+
+					<div id="link-linked-container">
+						<h5>__MSG_LinkedDocuments__</h5>
+						<div id="link-linked-empty" class="hidden-field opacitymedium">__MSG_NoLinkedDocument__</div>
+						<div id="link-linked-list" class="hidden-field"></div>
+					</div>
+
+					<hr/>
+
+					<div id="link-search-container">
+						<h5>__MSG_SearchDocumentToLink__</h5>
+						<div class="link-search-box">
+							<select id="link-search-type" class="dol-input"></select>
+							<input type="text" id="link-search-input" class="dol-input" list="link-detected-refs-datalist" placeholder="__MSG_SearchDocumentToLinkPlaceholder__">
+							<datalist id="link-detected-refs-datalist"></datalist>
+						</div>
+						<div id="link-search-results"></div>
+					</div>
+
+				</div>
+
+			</div>
+
+		</div>
 
 	</div>
 </div>

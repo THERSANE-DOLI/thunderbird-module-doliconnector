@@ -56,6 +56,9 @@
   "RefClient": {
     "message": "Client Ref"
   },
+  "RefSupplier": {
+    "message": "Supplier Ref"
+  },
   "CheckYourModuleConfig": {
     "message": "Configuration incomplete : Check your module configuration"
   },
@@ -101,8 +104,8 @@
   "PleaseSelectAnEmailBefore" :{
     "message": "Please select an email"
   },
-  "DoubleClickToDelete" :{
-    "message": "Double click to delete"
+  "ConfirmDelete" :{
+    "message": "Delete permanently"
   },
   "DolibarrUseNotes" :{
     "message": "Allow viewing and adding shared notes on emails"
@@ -271,5 +274,59 @@
   },
   "DolibarrTypeMember": {
     "message": "Member"
+  },
+  "TabInfo": {
+    "message": "Info"
+  },
+  "TabDocuments": {
+    "message": "Documents"
+  },
+  "TabLinkDocument": {
+    "message": "Link"
+  },
+  "LinkedDocuments": {
+    "message": "Linked documents"
+  },
+  "NoLinkedDocument": {
+    "message": "No document linked to this mail"
+  },
+  "SearchDocumentToLink": {
+    "message": "Link an existing document"
+  },
+  "SearchDocumentToLinkPlaceholder": {
+    "message": "Search a reference..."
+  },
+  "SearchDocumentToLinkNoResults": {
+    "message": "No results"
+  },
+  "SearchDocumentToLinkError": {
+    "message": "Search failed"
+  },
+  "LinkAllTypes": {
+    "message": "All types"
+  },
+  "Link": {
+    "message": "Link"
+  },
+  "Unlink": {
+    "message": "Unlink"
+  },
+  "Actions": {
+    "message": "Actions"
+  },
+  "LinkSuccess": {
+    "message": "Document linked"
+  },
+  "UnlinkSuccess": {
+    "message": "Document unlinked"
+  },
+  "UnlinkError": {
+    "message": "Error while unlinking the document"
+  },
+  "LinkError": {
+    "message": "Error while linking the document"
+  },
+  "Type": {
+    "message": "Type"
   }
 }

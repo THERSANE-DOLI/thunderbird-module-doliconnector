@@ -53,6 +53,9 @@
   "RefClient": {
     "message": "Αναφ. Πελάτη"
   },
+  "RefSupplier": {
+    "message": "Αναφ. Προμηθευτή"
+  },
   "CheckYourModuleConfig": {
     "message": "Ημιτελής διαμόρφωση : Ελέγξτε τη διαμόρφωση του Dolibarr connector"
   },
@@ -98,8 +101,8 @@
   "PleaseSelectAnEmailBefore" :{
     "message": "Παρακαλώ επιλέξτε ενα email"
   },
-  "DoubleClickToDelete" :{
-    "message": "Διπλό κλικ για διαγραφή"
+  "ConfirmDelete" :{
+    "message": "Οριστική διαγραφή"
   },
   "DolibarrRefDetected": {
     "message": "Εντοπίστηκε αναφορά σε αυτό το email:"
@@ -139,5 +142,59 @@
   },
   "DolibarrTypeMember": {
     "message": "Μέλος"
+  },
+  "TabInfo": {
+    "message": "Πληροφορίες"
+  },
+  "TabDocuments": {
+    "message": "Έγγραφα"
+  },
+  "TabLinkDocument": {
+    "message": "Σύνδεση"
+  },
+  "LinkedDocuments": {
+    "message": "Συνδεδεμένα έγγραφα"
+  },
+  "NoLinkedDocument": {
+    "message": "Κανένα συνδεδεμένο έγγραφο σε αυτό το email"
+  },
+  "SearchDocumentToLink": {
+    "message": "Σύνδεση υπάρχοντος εγγράφου"
+  },
+  "SearchDocumentToLinkPlaceholder": {
+    "message": "Αναζήτηση αναφοράς..."
+  },
+  "SearchDocumentToLinkNoResults": {
+    "message": "Χωρίς αποτελέσματα"
+  },
+  "SearchDocumentToLinkError": {
+    "message": "Η αναζήτηση απέτυχε"
+  },
+  "LinkAllTypes": {
+    "message": "Όλοι οι τύποι"
+  },
+  "Link": {
+    "message": "Σύνδεση"
+  },
+  "Unlink": {
+    "message": "Αποσύνδεση"
+  },
+  "Actions": {
+    "message": "Ενέργειες"
+  },
+  "LinkSuccess": {
+    "message": "Το έγγραφο συνδέθηκε"
+  },
+  "UnlinkSuccess": {
+    "message": "Το έγγραφο αποσυνδέθηκε"
+  },
+  "UnlinkError": {
+    "message": "Σφάλμα κατά την αποσύνδεση του εγγράφου"
+  },
+  "LinkError": {
+    "message": "Σφάλμα κατά τη σύνδεση του εγγράφου"
+  },
+  "Type": {
+    "message": "Τύπος"
   }
 }

@@ -56,6 +56,9 @@
   "RefClient": {
     "message": "Ref Client"
   },
+  "RefSupplier": {
+    "message": "Ref Fournisseur"
+  },
   "CheckYourModuleConfig": {
     "message": "Configuration incomplete : Vérifiez votre configuration module"
   },
@@ -128,8 +131,8 @@
   "WriteComment" :{
     "message": "Écrire une note ou un commentaire..."
   },
-  "DoubleClickToDelete" :{
-    "message": "Double click pour supprimer"
+  "ConfirmDelete" :{
+    "message": "Supprimer définitivement"
   },
   "DolibarrUseGravatar" :{
     "message": "Utiliser Gravatar pour afficher les photos de profil"
@@ -274,5 +277,59 @@
   },
   "DolibarrTypeMember": {
     "message": "Adhérent"
+  },
+  "TabInfo": {
+    "message": "Infos"
+  },
+  "TabDocuments": {
+    "message": "Documents"
+  },
+  "TabLinkDocument": {
+    "message": "Lier"
+  },
+  "LinkedDocuments": {
+    "message": "Documents liés"
+  },
+  "NoLinkedDocument": {
+    "message": "Aucun document lié à ce mail"
+  },
+  "SearchDocumentToLink": {
+    "message": "Lier un document existant"
+  },
+  "SearchDocumentToLinkPlaceholder": {
+    "message": "Rechercher une référence..."
+  },
+  "SearchDocumentToLinkNoResults": {
+    "message": "Aucun résultat"
+  },
+  "SearchDocumentToLinkError": {
+    "message": "Erreur lors de la recherche"
+  },
+  "LinkAllTypes": {
+    "message": "Tous les types"
+  },
+  "Link": {
+    "message": "Lier"
+  },
+  "Unlink": {
+    "message": "Délier"
+  },
+  "Actions": {
+    "message": "Actions"
+  },
+  "LinkSuccess": {
+    "message": "Document lié"
+  },
+  "UnlinkSuccess": {
+    "message": "Document délié"
+  },
+  "UnlinkError": {
+    "message": "Erreur lors de la déliaison du document"
+  },
+  "LinkError": {
+    "message": "Erreur lors de la liaison du document"
+  },
+  "Type": {
+    "message": "Type"
   }
 }

@@ -1,3 +1,124 @@
+/**
+ * Show a dismissible toast in the top-right corner of the page, instead of an inline
+ * success/error message in the page body (which shifts surrounding content around). Creates its
+ * own fixed-position container on first use, so no host page markup is required - usable from
+ * any page in the extension.
+ * @param {string} message
+ * @param {'success'|'error'} type
+ * @param {number} durationMs auto-dismiss delay (0 disables auto-dismiss, close button still works)
+ * @returns {HTMLElement} the toast element
+ */
+export function showToast(message, type = 'success', durationMs = 4000){
+    let container = document.getElementById('dolconnector-toast-container');
+    if(!container){
+        container = document.createElement('div');
+        container.id = 'dolconnector-toast-container';
+        document.body.appendChild(container);
+    }
+
+    let toast = document.createElement('div');
+    toast.classList.add('dolconnector-toast', 'dolconnector-toast--'+type);
+
+    let text = document.createElement('span');
+    text.classList.add('dolconnector-toast__text');
+    text.textContent = message;
+    toast.appendChild(text);
+
+    let closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.classList.add('dolconnector-toast__close');
+    closeBtn.textContent = '×';
+    closeBtn.addEventListener('click', () => toast.remove());
+    toast.appendChild(closeBtn);
+
+    container.appendChild(toast);
+
+    if(durationMs > 0){
+        setTimeout(() => toast.remove(), durationMs);
+    }
+
+    return toast;
+}
+
+/**
+ * Build a small dropdown with a single confirm action, used in place of a double-click or a
+ * blocking confirm() dialog for actions that need a deliberate second step (e.g. unlinking or
+ * deleting something) - closes on an outside click or after the action runs. The trigger is
+ * either a text label or an icon (e.g. the existing trash icon), whichever is passed.
+ * @param {{triggerLabel?: string, triggerIcon?: string, triggerTitle?: string, confirmLabel: string, onConfirm: () => void, danger?: boolean, solidConfirm?: boolean}} options
+ * @returns {HTMLElement} the dropdown wrapper element (trigger + menu)
+ */
+export function buildConfirmDropdown({triggerLabel, triggerIcon, triggerTitle, confirmLabel, onConfirm, danger = false, solidConfirm = false, onToggle}){
+    let wrapper = document.createElement('div');
+    wrapper.classList.add('confirm-dropdown');
+
+    let trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.classList.add('btn-tiny-action', 'confirm-dropdown__trigger');
+    if(danger){ trigger.classList.add('--delete-btn'); }
+    if(triggerIcon){
+        let icon = document.createElement('img');
+        icon.src = triggerIcon;
+        icon.classList.add('btn-tiny-action-icon');
+        trigger.appendChild(icon);
+    }else{
+        trigger.textContent = triggerLabel;
+    }
+    if(triggerTitle){ trigger.title = triggerTitle; }
+    wrapper.appendChild(trigger);
+
+    let menu = document.createElement('div');
+    menu.classList.add('confirm-dropdown__menu', 'hidden-field');
+
+    let confirmBtn = document.createElement('button');
+    confirmBtn.type = 'button';
+    confirmBtn.classList.add('confirm-dropdown__item');
+    if(danger){ confirmBtn.classList.add('confirm-dropdown__item--danger'); }
+    if(solidConfirm){ confirmBtn.classList.add('confirm-dropdown__item--solid'); }
+    confirmBtn.textContent = confirmLabel;
+    menu.appendChild(confirmBtn);
+
+    wrapper.appendChild(menu);
+
+    // Also toggles wrapper.confirm-dropdown--open and calls onToggle(), so a caller whose trigger
+    // only shows on hover (e.g. getMsgTpl()'s .action-btn-list) can force it to stay visible while
+    // the menu is open - otherwise the mouse leaving the row fades the trigger via CSS opacity,
+    // which (being on an ancestor) hides the still-open menu with it, and it silently reappears
+    // open the next time the mouse passes back over the row.
+    let setOpen = (open) => {
+        menu.classList.toggle('hidden-field', !open);
+        wrapper.classList.toggle('confirm-dropdown--open', open);
+        if(onToggle){ onToggle(open); }
+    };
+    let onOutsideClick = (event) => {
+        if(!wrapper.contains(event.target)){
+            setOpen(false);
+            document.removeEventListener('click', onOutsideClick);
+        }
+    };
+
+    trigger.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        let willOpen = menu.classList.contains('hidden-field');
+        setOpen(false);
+        if(willOpen){
+            setOpen(true);
+            // Deferred, so the click that opened the menu isn't also the outside click that closes it.
+            setTimeout(() => document.addEventListener('click', onOutsideClick), 0);
+        }
+    });
+
+    confirmBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        setOpen(false);
+        document.removeEventListener('click', onOutsideClick);
+        onConfirm();
+    });
+
+    return wrapper;
+}
+
 export async function checkConfig(){
 
     let configData = await browser.storage.local.get({dolibarrApiKey:'', dolibarrApiUrl:'', dolibarrApiEntity:1});
@@ -273,6 +394,67 @@ export function getDolibarrCardUrl(dolUrl, type, id){
     let url = new URL(dolUrl + meta.card);
     url.searchParams.set('id', id);
     return url.toString();
+}
+
+/**
+ * Turn the { type: {addon, example} } map returned by the crmclientconnector
+ * `numberingpatterns/` endpoint into { type: RegExp } detection patterns, by escaping the
+ * example's literal characters and replacing each run of digits with a \d{n} of the same
+ * length (more precise than a generic \d+, so a phone number or date in the mail body is
+ * less likely to be mistaken for a ref).
+ * @param {Object} numberingData as returned by GET crmclientconnector/numberingpatterns/
+ * @returns {Object} { type: RegExp }
+ */
+export function buildRefDetectionPatterns(numberingData){
+    let patterns = {};
+    if(!numberingData){
+        return patterns;
+    }
+
+    Object.entries(numberingData).forEach(([type, info]) => {
+        if(!info || !info.example){
+            return;
+        }
+        let escaped = info.example.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        let reSource = escaped.replace(/\\?\d+/g, (match) => {
+            let digitsOnly = match.replace(/\\/g, '');
+            return '\\d{'+digitsOnly.length+'}';
+        });
+        try {
+            patterns[type] = new RegExp(reSource, 'g');
+        } catch (error) {
+            console.error('buildRefDetectionPatterns: failed to build pattern for type '+type, error);
+        }
+    });
+
+    return patterns;
+}
+
+/**
+ * Scan a free text (mail subject/body) for document references matching the patterns built by
+ * buildRefDetectionPatterns().
+ * @param {string} text
+ * @param {Object} patterns { type: RegExp }
+ * @returns {Array<{type: string, ref: string}>}
+ */
+export function detectDolibarrRefsInText(text, patterns){
+    let found = [];
+    if(!text || !patterns){
+        return found;
+    }
+
+    Object.entries(patterns).forEach(([type, regex]) => {
+        regex.lastIndex = 0;
+        let match;
+        while((match = regex.exec(text)) !== null){
+            found.push({type: type, ref: match[0]});
+            if(match.index === regex.lastIndex){
+                regex.lastIndex++; // avoid an infinite loop on a zero-length match
+            }
+        }
+    });
+
+    return found;
 }
 
 /**
@@ -705,35 +887,30 @@ export function getMsgTpl(msg) {
     messageBtnAction.classList.add('action-btn-list');
 
 
-    let deleteBtn = document.createElement("button");
-    deleteBtn.classList.add('btn-tiny-action');
-    deleteBtn.classList.add('--delete-btn');
-    deleteBtn.classList.add('delete-message-btn');
-    deleteBtn.title = browser.i18n.getMessage('DoubleClickToDelete');
-    deleteBtn.setAttribute('data-msg-id', msg.id);
-    deleteBtn.setAttribute('data-action', 'delete');
-    deleteBtn.addEventListener("dblclick", (event) => {
-        event.preventDefault();
-        let commentDolId = deleteBtn.getAttribute('data-msg-id');
+    let deleteDropdown = buildConfirmDropdown({
+        triggerIcon: browser.runtime.getURL("images/trash-icon.svg"),
+        triggerTitle: browser.i18n.getMessage('Actions'),
+        confirmLabel: browser.i18n.getMessage('ConfirmDelete'),
+        danger: true,
+        solidConfirm: true,
+        onConfirm: () => {
+            callDolibarrApi(
+                'crmclientconnector/emailusermsgs/'+ msg.id,
+                {},
+                'DELETE',
+                {},
+                (resData)=>{
+                    container.remove();
+                }, (err)=>{
 
-        callDolibarrApi(
-            'crmclientconnector/emailusermsgs/'+ commentDolId,
-            {},
-            'DELETE',
-            {},
-            (resData)=>{
-                container.remove();
-            }, (err)=>{
-
-            });
+                });
+        },
+        onToggle: (open) => {
+            messageBtnAction.classList.toggle('action-btn-list--force-visible', open);
+        }
     });
 
-    let deleteBtnIcon = document.createElement("img");
-    deleteBtnIcon.src = browser.runtime.getURL("images/trash-icon.svg");
-    deleteBtnIcon.classList.add('btn-tiny-action-icon');
-    deleteBtn.appendChild(deleteBtnIcon);
-
-    messageBtnAction.appendChild(deleteBtn);
+    messageBtnAction.appendChild(deleteDropdown);
     message.appendChild(messageBtnAction);
 
 

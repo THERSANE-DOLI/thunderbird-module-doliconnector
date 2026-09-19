@@ -435,6 +435,10 @@ details.dolibarr-connector-detail > :where(div,p) {
 	opacity: 1;
 }
 
+.action-btn-list--force-visible {
+	opacity: 1;
+}
+
 .btn-tiny-action-icon {
 	height: 16px;
 	max-width: 24px;
@@ -454,4 +458,121 @@ details.dolibarr-connector-detail > :where(div,p) {
 
 .btn-tiny-action.--delete-btn {
 	color : var(--color-delete);
+}
+
+/* TOASTS */
+
+#dolconnector-toast-container {
+	position: fixed;
+	top: 10px;
+	right: 10px;
+	z-index: 99999;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	max-width: 300px;
+}
+
+.dolconnector-toast {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 8px 10px;
+	border-radius: 4px;
+	font-size: 12px;
+	line-height: 1.4;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+	animation: dolconnector-toast-in 0.15s ease-out;
+}
+
+.dolconnector-toast--success {
+	background-color: #eafaf3;
+	color: #1a7f37;
+	border: 1px solid rgba(37, 165, 128, 0.35);
+}
+
+.dolconnector-toast--error {
+	background-color: #fdecec;
+	color: var(--color-delete);
+	border: 1px solid rgba(138, 30, 30, 0.3);
+}
+
+.dolconnector-toast__close {
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: 14px;
+	line-height: 1;
+	color: inherit;
+	opacity: 0.6;
+	padding: 0;
+	flex: 0 0 auto;
+}
+
+.dolconnector-toast__close:hover {
+	opacity: 1;
+}
+
+@keyframes dolconnector-toast-in {
+	from { opacity: 0; transform: translateY(-6px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+/* CONFIRM DROPDOWN */
+
+.confirm-dropdown {
+	position: relative;
+	display: inline-block;
+}
+
+.confirm-dropdown__menu {
+	position: absolute;
+	top: calc(100% + 4px);
+	right: 0;
+	background-color: #fff;
+	border: 1px solid #d0d8e0;
+	border-radius: 4px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	z-index: 20;
+	min-width: 160px;
+	overflow: hidden;
+}
+
+.confirm-dropdown__item {
+	display: block;
+	width: 100%;
+	padding: 7px 10px;
+	background: none;
+	border: none;
+	text-align: left;
+	font-size: 12px;
+	cursor: pointer;
+	color: #3c4043;
+	white-space: nowrap;
+}
+
+.confirm-dropdown__item:hover {
+	background-color: #f3f4f6;
+}
+
+.confirm-dropdown__item--danger {
+	color: var(--color-delete);
+}
+
+.confirm-dropdown__item--solid {
+	width: calc(100% - 8px);
+	margin: 4px;
+	padding: 9px 10px;
+	background-color: var(--color-delete);
+	color: #fff;
+	font-weight: bold;
+	text-align: center;
+	border-radius: 5px;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+	transition: background-color 0.12s ease-in-out;
+}
+
+.confirm-dropdown__item--solid:hover {
+	background-color: #6e1717;
 }
