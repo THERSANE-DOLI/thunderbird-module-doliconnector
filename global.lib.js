@@ -119,6 +119,83 @@ export function buildConfirmDropdown({triggerLabel, triggerIcon, triggerTitle, c
     return wrapper;
 }
 
+/**
+ * Build an action button that opens a dropdown menu of plain navigation links (e.g. "View card"
+ * plus a few "create X for this thirdparty" shortcuts) - same trigger/menu/outside-click
+ * interaction as buildConfirmDropdown(), but for a list of links instead of a single confirm
+ * action, and with a full-size .btn.btn-primary trigger rather than a small icon-only one.
+ * @param {{triggerLabel: string, triggerTitle?: string, items: Array<{label: string, href: string, target？: string}>}} options
+ * @returns {HTMLElement} the dropdown wrapper element (trigger + menu)
+ */
+export function buildDropdownMenu({triggerLabel, triggerTitle, items}){
+    let wrapper = document.createElement('div');
+    wrapper.classList.add('confirm-dropdown', 'action-menu-dropdown');
+
+    let trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.classList.add('action-menu-dropdown__trigger');
+    if(triggerTitle){ trigger.title = triggerTitle; }
+
+    let triggerText = document.createElement('span');
+    triggerText.textContent = triggerLabel;
+    trigger.appendChild(triggerText);
+
+    let caret = document.createElement('span');
+    caret.classList.add('action-menu-dropdown__caret');
+    caret.textContent = '▾';
+    trigger.appendChild(caret);
+
+    wrapper.appendChild(trigger);
+
+    let menu = document.createElement('div');
+    menu.classList.add('confirm-dropdown__menu', 'hidden-field');
+
+    items.forEach((item) => {
+        let link = document.createElement('a');
+        link.classList.add('confirm-dropdown__item');
+        link.textContent = item.label;
+        link.href = item.href;
+        if(item.target){ link.target = item.target; }
+        menu.appendChild(link);
+    });
+
+    wrapper.appendChild(menu);
+
+    let setOpen = (open) => {
+        menu.classList.toggle('hidden-field', !open);
+        wrapper.classList.toggle('action-menu-dropdown--open', open);
+    };
+    let onOutsideClick = (event) => {
+        if(!wrapper.contains(event.target)){
+            setOpen(false);
+            document.removeEventListener('click', onOutsideClick);
+        }
+    };
+
+    trigger.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        let willOpen = menu.classList.contains('hidden-field');
+        setOpen(false);
+        if(willOpen){
+            setOpen(true);
+            // Deferred, so the click that opened the menu isn't also the outside click that closes it.
+            setTimeout(() => document.addEventListener('click', onOutsideClick), 0);
+        }
+    });
+
+    // Menu items are plain links (so ctrl/middle-click "open in new tab" works as expected) -
+    // just close the menu once one is clicked instead of intercepting the navigation.
+    menu.addEventListener('click', (event) => {
+        if(event.target.closest('.confirm-dropdown__item')){
+            setOpen(false);
+            document.removeEventListener('click', onOutsideClick);
+        }
+    });
+
+    return wrapper;
+}
+
 export async function checkConfig(){
 
     let configData = await browser.storage.local.get({dolibarrApiKey:'', dolibarrApiUrl:'', dolibarrApiEntity:1});
@@ -251,6 +328,28 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
     //
     // xhttp.send( postData );
     // return xhttp;
+}
+
+/**
+ * The Dolibarr user identified by the configured API key (GET /users/info, Dolibarr's standard
+ * "who am I" REST endpoint) - used to tell whether the current user authored a given comment, see
+ * getMsgTpl()'s edit button. Cached for the page's lifetime since the configured API key doesn't
+ * change mid-session.
+ * @returns {Promise<Object|null>} the user object (has .id), or null on error
+ */
+let currentDolibarrUserPromise = null;
+export function getCurrentDolibarrUser(){
+    if(!currentDolibarrUserPromise){
+        currentDolibarrUserPromise = new Promise((resolve) => {
+            callDolibarrApi('users/info', {}, 'GET', {}, (userData)=>{
+                resolve(userData || null);
+            }, (errorMsg)=>{
+                console.error('getCurrentDolibarrUser failed', errorMsg);
+                resolve(null);
+            });
+        });
+    }
+    return currentDolibarrUserPromise;
 }
 
 //wip
@@ -859,7 +958,13 @@ export function updateBadgeMessageDisplayAction(tab, commentCount){
     });
 }
 
-export function getMsgTpl(msg) {
+/**
+ * @param msg one entry from GET crmclientconnector/emailusermsgs
+ * @param {number|string|null} [currentUserId] id of the Dolibarr user behind the configured API
+ * key (see getCurrentDolibarrUser()) - when it matches msg.fk_user_creat, an edit icon is shown
+ * next to the trash one, letting the author rewrite their own comment in place.
+ */
+export function getMsgTpl(msg, currentUserId) {
     // create a new div element
     let container = document.createElement("div");
     container.id = 'mail-message-' + msg.id;
@@ -886,6 +991,99 @@ export function getMsgTpl(msg) {
     let messageBtnAction = document.createElement("div");
     messageBtnAction.classList.add('action-btn-list');
 
+    let messageTxt = document.createElement("div");
+    messageTxt.classList.add('dolibarr-textarea');
+    messageTxt.disabled = true;
+    messageTxt.innerText = msg.message;
+
+    let isAuthor = currentUserId !== null && currentUserId !== undefined
+        && msg.fk_user_creat !== null && msg.fk_user_creat !== undefined
+        && parseInt(msg.fk_user_creat) === parseInt(currentUserId);
+
+    if(isAuthor){
+        let editingBox = null;
+
+        // Toggled via inline style rather than the .hidden-field class : both
+        // .action-btn-list and ".mail-msg-box-list .dolibarr-textarea" (which matches
+        // messageTxt) declare their own "display" at a specificity/source-order .hidden-field
+        // can't win against, so adding that class here would silently do nothing.
+        let exitEditMode = () => {
+            if(editingBox){
+                editingBox.remove();
+                editingBox = null;
+            }
+            messageBtnAction.style.display = '';
+            messageTxt.style.display = '';
+        };
+
+        let enterEditMode = () => {
+            if(editingBox){
+                return;
+            }
+            messageBtnAction.style.display = 'none';
+            messageTxt.style.display = 'none';
+
+            editingBox = document.createElement('div');
+            editingBox.classList.add('mail-msg-box__edit');
+
+            let textarea = document.createElement('textarea');
+            textarea.classList.add('dolibarr-textarea');
+            textarea.value = msg.message;
+            editingBox.appendChild(textarea);
+            textareaAutosize(textarea);
+
+            let editActions = document.createElement('div');
+            editActions.classList.add('mail-msg-box__edit-actions');
+
+            let saveBtn = document.createElement('button');
+            saveBtn.type = 'button';
+            saveBtn.classList.add('btn', '--submit');
+            saveBtn.textContent = browser.i18n.getMessage('Save');
+            saveBtn.addEventListener('click', () => {
+                let newMessage = textarea.value;
+                saveBtn.disabled = true;
+                callDolibarrApi(
+                    'crmclientconnector/emailusermsgs/'+ msg.id,
+                    {},
+                    'PUT',
+                    JSON.stringify({message: newMessage}),
+                    ()=>{
+                        msg.message = newMessage;
+                        messageTxt.innerText = newMessage;
+                        exitEditMode();
+                        showToast(browser.i18n.getMessage('EditSuccess'), 'success');
+                    },
+                    (err)=>{
+                        saveBtn.disabled = false;
+                        showToast(browser.i18n.getMessage('EditError')+' ('+err+')', 'error');
+                    }
+                );
+            });
+            editActions.appendChild(saveBtn);
+
+            let cancelBtn = document.createElement('button');
+            cancelBtn.type = 'button';
+            cancelBtn.classList.add('btn-tiny-action');
+            cancelBtn.textContent = browser.i18n.getMessage('Cancel');
+            cancelBtn.addEventListener('click', () => exitEditMode());
+            editActions.appendChild(cancelBtn);
+
+            editingBox.appendChild(editActions);
+            messageTxt.after(editingBox);
+            textarea.focus();
+        };
+
+        let editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.classList.add('btn-tiny-action');
+        editBtn.title = browser.i18n.getMessage('Edit');
+        let editIcon = document.createElement('img');
+        editIcon.src = browser.runtime.getURL("images/edit-icon.svg");
+        editIcon.classList.add('btn-tiny-action-icon');
+        editBtn.appendChild(editIcon);
+        editBtn.addEventListener('click', enterEditMode);
+        messageBtnAction.appendChild(editBtn);
+    }
 
     let deleteDropdown = buildConfirmDropdown({
         triggerIcon: browser.runtime.getURL("images/trash-icon.svg"),
@@ -915,10 +1113,6 @@ export function getMsgTpl(msg) {
 
 
 
-    let messageTxt = document.createElement("div");
-    messageTxt.classList.add('dolibarr-textarea');
-    messageTxt.disabled = true;
-    messageTxt.innerText = msg.message;
     message.appendChild(messageTxt);
 
     let date = document.createElement("div");
@@ -942,14 +1136,16 @@ export function refreshComments(tabs, accountEmail, msgId){
     // Get all notes
     callDolibarrApi('crmclientconnector/emaillinks/quicksearch', {accountEmail: accountEmail, msgId: msgId}, 'GET', {}, (resData)=>{
         callDolibarrApi('crmclientconnector/emailusermsgs', {sqlfilters: `(fk_email_link:=:${resData.id})`}, 'GET', {}, (resDataMsg)=>{
-            let lisMsgContainer = document.getElementById('dolibarr-notes-list-container');
-            if(tabs !== false){
-                updateBadgeMessageDisplayAction(tabs, resDataMsg.length);
-            }
-            lisMsgContainer.textContent = '';
-            resDataMsg.forEach((msg) => {
-                // create a new div element
-                lisMsgContainer.appendChild(getMsgTpl(msg));
+            getCurrentDolibarrUser().then((currentUser)=>{
+                let lisMsgContainer = document.getElementById('dolibarr-notes-list-container');
+                if(tabs !== false){
+                    updateBadgeMessageDisplayAction(tabs, resDataMsg.length);
+                }
+                lisMsgContainer.textContent = '';
+                resDataMsg.forEach((msg) => {
+                    // create a new div element
+                    lisMsgContainer.appendChild(getMsgTpl(msg, currentUser ? currentUser.id : null));
+                });
             });
         });
     });

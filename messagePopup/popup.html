@@ -24,14 +24,14 @@
 				<td ><h4 id="popup-header"><div class="text-placeholder --medium">&nbsp;</div></h4></td>
 				<td style="text-align: right;" >
 					<a id="new-quotation-link" class="hidden-field btn btn-primary" href=""><i class="icon-plus"></i> __MSG_CreateNewQuotation__</a>
-					<a id="soc-link" class="hidden-field btn btn-primary" href="">__MSG_FicheDolibarr__</a>
+					<div id="soc-actions" class="hidden-field"></div>
 				</td>
 			</tr>
 		</table>
 
-		<div id="dolibarr-detected-ref" class="hidden-field alert alert-info">
-			<span id="dolibarr-detected-ref-text"></span>
-			<a id="dolibarr-detected-ref-link" href="" target="_blank" class="btn btn-primary">__MSG_OpenDocument__</a>
+		<div id="dolibarr-detected-ref" class="hidden-field detected-ref-block">
+			<div class="detected-ref-block__intro">__MSG_DolibarrRefDetected__</div>
+			<div id="dolibarr-detected-ref-card"></div>
 		</div>
 
 		<div class="popup-body-layout">
@@ -45,6 +45,15 @@
 			<div class="popup-tab-panels">
 
 				<div id="tab-panel-info" class="popup-tab-panel">
+
+					<div id="info-linked-documents-container" class="hidden-field">
+						<div id="info-linked-list" class="hidden-field"></div>
+						<div id="info-linked-empty" class="hidden-field">
+							<span id="info-linked-empty-text">__MSG_NoLinkedDocument__.</span>
+							<button type="button" id="info-link-document-cta" class="link-cta-btn">__MSG_SearchDocumentToLink__</button>
+						</div>
+						<hr/>
+					</div>
 
 					<div id="dolibarr-notes-container" class="hidden-field">
 						<div id="dolibarr-notes-list-container" class="mail-msg-box-list" ></div>

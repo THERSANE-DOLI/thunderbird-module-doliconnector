@@ -8,6 +8,18 @@
   "Save": {
     "message": "Sauvegarder"
   },
+  "Edit": {
+    "message": "Modifier"
+  },
+  "Cancel": {
+    "message": "Annuler"
+  },
+  "EditSuccess": {
+    "message": "Message modifié"
+  },
+  "EditError": {
+    "message": "Erreur lors de la modification du message"
+  },
   "dolibarrApiKey": {
     "message": "Clé API REST"
   },
@@ -47,6 +59,12 @@
   "CreateNewQuotation": {
     "message": "Créer un devis"
   },
+  "CreateNewOrder": {
+    "message": "Créer une commande"
+  },
+  "CreateNewTicket": {
+    "message": "Créer un ticket"
+  },
   "FicheDolibarr": {
     "message": "Voir Fiche"
   },
@@ -58,6 +76,9 @@
   },
   "RefSupplier": {
     "message": "Ref Fournisseur"
+  },
+  "Thirdparty": {
+    "message": "Tiers"
   },
   "CheckYourModuleConfig": {
     "message": "Configuration incomplete : Vérifiez votre configuration module"
@@ -213,6 +234,9 @@
     "message": "Livraison en cours"
   },
   "StatusOrderDeliveredShort": {
+    "message": "Livré"
+  },
+  "StatusOrderDelivered": {
     "message": "Livré"
   },
   "Status": {

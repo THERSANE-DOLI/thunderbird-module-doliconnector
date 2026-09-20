@@ -439,6 +439,21 @@ details.dolibarr-connector-detail > :where(div,p) {
 	opacity: 1;
 }
 
+.action-btn-list > * + * {
+	margin-left: 4px;
+}
+
+.mail-msg-box__edit {
+	margin-top: 4px;
+}
+
+.mail-msg-box__edit-actions {
+	display: flex;
+	gap: 6px;
+	justify-content: flex-end;
+	margin-top: 6px;
+}
+
 .btn-tiny-action-icon {
 	height: 16px;
 	max-width: 24px;
@@ -550,6 +565,7 @@ details.dolibarr-connector-detail > :where(div,p) {
 	cursor: pointer;
 	color: #3c4043;
 	white-space: nowrap;
+	text-decoration: none;
 }
 
 .confirm-dropdown__item:hover {
@@ -575,4 +591,43 @@ details.dolibarr-connector-detail > :where(div,p) {
 
 .confirm-dropdown__item--solid:hover {
 	background-color: #6e1717;
+}
+
+/* ACTION MENU DROPDOWN (buildDropdownMenu()) */
+
+.action-menu-dropdown__trigger {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	background-color: #fff;
+	color: #3c6f98;
+	border: 1px solid #c3d3e0;
+	border-radius: 4px;
+	font-family: arial, sans-serif;
+	font-size: 14px;
+	font-weight: bold;
+	height: 36px;
+	padding: 3px 14px;
+	cursor: pointer;
+}
+
+.action-menu-dropdown__trigger:hover {
+	background-color: #f3f7fa;
+	border-color: #6b99c0;
+}
+
+.action-menu-dropdown__trigger:focus {
+	outline: none;
+	border-color: #4285f4;
+}
+
+.action-menu-dropdown__caret {
+	font-size: 10px;
+	line-height: 1;
+	color: #6b99c0;
+	transition: transform 0.12s ease-in-out;
+}
+
+.action-menu-dropdown--open .action-menu-dropdown__caret {
+	transform: rotate(180deg);
 }

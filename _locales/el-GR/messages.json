@@ -8,6 +8,18 @@
   "Save": {
     "message": "Αποθήκευση"
   },
+  "Edit": {
+    "message": "Επεξεργασία"
+  },
+  "Cancel": {
+    "message": "Ακύρωση"
+  },
+  "EditSuccess": {
+    "message": "Το μήνυμα τροποποιήθηκε"
+  },
+  "EditError": {
+    "message": "Σφάλμα κατά την τροποποίηση του μηνύματος"
+  },
   "dolibarrApiKey": {
     "message": "REST API key"
   },
@@ -47,6 +59,15 @@
   "FicheDolibarr": {
     "message": "Εμφάνιση Πελάτη/Προμηθευτή"
   },
+  "CreateNewQuotation": {
+    "message": "Δημιουργία προσφοράς"
+  },
+  "CreateNewOrder": {
+    "message": "Δημιουργία παραγγελίας"
+  },
+  "CreateNewTicket": {
+    "message": "Δημιουργία Ticket"
+  },
   "Ref": {
     "message": "Αρ. παραστατικού"
   },
@@ -55,6 +76,12 @@
   },
   "RefSupplier": {
     "message": "Αναφ. Προμηθευτή"
+  },
+  "Thirdparty": {
+    "message": "Πελάτης/Προμηθευτής"
+  },
+  "StatusOrderDelivered": {
+    "message": "Παραδόθηκε"
   },
   "CheckYourModuleConfig": {
     "message": "Ημιτελής διαμόρφωση : Ελέγξτε τη διαμόρφωση του Dolibarr connector"

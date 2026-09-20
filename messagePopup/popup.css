@@ -84,13 +84,60 @@
 }
 
 #link-linked-container,
-#link-search-container {
+#link-search-container,
+#info-linked-documents-container {
 	padding: 6px 2px;
 }
 
 #link-linked-container h5,
 #link-search-container h5 {
 	margin: 0 0 8px 0;
+}
+
+/* Not plain "#info-linked-list { display: flex; ... }" : an ID selector's specificity beats
+   the plain class selector .hidden-field uses for "display: none", which would keep the list
+   force-shown (as an empty flex box, harmless) but also force-shows #info-linked-empty's real
+   text right along with it - :not(.hidden-field) keeps this rule from ever fighting that
+   toggle. */
+#info-linked-list:not(.hidden-field) {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+/* Styled like a low-key linked-doc-card (see LINKED DOCUMENT CARDS below) so it reads as one
+   more item among the document cards rather than a loud banner - kept deliberately quiet
+   (small, low-contrast grey) since "no document" isn't something that needs to grab attention. */
+#info-linked-empty:not(.hidden-field) {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 4px 8px;
+	border: 1px solid #e0e5ea;
+	border-radius: 6px;
+	padding: 8px 10px;
+	background-color: #fff;
+	font-size: 11px;
+}
+
+#info-linked-empty-text {
+	color: #94a0ab;
+}
+
+.link-cta-btn {
+	background: none;
+	border: none;
+	padding: 0;
+	margin: 0;
+	color: #94a0ab;
+	font-family: inherit;
+	font-size: 11px;
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+.link-cta-btn:hover {
+	color: #6b7280;
 }
 
 .link-search-box {
@@ -151,6 +198,28 @@
 	color: #ffffff;
 }
 
+/* DETECTED REF BLOCK (document found via email headers) */
+
+.detected-ref-block {
+	margin-bottom: 10px;
+}
+
+.detected-ref-block__intro {
+	font-size: 12px;
+	color: #5a5b62;
+	margin-bottom: 4px;
+}
+
+.detected-ref-block .linked-doc-card {
+	padding-right: 10px;
+}
+
+.detected-ref-block .linked-doc-card__actions {
+	position: static;
+	margin-top: 6px;
+	text-align: right;
+}
+
 /* LINKED DOCUMENT CARDS */
 
 #link-linked-list {
@@ -189,6 +258,12 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+	text-decoration: none;
+}
+
+.linked-doc-card__ref:hover {
+	text-decoration: underline;
+	color: #007bff;
 }
 
 .linked-doc-card__fields {
