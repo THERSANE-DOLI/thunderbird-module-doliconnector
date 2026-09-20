@@ -65,11 +65,6 @@ browser.runtime.onMessage.addListener((message, sender) => {
         })();
     }
 
-    if (message.action === "openDolibarr") {
-        // Dans le cas d'une ouverture depuis le mail il faut récupérer les infos de la tab source d'ouverture et les envoyer à la popup
-        return openDetachedPopupWindow(sender.tab.id);
-    }
-
     // Not handled by this listener - do not claim the message so other listeners can respond.
     return undefined;
 });
@@ -126,16 +121,7 @@ browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
                 div.innerHTML = ${JSON.stringify(html)};
                 if (document.body) { document.body.prepend(div); }
                 else if (document.documentElement) { document.documentElement.prepend(div); }
-                console.log("Div injecté avec succès");
-                
-                document.addEventListener("click", (ev) => {
-                  if (ev.target && ev.target.id === "doli-open-btn") {
-                    browser.runtime.sendMessage({action: "openDolibarr"});
-                  }
-                });
             })();
-            
-            
         `
             });
 
@@ -205,15 +191,13 @@ async function checkAndInjectTrackidBanner(tab, message){
     dolLib.callDolibarrApi(meta.api + '/' + ref.id, {}, 'GET', {}, (objData) => {
         injectTrackidBanner(tab.id, {
             typeLabel: browser.i18n.getMessage(meta.labelKey),
-            refLabel: (objData && objData.ref) ? objData.ref : ('#' + ref.id),
-            cardUrl: cardUrl
+            refLabel: (objData && objData.ref) ? objData.ref : ('#' + ref.id)
         });
     }, (errorMsg) => {
         console.log("[DoliConnector background] failed to fetch referenced object, showing a generic link", errorMsg);
         injectTrackidBanner(tab.id, {
             typeLabel: browser.i18n.getMessage(meta.labelKey),
-            refLabel: '#' + ref.id,
-            cardUrl: cardUrl
+            refLabel: '#' + ref.id
         });
     });
 }
@@ -246,11 +230,6 @@ function renderDolibarrTrackidBox(info) {
            <div style="flex:1">
               <div class="doli-last-note" style="font-style:normal">${info.typeLabel} ${info.refLabel}</div>
            </div>
-        </div>
-        <div class="doli-actions">
-           <a href="${info.cardUrl}" target="_blank" rel="noopener noreferrer" class="doli-btn-history">
-              ${browser.i18n.getMessage("OpenDocument")}
-           </a>
         </div>
       </div>
     `;
@@ -312,12 +291,6 @@ function renderDolibarrBox(messages) {
                  ${lastNoteContent}
               </div>
            </div>
-        </div>
-        <div class="doli-actions">
-           <button id="doli-open-btn" class="doli-btn-history">
-              ${browser.i18n.getMessage("Comments")} &nbsp;
-              ${doliData.totalEvents > 0 ? `<span class="doli-counter">${doliData.totalEvents}</span>` : ''}
-           </button>
         </div>
       </div>
     `;
