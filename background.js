@@ -1,6 +1,50 @@
 // background.js (ES module)
 import * as dolLib from '../global.lib.js';
 
+/**
+ * Open the popup UI in its own detached window rather than the small toolbar dropdown - used by
+ * the "comment" button injected in the mail body, and by Ctrl+click on the toolbar/message
+ * display action buttons (see onClicked listeners below).
+ * @param tabId tab the mail is displayed in, used to know which message to load in the popup
+ */
+async function openDetachedPopupWindow(tabId){
+    let message = await browser.messageDisplay.getDisplayedMessage(tabId);
+    await browser.storage.local.set({dolibarrMsg: message});
+
+    browser.windows.create({
+        url: browser.runtime.getURL("messagePopup/popup.html"),
+        type: "popup",
+        width: 600,
+        height: 500
+    });
+}
+
+/**
+ * Neither messageDisplayAction nor browserAction have a default_popup configured (see
+ * manifest.json) : this is what lets onClicked fire at all, so we can check for Ctrl before
+ * deciding what to open. On a plain click, the popup is opened the same way it would have been
+ * with a default_popup set (set it, open it, then clear it again so onClicked keeps firing on
+ * the next click - see https://bugzilla.mozilla.org/show_bug.cgi?id=1681131).
+ * @param action browser.messageDisplayAction or browser.browserAction
+ * @param tab tab passed to the onClicked listener
+ * @param info OnClickData passed to the onClicked listener
+ */
+async function handleActionClick(action, tab, info){
+    // Note: on macOS, Ctrl+click is treated as a right click by default and MacCtrl is not
+    // forwarded here, so this only reliably works on Windows/Linux.
+    if(info && Array.isArray(info.modifiers) && info.modifiers.includes('Ctrl')){
+        await openDetachedPopupWindow(tab.id);
+        return;
+    }
+
+    await action.setPopup({tabId: tab.id, popup: 'messagePopup/popup.html'});
+    await action.openPopup();
+    await action.setPopup({tabId: tab.id, popup: ''});
+}
+
+browser.messageDisplayAction.onClicked.addListener((tab, info) => handleActionClick(browser.messageDisplayAction, tab, info));
+browser.browserAction.onClicked.addListener((tab, info) => handleActionClick(browser.browserAction, tab, info));
+
 browser.runtime.onMessage.addListener((message, sender) => {
     if (message.type === "getEmailAccount") {
         return (async () => {
@@ -21,22 +65,6 @@ browser.runtime.onMessage.addListener((message, sender) => {
         })();
     }
 
-    if (message.action === "openDolibarr") {
-        return (async () => {
-            // Dans le cas d'une ouverture depuis le mail il faut récupérer les infos de la tab source d'ouverture et les envoyer à la popup
-            let tabId = sender.tab.id;
-            let message = await browser.messageDisplay.getDisplayedMessage(tabId);
-            await browser.storage.local.set({dolibarrMsg: message});
-
-            browser.windows.create({
-                url: browser.runtime.getURL("messagePopup/popup.html"),
-                type: "popup",
-                width: 600,
-                height: 500
-            });
-        })();
-    }
-
     // Not handled by this listener - do not claim the message so other listeners can respond.
     return undefined;
 });
@@ -48,9 +76,9 @@ browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
     // Dolibarr trackid, show a banner linking to the record it's about.
     checkAndInjectTrackidBanner(tab, message);
 
-    let config = await browser.storage.local.get({dolibarrUseNotes: false});
+    let crmConnectorEnabled = await dolLib.isCrmConnectorEnabled();
 
-    if (!config.dolibarrUseNotes) {
+    if (!crmConnectorEnabled) {
         return;
     }
 
@@ -93,16 +121,7 @@ browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
                 div.innerHTML = ${JSON.stringify(html)};
                 if (document.body) { document.body.prepend(div); }
                 else if (document.documentElement) { document.documentElement.prepend(div); }
-                console.log("Div injecté avec succès");
-                
-                document.addEventListener("click", (ev) => {
-                  if (ev.target && ev.target.id === "doli-open-btn") {
-                    browser.runtime.sendMessage({action: "openDolibarr"});
-                  }
-                });
             })();
-            
-            
         `
             });
 
@@ -172,15 +191,13 @@ async function checkAndInjectTrackidBanner(tab, message){
     dolLib.callDolibarrApi(meta.api + '/' + ref.id, {}, 'GET', {}, (objData) => {
         injectTrackidBanner(tab.id, {
             typeLabel: browser.i18n.getMessage(meta.labelKey),
-            refLabel: (objData && objData.ref) ? objData.ref : ('#' + ref.id),
-            cardUrl: cardUrl
+            refLabel: (objData && objData.ref) ? objData.ref : ('#' + ref.id)
         });
     }, (errorMsg) => {
         console.log("[DoliConnector background] failed to fetch referenced object, showing a generic link", errorMsg);
         injectTrackidBanner(tab.id, {
             typeLabel: browser.i18n.getMessage(meta.labelKey),
-            refLabel: '#' + ref.id,
-            cardUrl: cardUrl
+            refLabel: '#' + ref.id
         });
     });
 }
@@ -213,11 +230,6 @@ function renderDolibarrTrackidBox(info) {
            <div style="flex:1">
               <div class="doli-last-note" style="font-style:normal">${info.typeLabel} ${info.refLabel}</div>
            </div>
-        </div>
-        <div class="doli-actions">
-           <a href="${info.cardUrl}" target="_blank" rel="noopener noreferrer" class="doli-btn-history">
-              ${browser.i18n.getMessage("OpenDocument")}
-           </a>
         </div>
       </div>
     `;
@@ -279,12 +291,6 @@ function renderDolibarrBox(messages) {
                  ${lastNoteContent}
               </div>
            </div>
-        </div>
-        <div class="doli-actions">
-           <button id="doli-open-btn" class="doli-btn-history">
-              ${browser.i18n.getMessage("Comments")} &nbsp;
-              ${doliData.totalEvents > 0 ? `<span class="doli-counter">${doliData.totalEvents}</span>` : ''}
-           </button>
         </div>
       </div>
     `;

@@ -4,6 +4,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
     const LOG = (...args) => console.log('[DoliConnector popup]', ...args);
 
+    const POPUP_TABS = ['info', 'documents', 'link'];
+
     // Workaround for a Linux/GTK bug: when this UI is shown in a detached "popup" type
     // window (see browser.windows.create in background.js), pressing Ctrl or Alt on its
     // own is interpreted by the window manager as a request to close the window, which
@@ -52,9 +54,22 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     // document.getElementById("received").textContent = full.headers.received[0];
 
     let checkConfig = await dolLib.checkConfig();
+    // Only worth testing credentials/connectivity once the config itself looks complete -
+    // distinguishes "invalid API key / HTTP auth" and "server unreachable" from the
+    // "module not configured" case, which otherwise all looked the same to the user.
+    let connectionStatus = checkConfig ? await dolLib.checkDolibarrConnection() : null;
 
     // Extract email from author
     let authorEmail = message ? dolLib.extractEmailAddressFromString(message.author)[0] : '';
+
+    // Identity of the account this mail was received on, and its Message-Id : sent along when
+    // creating a devis/commande from this popup (see setSocInfos()'s new-quotation-link), so the
+    // crmclientconnector module's PROPAL_CREATE/ORDER_CREATE trigger can auto-link the newly
+    // created object back to this mail. Same values/convention already used for notes (see
+    // initNotesForMessage() below : accountEmail via getEmailAccountFromBackground(), msgId via
+    // message.headerMessageId).
+    let ownerAccountEmail = message ? await getEmailAccountFromBackground(message.id) : null;
+    let ownerMsgId = message ? message.headerMessageId : null;
 
     // Quotation form headers (X-Quotation-Mail / X-Quotation-Data) : only trusted when the
     // sender is in the configured trusted senders list, to avoid a forged header hijacking
@@ -90,23 +105,56 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     // ref is known, so its row lights up the same way a ref mentioned in the
     // message body/subject already does.
     let detectedRefSearchText = '';
+    // Populated once resolveSocFromId() (called when the trackid's referenced
+    // object carries a thirdparty id) fetches that thirdparty's name, so the
+    // detected-ref card can show it alongside the document reference.
+    let detectedRefThirdpartyName = null;
 
     //Filter on propal objects status
     let propalDisplayStatus = await dolLib.filterPropalStatus();
 
     let confDolibarUrl = await dolLib.getDolibarrUrl();
 
-    let config = await browser.storage.local.get({dolibarrUseNotes: false});
+    // Gates every feature built on the crmclientconnector module's REST endpoints (shared
+    // notes, the "Lier" tab, the detected-ref card's Link button, linked documents on the Info
+    // tab, ref auto-detection) - see isCrmConnectorEnabled()'s doc comment.
+    let crmConnectorEnabled = await dolLib.isCrmConnectorEnabled();
 
     if(!checkConfig){
         LOG('module not configured, showing check-module-config template');
         displayTpl("check-module-config");
+    }else if(connectionStatus.status === 'auth'){
+        LOG('invalid credentials, showing check-module-auth template', connectionStatus.message);
+        displayTpl("check-module-auth");
+    }else if(connectionStatus.status === 'connection'){
+        LOG('cannot reach Dolibarr server, showing check-module-connection template', connectionStatus.message);
+        displayTpl("check-module-connection");
     }else{
         displayTpl("main-popup");
 
 
         initNotesForMessage();
         document.querySelectorAll('textarea.autosize').forEach(textarea => dolLib.textareaAutosize(textarea))
+        initPopupTabs();
+        initDocumentsTabBadge();
+        initInfoTabLinkCta();
+
+        if(!crmConnectorEnabled){
+            LOG('crmClientConnector module disabled by config, showing discreet notice instead of notes/link features');
+            document.getElementById('crm-connector-disabled-notice-info')?.classList.remove('hidden-field');
+            document.getElementById('crm-connector-disabled-notice-link')?.classList.remove('hidden-field');
+            document.getElementById('link-tab-content')?.classList.add('hidden-field');
+        }
+
+        if(crmConnectorEnabled && ownerAccountEmail && ownerMsgId){
+            // Loaded eagerly (normally only fetched on-demand when the user opens the "Lier"
+            // tab, see initLinkTab()) so the Info tab's own linked-documents section (see
+            // updateInfoTabLinkedDocumentsSection()) and, when a trackid was detected, the
+            // detected-ref card's Link button (see buildDetectedRefCard()) both have the data
+            // they need without requiring the user to open the Link tab first.
+            LOG('eagerly loading linked documents for the Info tab / detected-ref card');
+            loadLinkedDocuments();
+        }
 
         if(detectedRef){
             LOG('trackid detected, fetching referenced object', detectedRefMeta.api + '/' + detectedRef.id);
@@ -159,6 +207,9 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                 id: socData.id,
                 name: socData.name
             });
+
+            detectedRefThirdpartyName = socData.name || null;
+            maybeRenderDetectedRefBlock();
 
             loadDocumentsInfos({
                 socId : socData.id
@@ -258,30 +309,32 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     }
 
     async function getExcludedDomains(){
-        try {
-            let domains = await fetch(browser.runtime.getURL("exclude-domains.json"))
-                .then(response => response.json())
-                .catch(error => console.error("Erreur de chargement du JSON :", error));
-
-            let apiDomain = await new Promise((resolve, reject) => {
-
-                // TODO add cache
-                dolLib.callDolibarrApi('crmclientconnector/excludeddomains', {
-                    sqlfilters: "(t.active:=:1)"
-                }, 'GET', {}, (resData)=>{
-                    resolve(resData);
-                }, (err) => {
-                    reject("fail call API crmclientconnector/excludeddomains or nothing into");
-                },true);
-            }).then((domainList) => {
-                domains = domains.concat(domainList);
+        let domains = await fetch(browser.runtime.getURL("exclude-domains.json"))
+            .then(response => response.json())
+            .catch(error => {
+                console.error("Erreur de chargement du JSON :", error);
+                return [];
             });
 
+        if(!crmConnectorEnabled){
+            // The extra domains list (crmclientconnector/excludeddomains) needs the
+            // crmClientConnector module - fall back to the local list only.
             return domains;
-        } catch (error) {
-            console.error("Erreur dans getExcludedDomains :", error);
-            return []; // Retourne un tableau vide en cas d’erreur
         }
+
+        let apiDomains = await new Promise((resolve) => {
+            // TODO add cache
+            dolLib.callDolibarrApi('crmclientconnector/excludeddomains', {
+                sqlfilters: "(t.active:=:1)"
+            }, 'GET', {}, (resData)=>{
+                resolve(Array.isArray(resData) ? resData : []);
+            }, (err) => {
+                LOG('getExcludedDomains: crmclientconnector/excludeddomains failed', err);
+                resolve([]);
+            }, true);
+        });
+
+        return domains.concat(apiDomains);
     }
 
 
@@ -340,8 +393,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
         }, socData);
 
-        // Add soc link
-        let linkSociete= document.getElementById("soc-link");
+        // Add soc actions dropdown
+        let socActions = document.getElementById("soc-actions");
         let titleDiv =  document.getElementById("popup-header");
 
         // console.log(message);
@@ -415,16 +468,55 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             // no table will ever be able to confirm/deny a match.
             resolveDetectedRefTableCheck(false);
 
+            // Documents tab would otherwise just show an empty table with no explanation -
+            // this is the only spot that knows for sure the thirdparty search came up empty.
+            document.getElementById('documents-no-thirdparty-notice')?.classList.remove('hidden-field');
+
             return;
         }
 
+        document.getElementById('documents-no-thirdparty-notice')?.classList.add('hidden-field');
+
         LOG('thirdparty displayed', soc);
-        displayTpl("soc-link");
+        displayTpl("soc-actions");
 
         titleDiv.textContent =  soc.name;
-        let url = new URL(confDolibarUrl + "societe/card.php");
-        url.searchParams.set('socid', soc.id);
-        linkSociete.href = url;
+
+        let socCardUrl = new URL(confDolibarUrl + "societe/card.php");
+        socCardUrl.searchParams.set('socid', soc.id);
+
+        // Créer un devis / une commande / un ticket : accountEmail+msgId let the
+        // crmclientconnector PROPAL_CREATE/ORDER_CREATE/TICKET_CREATE trigger auto-link the
+        // newly created object back to this mail (see initNotesForMessage()'s comment above and
+        // new-quotation-link below for the same convention).
+        let newPropalUrl = new URL(confDolibarUrl + "comm/propal/card.php");
+        newPropalUrl.searchParams.set('action', "create");
+        newPropalUrl.searchParams.set('socid', soc.id);
+        let newOrderUrl = new URL(confDolibarUrl + "commande/card.php");
+        newOrderUrl.searchParams.set('action', "create");
+        newOrderUrl.searchParams.set('socid', soc.id);
+        let newTicketUrl = new URL(confDolibarUrl + "ticket/card.php");
+        newTicketUrl.searchParams.set('action', "create");
+        newTicketUrl.searchParams.set('socid', soc.id);
+        if(ownerAccountEmail && ownerMsgId){
+            newPropalUrl.searchParams.set('accountEmail', ownerAccountEmail);
+            newPropalUrl.searchParams.set('msgId', ownerMsgId);
+            newOrderUrl.searchParams.set('accountEmail', ownerAccountEmail);
+            newOrderUrl.searchParams.set('msgId', ownerMsgId);
+            newTicketUrl.searchParams.set('accountEmail', ownerAccountEmail);
+            newTicketUrl.searchParams.set('msgId', ownerMsgId);
+        }
+
+        socActions.innerHTML = '';
+        socActions.appendChild(dolLib.buildDropdownMenu({
+            triggerLabel: chrome.i18n.getMessage('Actions'),
+            items: [
+                {label: chrome.i18n.getMessage('FicheDolibarr'), href: socCardUrl, target: '_blank'},
+                {label: chrome.i18n.getMessage('CreateNewQuotation'), href: newPropalUrl, target: '_blank'},
+                {label: chrome.i18n.getMessage('CreateNewOrder'), href: newOrderUrl, target: '_blank'},
+                {label: chrome.i18n.getMessage('CreateNewTicket'), href: newTicketUrl, target: '_blank'}
+            ]
+        }));
 
         if(quotationActive){
             displayTpl("new-quotation-link");
@@ -432,9 +524,21 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             let newQuotationURL = new URL(confDolibarUrl + "comm/propal/card.php");
             newQuotationURL.searchParams.set('action', "create");
             newQuotationURL.searchParams.set('socid', soc.id);
+            if(ownerAccountEmail && ownerMsgId){
+                newQuotationURL.searchParams.set('accountEmail', ownerAccountEmail);
+                newQuotationURL.searchParams.set('msgId', ownerMsgId);
+            }
             newQuotationLink.href = newQuotationURL;
         }
 
+        if(!crmConnectorEnabled){
+            // Without the crmClientConnector module, the Info tab has nothing useful left to
+            // show (no notes, no linked documents - see the discreet notice there) : default
+            // to the Documents tab instead. Skipped when the thirdparty itself is unknown (see
+            // the early return above), since Info is then the only tab offering something
+            // actionable (create company/contact).
+            switchPopupTab('documents');
+        }
     }
 
     /**
@@ -460,7 +564,9 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
      * Renders the "detected reference" fallback block, but only once we both
      * know it needs to be shown (the referenced object didn't show up in its
      * matching table - too old, or a type with no table at all) and have the
-     * API response for the referenced object (for its ref name).
+     * API response for the referenced object (for its ref name). Re-runs
+     * (idempotently) once the thirdparty name resolves too, see
+     * resolveSocFromId(), so the card can be completed in place.
      */
     function maybeRenderDetectedRefBlock(){
         if(!detectedRefShouldShowBlock || !detectedRefObjectFetchDone){
@@ -470,19 +576,197 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
         LOG('rendering detected ref block', detectedRef, detectedRefObjectData);
         let block = document.getElementById("dolibarr-detected-ref");
-        let textEl = document.getElementById("dolibarr-detected-ref-text");
-        let linkEl = document.getElementById("dolibarr-detected-ref-link");
-        if(!block || !textEl || !linkEl){
+        let cardContainer = document.getElementById("dolibarr-detected-ref-card");
+        if(!block || !cardContainer){
             return;
         }
 
-        let typeLabel = chrome.i18n.getMessage(detectedRefMeta.labelKey);
-        let refLabel = (detectedRefObjectData && detectedRefObjectData.ref) ? detectedRefObjectData.ref : ('#' + detectedRef.id);
-
-        textEl.textContent = chrome.i18n.getMessage('DolibarrRefDetected') + ' ' + typeLabel + ' ' + refLabel;
-        linkEl.href = dolLib.getDolibarrCardUrl(confDolibarUrl, detectedRef.type, detectedRef.id);
+        cardContainer.innerHTML = '';
+        cardContainer.appendChild(buildDetectedRefCard());
 
         block.classList.remove('hidden-field');
+
+        // This card's visibility feeds into the Info tab's own empty state, see
+        // updateInfoTabLinkedDocumentsSection().
+        updateInfoTabLinkedDocumentsSection();
+    }
+
+    /**
+     * Builds the detected-ref card, styled like the linked-document cards in
+     * the "Lier" tab (see buildLinkedDocCard()) so a document found via the
+     * mail headers reads the same way - reference/status up top, then
+     * whichever fields are known, instead of a raw "type : #id" line.
+     */
+    function buildDetectedRefCard(){
+        let data = detectedRefObjectData || {};
+        let locale = navigator.language || navigator.browserLanguage || (navigator.languages || ['en'])[0];
+
+        let card = document.createElement('div');
+        card.classList.add('linked-doc-card');
+
+        let header = document.createElement('div');
+        header.classList.add('linked-doc-card__header');
+
+        let type = document.createElement('span');
+        type.classList.add('linked-doc-card__type');
+        type.textContent = chrome.i18n.getMessage(detectedRefMeta.labelKey);
+        header.appendChild(type);
+
+        let ref = document.createElement('a');
+        ref.classList.add('linked-doc-card__ref');
+        ref.textContent = data.ref || ('#' + detectedRef.id);
+        ref.href = dolLib.getDolibarrCardUrl(confDolibarUrl, detectedRef.type, detectedRef.id);
+        ref.target = '_blank';
+        header.appendChild(ref);
+
+        let statusInfo = getDetectedRefStatusInfo(detectedRef.type, data.status);
+        if(statusInfo){
+            let status = document.createElement('span');
+            status.classList.add('badge', 'badge-status' + statusInfo.code);
+            status.textContent = statusInfo.label;
+            header.appendChild(status);
+        }
+
+        card.appendChild(header);
+
+        let fields = document.createElement('div');
+        fields.classList.add('linked-doc-card__fields');
+
+        let addField = (label, value) => {
+            if(value === null || value === undefined || value === ''){
+                return;
+            }
+            let field = document.createElement('span');
+            field.classList.add('linked-doc-card__field');
+            let fieldLabel = document.createElement('span');
+            fieldLabel.classList.add('linked-doc-card__field-label');
+            fieldLabel.textContent = label + ' : ';
+            field.appendChild(fieldLabel);
+            field.append(value);
+            fields.appendChild(field);
+        };
+
+        addField(chrome.i18n.getMessage('Thirdparty'), detectedRefThirdpartyName);
+
+        if(['sord', 'sinv'].includes(detectedRef.type) && data.ref_supplier){
+            addField(chrome.i18n.getMessage('RefSupplier'), data.ref_supplier);
+        }else if(data.ref_client){
+            addField(chrome.i18n.getMessage('RefClient'), data.ref_client);
+        }
+
+        let dateValue = data.date || data.date_creation || data.datec;
+        if(dateValue){
+            addField(chrome.i18n.getMessage('Date'), new Date(dateValue * 1000).toLocaleDateString(locale));
+        }
+
+        if(data.total_ttc !== undefined && data.total_ttc !== null && data.total_ttc !== ''){
+            addField(chrome.i18n.getMessage('Total'), new Intl.NumberFormat(locale, {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(parseFloat(data.total_ttc)));
+        }
+
+        if(fields.childNodes.length > 0){
+            card.appendChild(fields);
+        }
+
+        let actions = document.createElement('div');
+        actions.classList.add('linked-doc-card__actions');
+        let openLink = document.createElement('a');
+        openLink.href = dolLib.getDolibarrCardUrl(confDolibarUrl, detectedRef.type, detectedRef.id);
+        openLink.target = '_blank';
+        openLink.classList.add('btn', 'btn-primary');
+        openLink.textContent = chrome.i18n.getMessage('OpenDocument');
+        actions.appendChild(openLink);
+
+        // Offer to link this document to the mail when we know for sure it isn't linked yet
+        // (linkedDocumentsFetched : see the eager loadLinkedDocuments() call above and
+        // renderLinkedDocuments(), which is what keeps linkedDocumentKeys up to date). Needs
+        // ownerAccountEmail/ownerMsgId, same requirement as the rest of the "Lier" tab.
+        let key = detectedRef.type + ':' + detectedRef.id;
+        if(linkedDocumentsFetched && !linkedDocumentKeys.has(key) && ownerAccountEmail && ownerMsgId){
+            let linkBtn = document.createElement('button');
+            linkBtn.type = 'button';
+            linkBtn.classList.add('btn', 'btn-primary');
+            linkBtn.textContent = chrome.i18n.getMessage('Link');
+            linkBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                linkBtn.disabled = true;
+                linkDocument(detectedRef.type, detectedRef.id, (success, errorMsg) => {
+                    // linkDocument() always calls loadLinkedDocuments() itself, which will
+                    // rebuild this card (see renderLinkedDocuments()) and drop the button once
+                    // linkedDocumentKeys reflects the new link - no manual DOM update needed
+                    // here beyond user feedback.
+                    if(success || (errorMsg && errorMsg.indexOf('Duplicate entry') !== -1)){
+                        dolLib.showToast(chrome.i18n.getMessage('LinkSuccess'), 'success');
+                    }else{
+                        linkBtn.disabled = false;
+                        dolLib.showToast(chrome.i18n.getMessage('LinkError')+' ('+errorMsg+')', 'error');
+                    }
+                });
+            });
+            actions.appendChild(linkBtn);
+        }
+
+        card.appendChild(actions);
+
+        return card;
+    }
+
+    /**
+     * Status badge {code, label} for the document types whose status table is
+     * already known here (see setQuotationsInfos/setOrdersInfos/
+     * setInvoicesInfos/setSupplierordersInfos below, which this mirrors so
+     * the badge matches what the matching list/table would have shown), or
+     * null for a type with no status table / an unrecognized status value.
+     * @param {string} type
+     * @param {number|string} status
+     */
+    function getDetectedRefStatusInfo(type, status){
+        if(status === undefined || status === null || status === ''){
+            return null;
+        }
+        status = parseInt(status);
+
+        const TABLES = {
+            pro: {
+                '-1': {code: 9, key: 'StatusCanceledShort'},
+                '0': {code: 0, key: 'StatusDraftShort'},
+                '1': {code: 1, key: 'StatusValidatedShort'},
+                '2': {code: 4, key: 'StatusSignedShort'},
+                '3': {code: 6, key: 'StatusNotSignedShort'},
+                '4': {code: 6, key: 'StatusBilledShort'}
+            },
+            ord: {
+                '-1': {code: 9, key: 'StatusCanceledShort'},
+                '0': {code: 0, key: 'StatusDraftShort'},
+                '1': {code: 1, key: 'StatusValidatedShort'},
+                '2': {code: 4, key: 'StatusOrderSentShort'},
+                '3': {code: 6, key: 'StatusDelivered'}
+            },
+            inv: {
+                '-1': {code: 9, key: 'StatusCanceledShort'},
+                '0': {code: 0, key: 'StatusDraftShort'},
+                '1': {code: 1, key: 'StatusValidatedShort'},
+                '2': {code: 4, key: 'StatusClosed'},
+                '3': {code: 6, key: 'StatusAbandoned'}
+            },
+            sord: {
+                '0': {code: 0, key: 'StatusDraftShort'},
+                '1': {code: 1, key: 'StatusValidatedShort'},
+                '2': {code: 1, key: 'StatusSupplierOrderDraftShort'},
+                '3': {code: 4, key: 'StatusSupplierOrderOnProcessShort'},
+                '4': {code: 4, key: 'StatusSupplierOrderReceivedPartiallyShort'},
+                '5': {code: 6, key: 'StatusSupplierOrderReceivedAllShort'},
+                '6': {code: 9, key: 'StatusCanceledShort'},
+                '7': {code: 9, key: 'StatusCanceledShort'},
+                '9': {code: 9, key: 'StatusSupplierOrderRefusedShort'}
+            }
+        };
+
+        let table = TABLES[type];
+        let entry = table ? table[String(status)] : null;
+        if(!entry){
+            return null;
+        }
+        return {code: entry.code, label: chrome.i18n.getMessage(entry.key)};
     }
 
     /**
@@ -1059,7 +1343,7 @@ async function initNotesForMessage(){
     // NOTES
     // need Crm client connector module installed in Dolibarr
 
-    if (!config.dolibarrUseNotes || !message) {
+    if (!crmConnectorEnabled || !message) {
         return;
     }
 
@@ -1115,4 +1399,580 @@ async function initNotesForMessage(){
             });
         }
     })
+}
+
+/**
+ * "Lier" tab : search/link/unlink a devis/commande/facture/... to the mail currently displayed,
+ * using the crmclientconnector emaillinks/linkedobjects, emaillinks/link endpoints (needs
+ * crmclientconnector module installed in Dolibarr, same as the notes feature above).
+ */
+
+let linkTabInitialized = false;
+// type+':'+id keys of documents already linked to this mail, so the search results can hide
+// them (linking the same document twice hits Dolibarr's unique index and returns a 500), and
+// so the detected-ref card (see maybeRenderDetectedRefBlock()) knows whether to offer a "Link"
+// button for the document it detected via the mail headers.
+let linkedDocumentKeys = new Set();
+// Becomes true once the first loadLinkedDocuments() response comes back (success or failure),
+// so the detected-ref card can tell "not linked yet" apart from "don't know yet" and avoid
+// flashing a Link button it would immediately have to remove.
+let linkedDocumentsFetched = false;
+// Raw list from the last loadLinkedDocuments() response, kept around so the Info tab's own
+// linked-documents section (see updateInfoTabLinkedDocumentsSection()) can render its own set
+// of cards independently from the ones in the "Lier" tab's #link-linked-list.
+let lastLinkedDocumentsList = [];
+
+function initPopupTabs(){
+    POPUP_TABS.forEach((tab) => {
+        let btn = document.getElementById('tab-btn-'+tab);
+        if(btn){
+            btn.addEventListener('click', () => switchPopupTab(tab));
+        }
+    });
+}
+
+function switchPopupTab(tab){
+    POPUP_TABS.forEach((otherTab) => {
+        document.getElementById('tab-btn-'+otherTab)?.classList.toggle('active', otherTab === tab);
+        document.getElementById('tab-panel-'+otherTab)?.classList.toggle('hidden-field', otherTab !== tab);
+    });
+
+    if(tab === 'link' && !linkTabInitialized){
+        linkTabInitialized = true;
+        initLinkTab();
+    }
+}
+
+/**
+ * Badge on the "Documents" tab button showing how many recent documents it holds (capped at
+ * "9+"). The table is filled by 4 independent async calls (quotations/orders/invoices/supplier
+ * orders, see loadDocumentsInfos()) that each append their own rows whenever their own request
+ * resolves, so rather than threading a counter through all of them, just watch the table itself
+ * and recompute the total whenever it changes.
+ */
+function initDocumentsTabBadge(){
+    let table = document.getElementById('data-from-dolibarr');
+    let badge = document.getElementById('tab-documents-badge');
+    if(!table || !badge){
+        return;
+    }
+
+    let update = () => {
+        let count = table.querySelectorAll('tr:not(.table-title)').length;
+        if(count <= 0){
+            badge.classList.add('hidden-field');
+            return;
+        }
+        badge.textContent = count > 9 ? '9+' : String(count);
+        badge.classList.remove('hidden-field');
+    };
+
+    new MutationObserver(update).observe(table, {childList: true, subtree: true});
+    update();
+}
+
+/**
+ * Wires the Info tab's "no linked document" empty state (see
+ * updateInfoTabLinkedDocumentsSection()) CTA button to jump to the "Lier" tab with the search
+ * field focused, ready to type a reference.
+ */
+function initInfoTabLinkCta(){
+    let cta = document.getElementById('info-link-document-cta');
+    if(!cta){
+        return;
+    }
+    cta.addEventListener('click', () => {
+        switchPopupTab('link');
+        document.getElementById('link-search-input')?.focus();
+    });
+}
+
+function initLinkTab(){
+    if(!crmConnectorEnabled){
+        LOG('link tab: crmClientConnector module disabled by config, showing discreet notice only');
+        return;
+    }
+
+    if(!ownerAccountEmail || !ownerMsgId){
+        LOG('link tab: no accountEmail/msgId available, cannot link/search');
+        return;
+    }
+
+    populateLinkSearchTypeSelect();
+    loadLinkedDocuments();
+    initDetectedRefsSuggestions();
+
+    let searchInput = document.getElementById('link-search-input');
+    let typeSelect = document.getElementById('link-search-type');
+    let searchTimer = null;
+
+    searchInput.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => searchDocumentsToLink(searchInput.value.trim()), 400);
+    });
+
+    typeSelect.addEventListener('change', () => searchDocumentsToLink(searchInput.value.trim()));
+}
+
+function populateLinkSearchTypeSelect(){
+    let select = document.getElementById('link-search-type');
+    if(!select){
+        return;
+    }
+
+    let allOption = document.createElement('option');
+    allOption.value = '';
+    allOption.textContent = chrome.i18n.getMessage('LinkAllTypes');
+    select.appendChild(allOption);
+
+    Object.entries(dolLib.DOLIBARR_OBJECT_TYPES).forEach(([type, meta]) => {
+        let option = document.createElement('option');
+        option.value = type;
+        option.textContent = chrome.i18n.getMessage(meta.labelKey);
+        select.appendChild(option);
+    });
+}
+
+function loadLinkedDocuments(){
+    dolLib.callDolibarrApi(
+        'crmclientconnector/emaillinks/linkedobjects',
+        {accountEmail: ownerAccountEmail, msgId: ownerMsgId},
+        'GET',
+        {},
+        (resData)=>{
+            renderLinkedDocuments(Array.isArray(resData) ? resData : []);
+        },
+        (errorMsg)=>{
+            LOG('loadLinkedDocuments failed', errorMsg);
+            renderLinkedDocuments([]);
+        }
+    );
+}
+
+function renderLinkedDocuments(list){
+    let emptyEl = document.getElementById('link-linked-empty');
+    let listEl = document.getElementById('link-linked-list');
+    listEl.innerHTML = '';
+
+    linkedDocumentKeys = new Set(list.map((item) => item.type+':'+item.id));
+    linkedDocumentsFetched = true;
+    lastLinkedDocumentsList = list;
+    // The detected-ref card (built from the mail headers' trackid) needs to know whether its
+    // document is already linked to decide whether to offer a "Link" button - refresh it now
+    // that we know either way.
+    maybeRenderDetectedRefBlock();
+    // Mirrors the linked-documents list into the Info tab, see
+    // updateInfoTabLinkedDocumentsSection().
+    updateInfoTabLinkedDocumentsSection();
+
+    if(list.length === 0){
+        emptyEl.classList.remove('hidden-field');
+        listEl.classList.add('hidden-field');
+        return;
+    }
+
+    emptyEl.classList.add('hidden-field');
+    listEl.classList.remove('hidden-field');
+
+    list.forEach((item) => listEl.appendChild(buildLinkedDocCard(item)));
+}
+
+/**
+ * Whether the "detected via headers" card (see maybeRenderDetectedRefBlock()) is currently
+ * shown, i.e. it's already surfacing a document for this mail on its own - used by
+ * updateInfoTabLinkedDocumentsSection() to avoid also showing the "no linked document" empty
+ * state right below it when there's really nothing more to add.
+ */
+function detectedRefCardVisible(){
+    return !document.getElementById('dolibarr-detected-ref')?.classList.contains('hidden-field');
+}
+
+/**
+ * Mirrors the "Lier" tab's linked-documents list (lastLinkedDocumentsList, refreshed by
+ * renderLinkedDocuments()) into the Info tab : as cards when there are any, or an empty state
+ * with a CTA to the Link tab's search field when there's nothing linked *and* nothing already
+ * shown by the detected-ref card either. Also called from maybeRenderDetectedRefBlock(), since
+ * that card's own visibility affects this section's empty state.
+ */
+function updateInfoTabLinkedDocumentsSection(){
+    let container = document.getElementById('info-linked-documents-container');
+    let listEl = document.getElementById('info-linked-list');
+    let emptyEl = document.getElementById('info-linked-empty');
+    if(!container || !listEl || !emptyEl){
+        return;
+    }
+
+    if(!crmConnectorEnabled){
+        // Whole section (and its CTA to the Link tab) needs the crmClientConnector module -
+        // see the discreet notice shown instead, near the top of this tab.
+        container.classList.add('hidden-field');
+        return;
+    }
+
+    let hasLinked = lastLinkedDocumentsList.length > 0;
+
+    if(!hasLinked && detectedRefCardVisible()){
+        // The detected-ref card above the tabs already covers this mail, nothing to add here.
+        container.classList.add('hidden-field');
+        return;
+    }
+
+    container.classList.remove('hidden-field');
+
+    listEl.innerHTML = '';
+    lastLinkedDocumentsList.forEach((item) => listEl.appendChild(buildLinkedDocCard(item)));
+
+    listEl.classList.toggle('hidden-field', !hasLinked);
+    emptyEl.classList.toggle('hidden-field', hasLinked);
+}
+
+/**
+ * One linked document, as a card : ref/type/status up top, then whichever of ref client/
+ * supplier/date/total the backend sent for that document type (not every field applies to
+ * every type - see getEmailLinkLinkedObjects() on the Dolibarr side), and an unlink action.
+ * @param {{type:string, id:number, ref:string, refClient:?string, refSupplier:?string, status:?string, statusCode:?number, date:?number, totalTtc:?number}} item
+ */
+function buildLinkedDocCard(item){
+    let meta = dolLib.getDolibarrObjectTypeMeta(item.type);
+    let locale = navigator.language || navigator.browserLanguage || (navigator.languages || ['en'])[0];
+
+    let card = document.createElement('div');
+    card.classList.add('linked-doc-card');
+
+    let header = document.createElement('div');
+    header.classList.add('linked-doc-card__header');
+
+    let type = document.createElement('span');
+    type.classList.add('linked-doc-card__type');
+    type.textContent = meta ? chrome.i18n.getMessage(meta.labelKey) : item.type;
+    header.appendChild(type);
+
+    let ref = document.createElement('a');
+    ref.classList.add('linked-doc-card__ref');
+    ref.textContent = item.ref || ('#'+item.id);
+    let refUrl = dolLib.getDolibarrCardUrl(confDolibarUrl, item.type, item.id);
+    if(refUrl){
+        ref.href = refUrl;
+        ref.target = '_blank';
+    }
+    header.appendChild(ref);
+
+    if(item.status){
+        let status = document.createElement('span');
+        status.classList.add('badge');
+        if(Number.isInteger(item.statusCode) && item.statusCode >= 0 && item.statusCode <= 10){
+            status.classList.add('badge-status'+item.statusCode);
+        }
+        // item.status is a Dolibarr-side language key (e.g. "StatusOrderDelivered"), not
+        // already-translated text - translate it here, falling back to the raw key so an
+        // untranslated status is still visible rather than silently blank.
+        status.textContent = chrome.i18n.getMessage(item.status) || item.status;
+        header.appendChild(status);
+    }
+
+    card.appendChild(header);
+
+    let fields = document.createElement('div');
+    fields.classList.add('linked-doc-card__fields');
+
+    let addField = (label, value) => {
+        if(value === null || value === undefined || value === ''){
+            return;
+        }
+        let field = document.createElement('span');
+        field.classList.add('linked-doc-card__field');
+        let fieldLabel = document.createElement('span');
+        fieldLabel.classList.add('linked-doc-card__field-label');
+        fieldLabel.textContent = label+' : ';
+        field.appendChild(fieldLabel);
+        field.append(value);
+        fields.appendChild(field);
+    };
+
+    if(item.refSupplier){
+        addField(chrome.i18n.getMessage('RefSupplier'), item.refSupplier);
+    }else if(item.refClient){
+        addField(chrome.i18n.getMessage('RefClient'), item.refClient);
+    }
+    if(item.date){
+        addField(chrome.i18n.getMessage('Date'), new Date(item.date * 1000).toLocaleDateString(locale));
+    }
+    if(item.totalTtc !== null && item.totalTtc !== undefined){
+        addField(chrome.i18n.getMessage('Total'), new Intl.NumberFormat(locale, {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(item.totalTtc));
+    }
+
+    if(fields.childNodes.length > 0){
+        card.appendChild(fields);
+    }
+
+    let actions = document.createElement('div');
+    actions.classList.add('linked-doc-card__actions');
+    actions.appendChild(dolLib.buildConfirmDropdown({
+        triggerLabel: '⋯',
+        triggerTitle: chrome.i18n.getMessage('Actions'),
+        confirmLabel: chrome.i18n.getMessage('Unlink'),
+        danger: true,
+        onConfirm: () => {
+            // unlinkDocument() always calls loadLinkedDocuments() itself, which rebuilds every
+            // rendering of the linked-documents list (the "Lier" tab's and the Info tab's, see
+            // renderLinkedDocuments()/updateInfoTabLinkedDocumentsSection()) from scratch - no
+            // manual DOM patching needed here, this card included.
+            unlinkDocument(item.type, item.id);
+        }
+    }));
+    card.appendChild(actions);
+
+    return card;
+}
+
+function unlinkDocument(type, elementid, onDone){
+    let endpoint = 'crmclientconnector/emaillinks/link'
+        + '?accountEmail=' + encodeURIComponent(ownerAccountEmail)
+        + '&msgId=' + encodeURIComponent(ownerMsgId)
+        + '&type=' + encodeURIComponent(type)
+        + '&elementid=' + encodeURIComponent(elementid);
+
+    dolLib.callDolibarrApi(endpoint, {}, 'DELETE', {}, ()=>{
+        LOG('document unlinked', type, elementid);
+        loadLinkedDocuments();
+        dolLib.showToast(chrome.i18n.getMessage('UnlinkSuccess'), 'success');
+        if(onDone){ onDone(true); }
+    }, (errorMsg)=>{
+        LOG('unlink failed', errorMsg);
+        dolLib.showToast(chrome.i18n.getMessage('UnlinkError')+' ('+errorMsg+')', 'error');
+        if(onDone){ onDone(false); }
+    });
+}
+
+function linkDocument(type, elementid, onDone){
+    dolLib.callDolibarrApi(
+        'crmclientconnector/emaillinks/link',
+        {},
+        'POST',
+        JSON.stringify({
+            accountEmail: ownerAccountEmail,
+            msgId: ownerMsgId,
+            type: type,
+            elementid: elementid
+        }),
+        ()=>{
+            LOG('document linked', type, elementid);
+            loadLinkedDocuments();
+            if(onDone){ onDone(true); }
+        },
+        (errorMsg)=>{
+            LOG('link failed', errorMsg);
+            // The document may in fact already be linked (e.g. a stale search result, or
+            // linked from another window) - Dolibarr's unique index rejects the duplicate with
+            // a 500. Refresh the linked list either way so the UI reflects reality.
+            loadLinkedDocuments();
+            if(onDone){ onDone(false, errorMsg); }
+        }
+    );
+}
+
+function searchDocumentsToLink(term){
+    let resultsEl = document.getElementById('link-search-results');
+    resultsEl.innerHTML = '';
+
+    if(!term || term.length < 2){
+        return;
+    }
+
+    let selectedType = document.getElementById('link-search-type').value;
+    let typesToSearch = selectedType
+        ? [[selectedType, dolLib.DOLIBARR_OBJECT_TYPES[selectedType]]]
+        : Object.entries(dolLib.DOLIBARR_OBJECT_TYPES);
+
+    let allResults = [];
+    let errors = [];
+    let pending = typesToSearch.length;
+
+    typesToSearch.forEach(([type, meta]) => {
+        dolLib.callDolibarrApi(meta.api, {
+            limit: 10,
+            sqlfilters: "(t.ref:like:'%"+term+"%')"
+        }, 'GET', {}, (resData)=>{
+            if(Array.isArray(resData)){
+                resData.forEach((item) => {
+                    if(!linkedDocumentKeys.has(type+':'+item.id)){
+                        allResults.push({type: type, id: item.id, ref: item.ref});
+                    }
+                });
+            }
+            pending--;
+            if(pending === 0){
+                renderSearchResults(allResults, term, errors);
+            }
+        }, (errorMsg)=>{
+            LOG('searchDocumentsToLink: '+meta.api+' failed', errorMsg);
+            errors.push({type: type, errorMsg: errorMsg});
+            pending--;
+            if(pending === 0){
+                renderSearchResults(allResults, term, errors);
+            }
+        });
+    });
+}
+
+function renderSearchResults(results, term, errors){
+    let resultsEl = document.getElementById('link-search-results');
+    resultsEl.innerHTML = '';
+
+    if(results.length === 0){
+        let empty = document.createElement('div');
+        empty.classList.add('opacitymedium');
+        if(errors && errors.length > 0){
+            empty.textContent = chrome.i18n.getMessage('SearchDocumentToLinkError')+' ('+errors[0].errorMsg+')';
+        }else{
+            empty.textContent = chrome.i18n.getMessage('SearchDocumentToLinkNoResults');
+        }
+        resultsEl.appendChild(empty);
+        return;
+    }
+
+    let tableItems = results.map((item) => {
+        let meta = dolLib.getDolibarrObjectTypeMeta(item.type);
+        return {
+            type: meta ? chrome.i18n.getMessage(meta.labelKey) : item.type,
+            ref: item.ref || ('#'+item.id),
+            action: {
+                html: '<button type="button" class="btn-tiny-action link-link-btn" '
+                    +'data-type="'+item.type+'" data-id="'+item.id+'">'
+                    +chrome.i18n.getMessage('Link')+'</button>'
+            }
+        };
+    });
+
+    dolLib.jsonToTable(
+        {type: chrome.i18n.getMessage('Type'), ref: chrome.i18n.getMessage('Ref'), action: ''},
+        tableItems,
+        resultsEl,
+        'dolibarr-table dolibarr-table-stripped',
+        term
+    );
+
+    resultsEl.querySelectorAll('.link-link-btn').forEach((btn) => {
+        btn.addEventListener('click', (event) => {
+            event.preventDefault();
+            btn.disabled = true;
+            linkDocument(btn.getAttribute('data-type'), btn.getAttribute('data-id'), (success, errorMsg) => {
+                if(success || (errorMsg && errorMsg.indexOf('Duplicate entry') !== -1)){
+                    btn.closest('tr')?.remove();
+                    dolLib.showToast(chrome.i18n.getMessage('LinkSuccess'), 'success');
+                }else{
+                    btn.disabled = false;
+                    dolLib.showToast(chrome.i18n.getMessage('LinkError')+' ('+errorMsg+')', 'error');
+                }
+            });
+        });
+    });
+}
+
+/**
+ * Point 3 : scan the mail's subject/body for ref-shaped strings matching Dolibarr's active
+ * numbering patterns (crmclientconnector numberingpatterns/ endpoint), and suggest linking any
+ * match that corresponds to a real, existing document.
+ */
+function initDetectedRefsSuggestions(){
+    let container = document.getElementById('link-detected-refs');
+    if(!message){
+        return;
+    }
+
+    dolLib.callDolibarrApi('crmclientconnector/numberingpatterns', {}, 'GET', {}, (numberingData)=>{
+        let patterns = dolLib.buildRefDetectionPatterns(numberingData);
+        let text = (message.subject || '') + ' ' + (messageBody && messageBody.txt ? messageBody.txt : '');
+        let detected = dolLib.detectDolibarrRefsInText(text, patterns);
+
+        // De-duplicate by type+ref
+        let seen = new Set();
+        detected = detected.filter((entry) => {
+            let key = entry.type+':'+entry.ref;
+            if(seen.has(key)){ return false; }
+            seen.add(key);
+            return true;
+        });
+
+        populateDetectedRefsDatalist(detected);
+
+        if(container){
+            detected.forEach((entry) => verifyAndSuggestDetectedRef(entry, container));
+        }
+    }, (errorMsg)=>{
+        LOG('numberingpatterns fetch failed', errorMsg);
+    }, true);
+}
+
+/**
+ * Feed the refs detected in the mail into the search input's <datalist>, so the user can pick
+ * one from the native autocomplete instead of retyping/copy-pasting it - regardless of whether
+ * it was verified to match a real document (unlike the inline suggestion banner above, this is
+ * just a typing aid for the search box).
+ * @param {Array<{type: string, ref: string}>} detected
+ */
+function populateDetectedRefsDatalist(detected){
+    let datalist = document.getElementById('link-detected-refs-datalist');
+    if(!datalist){
+        return;
+    }
+
+    datalist.innerHTML = '';
+    detected.forEach((entry) => {
+        let option = document.createElement('option');
+        option.value = entry.ref;
+        datalist.appendChild(option);
+    });
+}
+
+function verifyAndSuggestDetectedRef(entry, container){
+    let meta = dolLib.getDolibarrObjectTypeMeta(entry.type);
+    if(!meta){
+        return;
+    }
+
+    dolLib.callDolibarrApi(meta.api, {
+        limit: 1,
+        sqlfilters: "(t.ref:='"+entry.ref+"')"
+    }, 'GET', {}, (resData)=>{
+        if(!Array.isArray(resData) || resData.length === 0){
+            return; // Ref-shaped string but no matching document, not worth suggesting
+        }
+
+        let matchedId = resData[0].id;
+        if(linkedDocumentKeys.has(entry.type+':'+matchedId)){
+            return; // already linked to this mail, nothing to suggest
+        }
+
+        let suggestion = document.createElement('div');
+        suggestion.classList.add('alert', 'alert-info');
+
+        let text = document.createElement('span');
+        text.textContent = chrome.i18n.getMessage('DolibarrRefDetected')+' '+chrome.i18n.getMessage(meta.labelKey)+' '+entry.ref;
+        suggestion.appendChild(text);
+
+        let linkBtn = document.createElement('button');
+        linkBtn.type = 'button';
+        linkBtn.classList.add('btn', 'btn-primary');
+        linkBtn.textContent = chrome.i18n.getMessage('Link');
+        linkBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            linkBtn.disabled = true;
+            linkDocument(entry.type, matchedId, (success, errorMsg) => {
+                if(success || (errorMsg && errorMsg.indexOf('Duplicate entry') !== -1)){
+                    suggestion.remove();
+                    dolLib.showToast(chrome.i18n.getMessage('LinkSuccess'), 'success');
+                }else{
+                    linkBtn.disabled = false;
+                    dolLib.showToast(chrome.i18n.getMessage('LinkError')+' ('+errorMsg+')', 'error');
+                }
+            });
+        });
+        suggestion.appendChild(linkBtn);
+
+        container.appendChild(suggestion);
+        container.classList.remove('hidden-field');
+    }, (errorMsg)=>{
+        LOG('verifyAndSuggestDetectedRef failed for', entry, errorMsg);
+    });
 }

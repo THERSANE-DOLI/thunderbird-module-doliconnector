@@ -34,8 +34,13 @@ function restoreOptions() {
 		document.getElementById("dolibarr-propal-notsigned").checked = data.dolibarrPropalNotSigned;
 		document.getElementById("dolibarr-propal-billed").checked = data.dolibarrPropalBilled;
 		document.getElementById("dolibarr-search-domain").checked = data.dolibarrSearchDomain;
-		document.getElementById("dolibarr-use-notes").checked = data.dolibarrUseNotes;
+		document.getElementById("dolibarr-crm-connector-enabled").checked =
+			data.dolibarrCrmConnectorEnabled !== undefined ? data.dolibarrCrmConnectorEnabled : data.dolibarrUseNotes;
 		document.getElementById("dolibarr-quotation-trusted-senders").value = data.dolibarrQuotationTrustedSenders;
+		document.getElementById("dolibarr-http-auth-enabled").checked = data.dolibarrHttpAuthEnabled;
+		document.getElementById("dolibarr-http-auth-user").value = data.dolibarrHttpAuthUser;
+		document.getElementById("dolibarr-http-auth-password").value = data.dolibarrHttpAuthPassword;
+		toggleHttpAuthFields();
 	}
 
 
@@ -55,11 +60,15 @@ function restoreOptions() {
     document.getElementById("save-dolibarr-options").textContent = browser.i18n.getMessage("Save");
     document.getElementById("label-for-dolibarr-search-domain").textContent = browser.i18n.getMessage("dolibarrOptSearchDomain");
     document.getElementById("label-for-link-to-modules-doc").textContent = browser.i18n.getMessage("SeeModuleDoc");
-    document.getElementById("label-for-dolibarr-use-notes").textContent = browser.i18n.getMessage("DolibarrUseNotes");
-    document.getElementById("label-for-dolibarr-use-notes_desc").textContent = browser.i18n.getMessage("DolibarrUseNotesDesc");
+    document.getElementById("label-for-dolibarr-crm-connector-enabled").textContent = browser.i18n.getMessage("DolibarrCrmConnectorEnabled");
+    document.getElementById("label-for-dolibarr-crm-connector-enabled_desc").textContent = browser.i18n.getMessage("DolibarrCrmConnectorEnabledDesc");
     document.getElementById("label-for-dolibarr-quotation-trusted-senders").textContent = browser.i18n.getMessage("dolibarrQuotationTrustedSenders");
     document.getElementById("label-for-dolibarr-quotation-trusted-senders_desc").textContent = browser.i18n.getMessage("dolibarrQuotationTrustedSendersDesc");
     document.getElementById("dolibarr-quotation-trusted-senders").placeholder = browser.i18n.getMessage("dolibarrQuotationTrustedSendersPlaceholder");
+    document.getElementById("label-for-dolibarr-http-auth-enabled").textContent = browser.i18n.getMessage("dolibarrHttpAuthEnabled");
+    document.getElementById("label-for-dolibarr-http-auth-enabled_desc").textContent = browser.i18n.getMessage("dolibarrHttpAuthEnabledDesc");
+    document.getElementById("label-for-dolibarr-http-auth-user").textContent = browser.i18n.getMessage("dolibarrHttpAuthUser");
+    document.getElementById("label-for-dolibarr-http-auth-password").textContent = browser.i18n.getMessage("dolibarrHttpAuthPassword");
 
 
 
@@ -74,11 +83,35 @@ function restoreOptions() {
 		dolibarrPropalSigned:  false,
 		dolibarrPropalNotSigned:  false,
 		dolibarrPropalBilled:  false,
+		// dolibarrCrmConnectorEnabled replaces the old dolibarrUseNotes setting (which only
+		// gated the notes feature, see saveOptions() below) - left undefined here so
+		// setCurrentChoice() can tell "never saved, fall back to dolibarrUseNotes" apart from
+		// an explicit false.
+		dolibarrCrmConnectorEnabled: undefined,
 		dolibarrUseNotes:  false,
 		dolibarrSearchDomain:  false,
-		dolibarrQuotationTrustedSenders: ''
+		dolibarrQuotationTrustedSenders: '',
+		dolibarrHttpAuthEnabled: false,
+		dolibarrHttpAuthUser: '',
+		dolibarrHttpAuthPassword: ''
     }).then(setCurrentChoice, onError);
 }
+
+
+function toggleHttpAuthFields() {
+	let enabled = document.getElementById("dolibarr-http-auth-enabled").checked;
+	document.getElementById("dolibarr-http-auth-user-row").classList.toggle("hidden-field", !enabled);
+	document.getElementById("dolibarr-http-auth-password-row").classList.toggle("hidden-field", !enabled);
+}
+
+document.getElementById("dolibarr-http-auth-enabled").addEventListener("change", toggleHttpAuthFields);
+
+// On/off switches (search-domain, CRM connector, HTTP auth) save immediately on toggle instead
+// of waiting for the explicit "Save" button - flipping a switch already reads as an immediate
+// action to the user, unlike typing into a text field.
+document.querySelectorAll('.dol-input-swith input[type="checkbox"]').forEach((toggle) => {
+	toggle.addEventListener("change", saveOptions);
+});
 
 
 
@@ -102,9 +135,12 @@ function saveOptions(e) {
         dolibarrPropalSigned: document.getElementById("dolibarr-propal-signed").checked,
         dolibarrPropalNotSigned: document.getElementById("dolibarr-propal-notsigned").checked,
         dolibarrPropalBilled: document.getElementById("dolibarr-propal-billed").checked,
-        dolibarrUseNotes: document.getElementById("dolibarr-use-notes").checked,
+        dolibarrCrmConnectorEnabled: document.getElementById("dolibarr-crm-connector-enabled").checked,
         dolibarrSearchDomain: document.getElementById("dolibarr-search-domain").checked,
-        dolibarrQuotationTrustedSenders: document.getElementById("dolibarr-quotation-trusted-senders").value
+        dolibarrQuotationTrustedSenders: document.getElementById("dolibarr-quotation-trusted-senders").value,
+        dolibarrHttpAuthEnabled: document.getElementById("dolibarr-http-auth-enabled").checked,
+        dolibarrHttpAuthUser: document.getElementById("dolibarr-http-auth-user").value,
+        dolibarrHttpAuthPassword: document.getElementById("dolibarr-http-auth-password").value
     }
     // console.log(objToStore);
 
@@ -114,6 +150,9 @@ function saveOptions(e) {
 	}
 
     browser.storage.local.set(objToStore);
+    // dolibarrUseNotes was renamed to dolibarrCrmConnectorEnabled (see restoreOptions()'s
+    // fallback) - drop the old key now that this form has saved the new one.
+    browser.storage.local.remove('dolibarrUseNotes');
 
 
     const event = new Date();

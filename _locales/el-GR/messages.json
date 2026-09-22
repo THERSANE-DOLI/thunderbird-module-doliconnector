@@ -8,6 +8,18 @@
   "Save": {
     "message": "Αποθήκευση"
   },
+  "Edit": {
+    "message": "Επεξεργασία"
+  },
+  "Cancel": {
+    "message": "Ακύρωση"
+  },
+  "EditSuccess": {
+    "message": "Το μήνυμα τροποποιήθηκε"
+  },
+  "EditError": {
+    "message": "Σφάλμα κατά την τροποποίηση του μηνύματος"
+  },
   "dolibarrApiKey": {
     "message": "REST API key"
   },
@@ -47,14 +59,50 @@
   "FicheDolibarr": {
     "message": "Εμφάνιση Πελάτη/Προμηθευτή"
   },
+  "CreateNewQuotation": {
+    "message": "Δημιουργία προσφοράς"
+  },
+  "CreateNewOrder": {
+    "message": "Δημιουργία παραγγελίας"
+  },
+  "CreateNewTicket": {
+    "message": "Δημιουργία Ticket"
+  },
   "Ref": {
     "message": "Αρ. παραστατικού"
   },
   "RefClient": {
     "message": "Αναφ. Πελάτη"
   },
+  "RefSupplier": {
+    "message": "Αναφ. Προμηθευτή"
+  },
+  "Thirdparty": {
+    "message": "Πελάτης/Προμηθευτής"
+  },
+  "StatusOrderDelivered": {
+    "message": "Παραδόθηκε"
+  },
   "CheckYourModuleConfig": {
     "message": "Ημιτελής διαμόρφωση : Ελέγξτε τη διαμόρφωση του Dolibarr connector"
+  },
+  "CheckYourCredentials": {
+    "message": "Μη έγκυρα διαπιστευτήρια : Ελέγξτε το κλειδί API σας (και τα διαπιστευτήρια HTTP Basic Auth, εφόσον χρησιμοποιούνται) στη διαμόρφωση του module"
+  },
+  "CheckServerConnection": {
+    "message": "Αποτυχία σύνδεσης : Δεν είναι δυνατή η σύνδεση με τον διακομιστή Dolibarr. Ελέγξτε το διαμορφωμένο URL και τη σύνδεσή σας στο δίκτυο"
+  },
+  "dolibarrHttpAuthEnabled": {
+    "message": "HTTP Basic Auth"
+  },
+  "dolibarrHttpAuthEnabledDesc": {
+    "message": "Ενεργοποιήστε το αν οι κλήσεις προς το API του Dolibarr προστατεύονται με HTTP Basic Auth"
+  },
+  "dolibarrHttpAuthUser": {
+    "message": "Όνομα χρήστη HTTP"
+  },
+  "dolibarrHttpAuthPassword": {
+    "message": "Κωδικός πρόσβασης HTTP"
   },
   "refFourn": {
     "message": "Αναφ. Προμηθευτή"
@@ -98,8 +146,8 @@
   "PleaseSelectAnEmailBefore" :{
     "message": "Παρακαλώ επιλέξτε ενα email"
   },
-  "DoubleClickToDelete" :{
-    "message": "Διπλό κλικ για διαγραφή"
+  "ConfirmDelete" :{
+    "message": "Οριστική διαγραφή"
   },
   "DolibarrRefDetected": {
     "message": "Εντοπίστηκε αναφορά σε αυτό το email:"
@@ -139,5 +187,59 @@
   },
   "DolibarrTypeMember": {
     "message": "Μέλος"
+  },
+  "TabInfo": {
+    "message": "Πληροφορίες"
+  },
+  "TabDocuments": {
+    "message": "Έγγραφα"
+  },
+  "TabLinkDocument": {
+    "message": "Σύνδεση"
+  },
+  "LinkedDocuments": {
+    "message": "Συνδεδεμένα έγγραφα"
+  },
+  "NoLinkedDocument": {
+    "message": "Κανένα συνδεδεμένο έγγραφο σε αυτό το email"
+  },
+  "SearchDocumentToLink": {
+    "message": "Σύνδεση υπάρχοντος εγγράφου"
+  },
+  "SearchDocumentToLinkPlaceholder": {
+    "message": "Αναζήτηση αναφοράς..."
+  },
+  "SearchDocumentToLinkNoResults": {
+    "message": "Χωρίς αποτελέσματα"
+  },
+  "SearchDocumentToLinkError": {
+    "message": "Η αναζήτηση απέτυχε"
+  },
+  "LinkAllTypes": {
+    "message": "Όλοι οι τύποι"
+  },
+  "Link": {
+    "message": "Σύνδεση"
+  },
+  "Unlink": {
+    "message": "Αποσύνδεση"
+  },
+  "Actions": {
+    "message": "Ενέργειες"
+  },
+  "LinkSuccess": {
+    "message": "Το έγγραφο συνδέθηκε"
+  },
+  "UnlinkSuccess": {
+    "message": "Το έγγραφο αποσυνδέθηκε"
+  },
+  "UnlinkError": {
+    "message": "Σφάλμα κατά την αποσύνδεση του εγγράφου"
+  },
+  "LinkError": {
+    "message": "Σφάλμα κατά τη σύνδεση του εγγράφου"
+  },
+  "Type": {
+    "message": "Τύπος"
   }
 }
