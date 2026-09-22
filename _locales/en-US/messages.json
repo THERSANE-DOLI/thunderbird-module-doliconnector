@@ -332,6 +332,9 @@
   "DolibarrTypeMember": {
     "message": "Member"
   },
+  "DolibarrTypeAgendaEvent": {
+    "message": "Agenda event"
+  },
   "TabInfo": {
     "message": "Info"
   },
@@ -340,6 +343,24 @@
   },
   "TabLinkDocument": {
     "message": "Link"
+  },
+  "TabAgenda": {
+    "message": "Agenda"
+  },
+  "CreateNewEvent": {
+    "message": "View and create event"
+  },
+  "AgendaEventAlreadyLinked": {
+    "message": "Event already registered in Dolibarr"
+  },
+  "IcsEventDetectedInvitation": {
+    "message": "An event was detected in this email."
+  },
+  "Location": {
+    "message": "Location"
+  },
+  "Organizer": {
+    "message": "Organizer"
   },
   "LinkedDocuments": {
     "message": "Linked documents"

@@ -85,13 +85,30 @@
 
 #link-linked-container,
 #link-search-container,
-#info-linked-documents-container {
+#info-linked-documents-container,
+#agenda-event-linked-container {
 	padding: 6px 2px;
 }
 
 #link-linked-container h5,
-#link-search-container h5 {
+#link-search-container h5,
+#agenda-event-linked-container h5 {
 	margin: 0 0 8px 0;
+}
+
+#agenda-event-preview {
+	margin-bottom: 10px;
+}
+
+.agenda-event-description {
+	margin-top: 8px;
+	font-size: 12px;
+	color: #5a5b62;
+	white-space: pre-wrap;
+}
+
+#agenda-event-create-container {
+	margin-top: 10px;
 }
 
 /* Not plain "#info-linked-list { display: flex; ... }" : an ID selector's specificity beats
@@ -439,4 +456,30 @@
 	color: #999999;
 	font-style: italic;
 	padding: 6px 0;
+}
+
+/* "Info" variant : same discreet size/weight as .discreet-notice, but blue-toned like .alert-info
+   instead of the plain grey default - for a notice that's informative rather than a disabled
+   feature (e.g. "an event was detected in this mail"), a plain grey read as too easy to miss. */
+.discreet-notice--info {
+	color: #0c5460;
+	background-color: #eaf6f8;
+	border-left: 3px solid #9fd8e3;
+	border-radius: 0 4px 4px 0;
+	font-style: normal;
+	padding: 6px 8px;
+	margin-bottom: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.discreet-notice--info .link-cta-btn {
+	color: #0c8299;
+	text-decoration: underline;
+}
+
+.discreet-notice--info .link-cta-btn:hover {
+	color: #0c5460;
 }

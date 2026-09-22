@@ -524,6 +524,132 @@ export function isQuotationTrustedSender(email, trustedSenders){
 }
 
 /**
+ * Finds the .ics/text-calendar event on a message and parses its first VEVENT, for the popup's
+ * "Agenda" tab (see messagePopup/popup.js's initAgendaTab()). Checks two places : most real-world
+ * calendar invites (Outlook, Google Calendar, Thunderbird's own Lightning...) send the ICS as an
+ * *inline* text/calendar MIME part with no Content-Disposition: attachment - listAttachments()
+ * deliberately excludes those (its own doc comment : "these parts ... usually make up the
+ * readable content of the message"), so listInlineTextParts() is checked first. A genuine .ics
+ * *attachment* (Content-Disposition: attachment, e.g. a forwarded invite) is checked as a
+ * fallback.
+ * @param {number} messageId
+ * @returns {Promise<{uid:?string, summary:?string, location:?string, description:?string, organizer:?string, start:?Date, end:?Date, allDay:boolean}|null>}
+ */
+export async function detectIcsEventFromMessage(messageId){
+    let inlineParts = await messenger.messages.listInlineTextParts(messageId);
+    let icsPart = inlineParts.find((part) => part.contentType === 'text/calendar');
+    if(icsPart){
+        return parseIcsEvent(icsPart.content);
+    }
+
+    let attachments = await messenger.messages.listAttachments(messageId);
+    let icsAttachment = attachments.find((attachment) => {
+        return attachment.contentType === 'text/calendar'
+            || /\.ics$/i.test(attachment.name || '');
+    });
+    if(!icsAttachment){
+        return null;
+    }
+
+    let file = await messenger.messages.getAttachmentFile(messageId, icsAttachment.partName);
+    let text = await file.text();
+    return parseIcsEvent(text);
+}
+
+/**
+ * Parses the first VEVENT block of an iCalendar (.ics) file, extracting just the fields the
+ * "Agenda" tab needs to preview a calendar invite and prefill Dolibarr's agenda event create
+ * form - a full RFC 5545 parser is out of scope, this only handles the handful of properties
+ * (SUMMARY, LOCATION, DESCRIPTION, DTSTART, DTEND, ORGANIZER, UID) real-world calendar invites
+ * reliably use.
+ * @param {string} icsText raw .ics file content
+ * @returns {{uid:?string, summary:?string, location:?string, description:?string, organizer:?string, start:?Date, end:?Date, allDay:boolean}|null}
+ */
+export function parseIcsEvent(icsText){
+    if(!icsText){
+        return null;
+    }
+
+    // Unfold : a line starting with a space/tab is a continuation of the previous line (RFC
+    // 5545 section 3.1), used by real calendar software to wrap long lines (e.g. DESCRIPTION).
+    let unfolded = icsText.replace(/\r\n/g, '\n').replace(/\n[ \t]/g, '');
+    let lines = unfolded.split('\n');
+
+    let veventStart = lines.findIndex((line) => line.trim().toUpperCase() === 'BEGIN:VEVENT');
+    let veventEnd = lines.findIndex((line) => line.trim().toUpperCase() === 'END:VEVENT');
+    if(veventStart === -1 || veventEnd === -1 || veventEnd <= veventStart){
+        return null;
+    }
+
+    let props = {};
+    lines.slice(veventStart + 1, veventEnd).forEach((line) => {
+        let colonIndex = line.indexOf(':');
+        if(colonIndex === -1){
+            return;
+        }
+        let left = line.slice(0, colonIndex);
+        let value = line.slice(colonIndex + 1);
+        let semiIndex = left.indexOf(';');
+        let name = (semiIndex === -1 ? left : left.slice(0, semiIndex)).trim().toUpperCase();
+        let params = semiIndex === -1 ? '' : left.slice(semiIndex + 1);
+        if(!props[name]){
+            // First occurrence wins (e.g. a recurring event's overridden instances add more
+            // VEVENT blocks later in the file, out of scope here - we only read the first one).
+            props[name] = {value: value.trim(), params};
+        }
+    });
+
+    let unescapeText = (text) => text
+        .replace(/\\n/gi, '\n')
+        .replace(/\\,/g, ',')
+        .replace(/\\;/g, ';')
+        .replace(/\\\\/g, '\\');
+
+    let parseIcsDate = (prop) => {
+        if(!prop){
+            return null;
+        }
+        let m = prop.value.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/);
+        if(!m){
+            return null;
+        }
+        let [, y, mo, d, h, mi, s, utc] = m;
+        if(!h){
+            // DATE (no time) : an all-day event, e.g. DTSTART;VALUE=DATE:20250115.
+            return {date: new Date(Date.UTC(+y, +mo - 1, +d)), allDay: true};
+        }
+        if(utc){
+            return {date: new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s)), allDay: false};
+        }
+        // Floating time or TZID-relative (e.g. DTSTART;TZID=Europe/Paris:...) : no timezone
+        // database available client-side to convert precisely, so this is read as local time -
+        // close enough for a preview/prefill, not exact calendaring math.
+        return {date: new Date(+y, +mo - 1, +d, +h, +mi, +s), allDay: false};
+    };
+
+    let startInfo = parseIcsDate(props.DTSTART);
+    let endInfo = parseIcsDate(props.DTEND);
+
+    let organizer = null;
+    if(props.ORGANIZER){
+        let cnMatch = props.ORGANIZER.params.match(/CN=([^;]+)/i);
+        let mailMatch = props.ORGANIZER.value.match(/^mailto:(.+)$/i);
+        organizer = cnMatch ? cnMatch[1].replace(/^"|"$/g, '') : (mailMatch ? mailMatch[1] : props.ORGANIZER.value);
+    }
+
+    return {
+        uid: props.UID ? props.UID.value : null,
+        summary: props.SUMMARY ? unescapeText(props.SUMMARY.value) : null,
+        location: props.LOCATION ? unescapeText(props.LOCATION.value) : null,
+        description: props.DESCRIPTION ? unescapeText(props.DESCRIPTION.value) : null,
+        organizer: organizer,
+        start: startInfo ? startInfo.date : null,
+        end: endInfo ? endInfo.date : null,
+        allDay: !!(startInfo && startInfo.allDay)
+    };
+}
+
+/**
  * Dolibarr object types that can appear in an email trackid, keyed by the
  * short prefix Dolibarr puts in front of the object id (see e.g.
  * htdocs/commande/card.php: `$trackid = 'ord'.$object->id;`, and the
@@ -541,6 +667,7 @@ export const DOLIBARR_OBJECT_TYPES = {
     proj: { api: 'projects',         card: 'projet/card.php',         labelKey: 'DolibarrTypeProject' },
     int:  { api: 'interventions',    card: 'fichinter/card.php',      labelKey: 'DolibarrTypeIntervention' },
     mem:  { api: 'members',          card: 'adherents/card.php',      labelKey: 'DolibarrTypeMember' },
+    act:  { api: 'agendaevents',     card: 'comm/action/card.php',    labelKey: 'DolibarrTypeAgendaEvent' },
 };
 
 export function getDolibarrObjectTypeMeta(type){

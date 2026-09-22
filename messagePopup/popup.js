@@ -4,7 +4,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
     const LOG = (...args) => console.log('[DoliConnector popup]', ...args);
 
-    const POPUP_TABS = ['info', 'documents', 'link'];
+    const POPUP_TABS = ['info', 'documents', 'link', 'agenda'];
 
     // Workaround for a Linux/GTK bug: when this UI is shown in a detached "popup" type
     // window (see browser.windows.create in background.js), pressing Ctrl or Alt on its
@@ -71,6 +71,10 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     let ownerAccountEmail = message ? await getEmailAccountFromBackground(message.id) : null;
     let ownerMsgId = message ? message.headerMessageId : null;
 
+    // .ics calendar invite attachment, if any - drives the "Agenda" tab (see initAgendaTab()).
+    let icsEvent = message ? await dolLib.detectIcsEventFromMessage(message.id) : null;
+    LOG('detected ics event', icsEvent);
+
     // Quotation form headers (X-Quotation-Mail / X-Quotation-Data) : only trusted when the
     // sender is in the configured trusted senders list, to avoid a forged header hijacking
     // the thirdparty search.
@@ -120,6 +124,25 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     // tab, ref auto-detection) - see isCrmConnectorEnabled()'s doc comment.
     let crmConnectorEnabled = await dolLib.isCrmConnectorEnabled();
 
+    // "Lier" tab state (see its own section below for the functions using these) - declared
+    // here rather than down there because updateAgendaEventLinkState() reads
+    // lastLinkedDocumentsList synchronously from initAgendaTab(), called further down in this
+    // same top-level script before execution would otherwise reach their old declaration site.
+    let linkTabInitialized = false;
+    // type+':'+id keys of documents already linked to this mail, so the search results can hide
+    // them (linking the same document twice hits Dolibarr's unique index and returns a 500), and
+    // so the detected-ref card (see maybeRenderDetectedRefBlock()) knows whether to offer a "Link"
+    // button for the document it detected via the mail headers.
+    let linkedDocumentKeys = new Set();
+    // Becomes true once the first loadLinkedDocuments() response comes back (success or failure),
+    // so the detected-ref card can tell "not linked yet" apart from "don't know yet" and avoid
+    // flashing a Link button it would immediately have to remove.
+    let linkedDocumentsFetched = false;
+    // Raw list from the last loadLinkedDocuments() response, kept around so the Info tab's own
+    // linked-documents section (see updateInfoTabLinkedDocumentsSection()) can render its own set
+    // of cards independently from the ones in the "Lier" tab's #link-linked-list.
+    let lastLinkedDocumentsList = [];
+
     if(!checkConfig){
         LOG('module not configured, showing check-module-config template');
         displayTpl("check-module-config");
@@ -138,6 +161,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         initPopupTabs();
         initDocumentsTabBadge();
         initInfoTabLinkCta();
+        initInfoTabAgendaCta();
+        initAgendaTab();
 
         if(!crmConnectorEnabled){
             LOG('crmClientConnector module disabled by config, showing discreet notice instead of notes/link features');
@@ -1412,23 +1437,11 @@ async function initNotesForMessage(){
 /**
  * "Lier" tab : search/link/unlink a devis/commande/facture/... to the mail currently displayed,
  * using the crmclientconnector emaillinks/linkedobjects, emaillinks/link endpoints (needs
- * crmclientconnector module installed in Dolibarr, same as the notes feature above).
+ * crmclientconnector module installed in Dolibarr, same as the notes feature above). State
+ * declared up near the top of the module (see linkTabInitialized et al. above) since
+ * updateAgendaEventLinkState() reads lastLinkedDocumentsList synchronously from initAgendaTab(),
+ * called before the script would otherwise reach this point.
  */
-
-let linkTabInitialized = false;
-// type+':'+id keys of documents already linked to this mail, so the search results can hide
-// them (linking the same document twice hits Dolibarr's unique index and returns a 500), and
-// so the detected-ref card (see maybeRenderDetectedRefBlock()) knows whether to offer a "Link"
-// button for the document it detected via the mail headers.
-let linkedDocumentKeys = new Set();
-// Becomes true once the first loadLinkedDocuments() response comes back (success or failure),
-// so the detected-ref card can tell "not linked yet" apart from "don't know yet" and avoid
-// flashing a Link button it would immediately have to remove.
-let linkedDocumentsFetched = false;
-// Raw list from the last loadLinkedDocuments() response, kept around so the Info tab's own
-// linked-documents section (see updateInfoTabLinkedDocumentsSection()) can render its own set
-// of cards independently from the ones in the "Lier" tab's #link-linked-list.
-let lastLinkedDocumentsList = [];
 
 function initPopupTabs(){
     POPUP_TABS.forEach((tab) => {
@@ -1493,6 +1506,161 @@ function initInfoTabLinkCta(){
         switchPopupTab('link');
         document.getElementById('link-search-input')?.focus();
     });
+}
+
+/**
+ * Wires the Info tab's "an event was detected in this mail, create it ?" invitation (see
+ * updateAgendaEventLinkState()) CTA button to jump to the "Agenda" tab.
+ */
+function initInfoTabAgendaCta(){
+    let cta = document.getElementById('info-agenda-invitation-cta');
+    if(!cta){
+        return;
+    }
+    cta.addEventListener('click', () => switchPopupTab('agenda'));
+}
+
+/**
+ * "Agenda" tab : only shown when the mail carries a .ics calendar invite attachment (see
+ * detectIcsEventFromMessage() in global.lib.js). Renders a preview card from the parsed VEVENT
+ * (summary/date/location/organizer/description) and a link to create the matching Dolibarr
+ * agenda event, prefilled from that same data - see buildAgendaEventCreateUrl(). Whether that
+ * event already exists (linked to this mail via crmclientconnector/emaillinks, either by that
+ * create link's own auto-link trigger or manually from the "Lier" tab) is resolved separately,
+ * see updateAgendaEventLinkState().
+ */
+function initAgendaTab(){
+    if(!icsEvent){
+        return;
+    }
+
+    document.getElementById('tab-btn-agenda')?.classList.remove('hidden-field');
+
+    if(icsEvent.summary){
+        document.getElementById('agenda-event-summary').textContent = icsEvent.summary;
+    }
+
+    let locale = navigator.language || navigator.browserLanguage || (navigator.languages || ['en'])[0];
+    let formatIcsDate = (date) => icsEvent.allDay ? date.toLocaleDateString(locale) : date.toLocaleString(locale);
+
+    if(icsEvent.start){
+        let text = formatIcsDate(icsEvent.start);
+        if(icsEvent.end && icsEvent.end.getTime() !== icsEvent.start.getTime()){
+            text += ' - ' + formatIcsDate(icsEvent.end);
+        }
+        let dateEl = document.getElementById('agenda-event-date');
+        dateEl.textContent = text;
+        dateEl.classList.remove('hidden-field');
+    }
+
+    if(icsEvent.location){
+        let locationEl = document.getElementById('agenda-event-location');
+        locationEl.textContent = chrome.i18n.getMessage('Location') + ' : ' + icsEvent.location;
+        locationEl.classList.remove('hidden-field');
+    }
+
+    if(icsEvent.organizer){
+        let organizerEl = document.getElementById('agenda-event-organizer');
+        organizerEl.textContent = chrome.i18n.getMessage('Organizer') + ' : ' + icsEvent.organizer;
+        organizerEl.classList.remove('hidden-field');
+    }
+
+    if(icsEvent.description){
+        let descriptionEl = document.getElementById('agenda-event-description');
+        descriptionEl.textContent = icsEvent.description;
+        descriptionEl.classList.remove('hidden-field');
+    }
+
+    document.getElementById('agenda-event-create-link').href = buildAgendaEventCreateUrl();
+
+    updateAgendaEventLinkState();
+}
+
+/**
+ * Dolibarr's comm/action/card.php create form reads label/location/note/datep straight off the
+ * querystring to prefill itself (unlike the quotation/order/ticket create links, which only
+ * carry socid/accountEmail/msgId) - see this function's Dolibarr-side counterpart in
+ * comm/action/card.php around GETPOST('label')/GETPOST('location')/GETPOST('datep'). accountEmail
+ * + msgId are carried the same way as the other "create X" links (see setSocInfos()'s
+ * newPropalUrl/newOrderUrl/newTicketUrl above) so the ACTION_CREATE trigger can auto-link the new
+ * event back to this mail.
+ * @returns {string}
+ */
+function buildAgendaEventCreateUrl(){
+    let url = new URL(confDolibarUrl + 'comm/action/card.php');
+    url.searchParams.set('action', 'create');
+
+    if(icsEvent.summary){ url.searchParams.set('label', icsEvent.summary); }
+    if(icsEvent.location){ url.searchParams.set('location', icsEvent.location); }
+    if(icsEvent.description){ url.searchParams.set('note', icsEvent.description); }
+
+    let pad = (n) => String(n).padStart(2, '0');
+
+    if(icsEvent.start){
+        if(icsEvent.allDay){
+            url.searchParams.set('fullday', '1');
+            // YYYYMMDD form - see comm/action/card.php's GETPOST('datep') handling.
+            url.searchParams.set('datep', icsEvent.start.getFullYear() + pad(icsEvent.start.getMonth()+1) + pad(icsEvent.start.getDate()));
+        }else{
+            // YYYYMMDDHHMMSS form.
+            url.searchParams.set('datep',
+                icsEvent.start.getFullYear() + pad(icsEvent.start.getMonth()+1) + pad(icsEvent.start.getDate())
+                + pad(icsEvent.start.getHours()) + pad(icsEvent.start.getMinutes()) + pad(icsEvent.start.getSeconds())
+            );
+        }
+    }
+
+    if(icsEvent.end){
+        // No combined format for the end date - only individual day/month/year(/hour/min) params.
+        url.searchParams.set('p2day', icsEvent.end.getDate());
+        url.searchParams.set('p2month', icsEvent.end.getMonth() + 1);
+        url.searchParams.set('p2year', icsEvent.end.getFullYear());
+        if(!icsEvent.allDay){
+            url.searchParams.set('p2hour', icsEvent.end.getHours());
+            url.searchParams.set('p2min', icsEvent.end.getMinutes());
+        }
+    }
+
+    if(ownerAccountEmail && ownerMsgId){
+        url.searchParams.set('accountEmail', ownerAccountEmail);
+        url.searchParams.set('msgId', ownerMsgId);
+    }
+
+    return url.toString();
+}
+
+/**
+ * Switches the Agenda tab (and the Info tab's invitation banner) between "not linked yet - offer
+ * to create it" and "already linked - show the existing event" (reusing buildLinkedDocCard(), the
+ * same card the "Lier" tab uses), based on whether lastLinkedDocumentsList (refreshed by
+ * renderLinkedDocuments(), see loadLinkedDocuments()) already has a type 'act' entry. Needs the
+ * CRM Client Connector module to know for sure (see isCrmConnectorEnabled()) - when it's
+ * disabled, lastLinkedDocumentsList never gets populated, so this defaults to "not linked yet"
+ * (can't tell, so still offer to create it rather than silently doing nothing).
+ */
+function updateAgendaEventLinkState(){
+    if(!icsEvent){
+        return;
+    }
+
+    let linkedEvent = lastLinkedDocumentsList.find((item) => item.type === 'act');
+
+    let linkedContainer = document.getElementById('agenda-event-linked-container');
+    let linkedCard = document.getElementById('agenda-event-linked-card');
+    let createContainer = document.getElementById('agenda-event-create-container');
+    let infoInvitation = document.getElementById('info-agenda-invitation');
+
+    if(linkedEvent){
+        linkedCard.innerHTML = '';
+        linkedCard.appendChild(buildLinkedDocCard(linkedEvent));
+        linkedContainer.classList.remove('hidden-field');
+        createContainer.classList.add('hidden-field');
+        infoInvitation.classList.add('hidden-field');
+    }else{
+        linkedContainer.classList.add('hidden-field');
+        createContainer.classList.remove('hidden-field');
+        infoInvitation.classList.remove('hidden-field');
+    }
 }
 
 function initLinkTab(){
@@ -1572,6 +1740,9 @@ function renderLinkedDocuments(list){
     // Mirrors the linked-documents list into the Info tab, see
     // updateInfoTabLinkedDocumentsSection().
     updateInfoTabLinkedDocumentsSection();
+    // Tells the Agenda tab / Info tab invitation whether the detected .ics event is already
+    // linked, see updateAgendaEventLinkState().
+    updateAgendaEventLinkState();
 
     if(list.length === 0){
         emptyEl.classList.remove('hidden-field');

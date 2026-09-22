@@ -48,6 +48,7 @@
 				<button type="button" id="tab-btn-info" class="popup-tab-btn active">__MSG_TabInfo__</button>
 				<button type="button" id="tab-btn-documents" class="popup-tab-btn">__MSG_TabDocuments__<span id="tab-documents-badge" class="popup-tab-badge hidden-field"></span></button>
 				<button type="button" id="tab-btn-link" class="popup-tab-btn">__MSG_TabLinkDocument__</button>
+				<button type="button" id="tab-btn-agenda" class="popup-tab-btn hidden-field">__MSG_TabAgenda__</button>
 			</div>
 
 			<div class="popup-tab-panels">
@@ -55,6 +56,11 @@
 				<div id="tab-panel-info" class="popup-tab-panel">
 
 					<div id="crm-connector-disabled-notice-info" class="hidden-field discreet-notice">__MSG_CrmConnectorFeatureDisabled__</div>
+
+					<div id="info-agenda-invitation" class="hidden-field discreet-notice discreet-notice--info">
+						<span id="info-agenda-invitation-text">__MSG_IcsEventDetectedInvitation__</span>
+						<button type="button" id="info-agenda-invitation-cta" class="link-cta-btn">__MSG_CreateNewEvent__</button>
+					</div>
 
 					<div id="info-linked-documents-container" class="hidden-field">
 						<div id="info-linked-list" class="hidden-field"></div>
@@ -122,6 +128,32 @@
 							<div id="link-search-results"></div>
 						</div>
 
+					</div>
+
+				</div>
+
+				<div id="tab-panel-agenda" class="popup-tab-panel hidden-field">
+
+					<div id="agenda-event-preview" class="linked-doc-card">
+						<div class="linked-doc-card__header">
+							<span class="linked-doc-card__type">__MSG_DolibarrTypeAgendaEvent__</span>
+							<span id="agenda-event-summary" class="linked-doc-card__ref"></span>
+						</div>
+						<div class="linked-doc-card__fields">
+							<span id="agenda-event-date" class="linked-doc-card__field hidden-field"></span>
+							<span id="agenda-event-location" class="linked-doc-card__field hidden-field"></span>
+							<span id="agenda-event-organizer" class="linked-doc-card__field hidden-field"></span>
+						</div>
+						<div id="agenda-event-description" class="hidden-field agenda-event-description"></div>
+					</div>
+
+					<div id="agenda-event-linked-container" class="hidden-field">
+						<h5>__MSG_AgendaEventAlreadyLinked__</h5>
+						<div id="agenda-event-linked-card"></div>
+					</div>
+
+					<div id="agenda-event-create-container">
+						<a id="agenda-event-create-link" class="btn btn-primary" href="" target="_blank"><i class="icon-plus"></i> __MSG_CreateNewEvent__</a>
 					</div>
 
 				</div>
