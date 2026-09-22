@@ -2,7 +2,13 @@
  * Show a dismissible toast in the top-right corner of the page, instead of an inline
  * success/error message in the page body (which shifts surrounding content around). Creates its
  * own fixed-position container on first use, so no host page markup is required - usable from
- * any page in the extension.
+ * any page in the extension. Appended to <html> (not <body>) and given its fixed positioning
+ * inline (on top of the same rule in global.css) : on a long, scrollable page (e.g. options.html,
+ * whose form can be taller than the visible area), a container appended under <body> can end up
+ * positioned relative to something other than the true viewport (a body-level CSS quirk, or a
+ * host embedding the page in a way that resizes <body> to its full content height rather than
+ * scrolling it) - this otherwise made the toast scroll away with the page's own content instead
+ * of staying pinned in the corner as intended.
  * @param {string} message
  * @param {'success'|'error'} type
  * @param {number} durationMs auto-dismiss delay (0 disables auto-dismiss, close button still works)
@@ -13,7 +19,8 @@ export function showToast(message, type = 'success', durationMs = 4000){
     if(!container){
         container = document.createElement('div');
         container.id = 'dolconnector-toast-container';
-        document.body.appendChild(container);
+        container.setAttribute('style', 'position:fixed!important;top:10px!important;right:10px!important;left:auto!important;bottom:auto!important;');
+        document.documentElement.appendChild(container);
     }
 
     let toast = document.createElement('div');
@@ -262,40 +269,142 @@ export function buildDropdownMenu({triggerLabel, triggerTitle, discreet = false,
 }
 
 /**
+ * A mailbox can only ever talk to one Dolibarr at a time, but the extension can be configured
+ * with several Dolibarr "connections" (see getDolibarrConnections() below) - this is the shared
+ * per-page context that tells every config-dependent function (checkConfig, callDolibarrApi,
+ * etc.) which one to resolve when a call site doesn't pass an explicit accountId. Set once, near
+ * the top of messagePopup/popup.js, right after the displayed message is resolved - popup.js is a
+ * fresh module instance per popup open (one message, no concurrency), so a shared mutable flag is
+ * safe there, same as forceFreshLoad/setForceFreshLoad() above. background.js is a shared,
+ * non-persistent event page that can process onMessageDisplayed for two different tabs
+ * concurrently, so it does NOT use this - it resolves and threads an explicit accountId through
+ * its own call chain instead (see checkAndInjectDolibarrBanner()).
+ */
+let activeAccountId = null;
+
+/**
+ * @param {string|null} accountId Thunderbird account id (MessageHeader.folder.accountId), or null
+ *   to fall back to the default connection for every subsequent unqualified call on this page.
+ */
+export function setActiveAccountContext(accountId){
+    activeAccountId = accountId || null;
+}
+
+/**
+ * Reads (and lazily migrates) the multi-Dolibarr connection list. If dolibarrConnections doesn't
+ * exist yet but the legacy single-server flat keys (dolibarrApiUrl, dolibarrApiKey,
+ * dolibarrApiEntity, dolibarrHttpAuth..., dolibarrCrmConnectorEnabled) do, synthesizes one
+ * connection from them - flagged as the default - and
+ * persists it, so a user who never reopens the options page after updating keeps working exactly
+ * as before (this runs lazily from any entry point, not just the options page). Legacy keys are
+ * left in storage afterwards (unused, but harmless) rather than removed, to avoid any
+ * write-ordering risk with a concurrent options.js save.
+ * @returns {Promise<{connections: Array<object>, accountConnections: Object<string,string>}>}
+ */
+export async function getDolibarrConnections(){
+    let stored = await browser.storage.local.get({
+        dolibarrConnections: null,
+        dolibarrAccountConnections: {}
+    });
+
+    if(Array.isArray(stored.dolibarrConnections)){
+        return {connections: stored.dolibarrConnections, accountConnections: stored.dolibarrAccountConnections || {}};
+    }
+
+    let legacy = await browser.storage.local.get({
+        dolibarrApiKey: '',
+        dolibarrApiUrl: '',
+        dolibarrApiEntity: 1,
+        dolibarrHttpAuthEnabled: false,
+        dolibarrHttpAuthUser: '',
+        dolibarrHttpAuthPassword: '',
+        dolibarrCrmConnectorEnabled: undefined,
+        dolibarrUseNotes: false
+    });
+
+    if(!legacy.dolibarrApiUrl){
+        // Nothing configured yet at all (fresh install) - no connection to migrate.
+        return {connections: [], accountConnections: {}};
+    }
+
+    let migrated = [{
+        id: 'default',
+        name: browser.i18n.getMessage('DolibarrConnectionDefaultName') || 'Dolibarr',
+        apiUrl: legacy.dolibarrApiUrl,
+        apiKey: legacy.dolibarrApiKey,
+        apiEntity: legacy.dolibarrApiEntity,
+        httpAuthEnabled: legacy.dolibarrHttpAuthEnabled,
+        httpAuthUser: legacy.dolibarrHttpAuthUser,
+        httpAuthPassword: legacy.dolibarrHttpAuthPassword,
+        crmConnectorEnabled: legacy.dolibarrCrmConnectorEnabled !== undefined ? legacy.dolibarrCrmConnectorEnabled : legacy.dolibarrUseNotes,
+        isDefault: true
+    }];
+
+    await browser.storage.local.set({dolibarrConnections: migrated});
+
+    return {connections: migrated, accountConnections: stored.dolibarrAccountConnections || {}};
+}
+
+/**
+ * Resolves which Dolibarr connection a given Thunderbird account should use : an explicit mapping
+ * in dolibarrAccountConnections if one exists (and still points at a connection that actually
+ * exists - a stale mapping to a since-deleted connection falls back the same as "no mapping"),
+ * otherwise the connection flagged isDefault, otherwise (defensive, shouldn't normally happen)
+ * the first connection. Null if no connection is configured at all.
+ * @param {string|null|undefined} accountId defaults to the shared setActiveAccountContext() value
+ * @returns {Promise<object|null>}
+ */
+export async function resolveDolibarrConnection(accountId){
+    let resolvedAccountId = accountId !== undefined ? accountId : activeAccountId;
+    let {connections, accountConnections} = await getDolibarrConnections();
+
+    if(connections.length === 0){
+        return null;
+    }
+
+    let mappedId = resolvedAccountId ? accountConnections[resolvedAccountId] : null;
+    if(mappedId){
+        let mapped = connections.find((c) => c.id === mappedId);
+        if(mapped){ return mapped; }
+    }
+
+    return connections.find((c) => c.isDefault) || connections[0];
+}
+
+/**
  * Whether the Dolibarr crmclientconnector module (custom/crmclientconnector on the Dolibarr
  * side) is installed and enabled - every feature built on its REST endpoints
  * (crmclientconnector/*: shared notes, the "Lier" tab and detected-ref card's Link button,
  * linked documents on the Info tab, ref auto-detection via numbering patterns, the domain
  * exclusion list) must check this before calling one of them, since those calls 404/500
- * otherwise. Falls back to the old dolibarrUseNotes key (this setting used to only gate the
- * notes feature) so users who already enabled it keep working after the rename.
+ * otherwise. Resolves the connection for accountId (defaulting to the shared
+ * setActiveAccountContext() value, see resolveDolibarrConnection()) rather than a single global
+ * setting, since whether the CRM Client Connector module is installed is a property of a specific
+ * Dolibarr server, not a user preference.
+ * @param {string} [accountId]
  * @returns {Promise<boolean>}
  */
-export async function isCrmConnectorEnabled(){
-    let data = await browser.storage.local.get({dolibarrCrmConnectorEnabled: undefined, dolibarrUseNotes: false});
-    return data.dolibarrCrmConnectorEnabled !== undefined ? data.dolibarrCrmConnectorEnabled : data.dolibarrUseNotes;
+export async function isCrmConnectorEnabled(accountId){
+    let connection = await resolveDolibarrConnection(accountId);
+    return !!(connection && connection.crmConnectorEnabled);
 }
 
-export async function checkConfig(){
+/**
+ * @param {string} [accountId]
+ * @returns {Promise<boolean>}
+ */
+export async function checkConfig(accountId){
+    let connection = await resolveDolibarrConnection(accountId);
+    if(!connection){ return false; }
 
-    let configData = await browser.storage.local.get({
-        dolibarrApiKey:'',
-        dolibarrApiUrl:'',
-        dolibarrApiEntity:1,
-        dolibarrHttpAuthEnabled: false,
-        dolibarrHttpAuthUser: '',
-        dolibarrHttpAuthPassword: ''
-    });
+    let apiKey = connection.apiKey || '';
+    let dolUrl = connection.apiUrl || '';
+    let apiEntity = connection.apiEntity || '';
 
+    if(apiKey.length == 0 || dolUrl.length == 0 || String(apiEntity).length == 0){  return false; }
 
-    let apiKey = configData.dolibarrApiKey;
-    let dolUrl = configData.dolibarrApiUrl;
-	let apiEntity = configData.dolibarrApiEntity;
-
-    if(apiKey.length == 0 || dolUrl ==0 || apiEntity.length == 0){  return false; }
-
-    if(configData.dolibarrHttpAuthEnabled
-        && (configData.dolibarrHttpAuthUser.length == 0 || configData.dolibarrHttpAuthPassword.length == 0)){
+    if(connection.httpAuthEnabled
+        && ((connection.httpAuthUser || '').length == 0 || (connection.httpAuthPassword || '').length == 0)){
         return false;
     }
 
@@ -307,16 +416,17 @@ export async function checkConfig(){
  * configured API key (and HTTP Basic Auth credentials, if enabled) actually work and that
  * the server can be reached, so the UI can tell an invalid-credentials problem apart from
  * a connection problem - both look like "config incomplete" otherwise.
+ * @param {string} [accountId]
  * @returns {Promise<{status: 'ok'|'auth'|'connection', message: (string|null)}>}
  */
-export async function checkDolibarrConnection(){
+export async function checkDolibarrConnection(accountId){
     return new Promise((resolve) => {
         callDolibarrApi('users/info', {}, 'GET', {}, () => {
             resolve({status: 'ok', message: null});
         }, (errorMsg, errorInfo) => {
             let status = (errorInfo && errorInfo.type === 'auth') ? 'auth' : 'connection';
             resolve({status, message: errorMsg});
-        });
+        }, false, accountId);
     });
 }
 
@@ -337,29 +447,24 @@ export function setForceFreshLoad(enabled){
     forceFreshLoad = !!enabled;
 }
 
-export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', postData, successCallBackFunction = ()=>{}, errorCallBackFunction = ()=>{}, cache = false){
+export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', postData, successCallBackFunction = ()=>{}, errorCallBackFunction = ()=>{}, cache = false, accountId){
 
-    let configData = await browser.storage.local.get({
-        dolibarrApiKey:'',
-        dolibarrApiUrl:'',
-        dolibarrApiEntity:1,
-        dolibarrHttpAuthEnabled: false,
-        dolibarrHttpAuthUser: '',
-        dolibarrHttpAuthPassword: ''
-    });
+    let connection = await resolveDolibarrConnection(accountId);
+    if(!connection){
+        errorCallBackFunction("Fail getting settings", {type: 'auth', status: null});
+        return;
+    }
 
-
-    let apiKey = configData.dolibarrApiKey;
-    let dolUrl = configData.dolibarrApiUrl;
-	let apiEntity = configData.dolibarrApiEntity;
-	if(apiEntity.length == 0 || apiEntity <= 0){
+    let apiKey = connection.apiKey || '';
+    let dolUrl = connection.apiUrl || '';
+	let apiEntity = connection.apiEntity;
+	if(String(apiEntity || '').length == 0 || apiEntity <= 0){
         apiEntity = 1;
     }
     if(typeof getDataParam.entity === "undefined"){
         getDataParam.entity = apiEntity;
     }
 
-    if(apiKey.length == 0 || dolUrl ==0){  reject("Fail getting settings"); }
     if(dolUrl.slice(-1) != '/'){ dolUrl = dolUrl + '/';  }
     let dolApiUrl = dolUrl + 'api/index.php/';
     let finalUrl = dolApiUrl + endPoint;
@@ -382,8 +487,8 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
         'DOLAPIENTITY': apiEntity,
         "Content-Type": "application/json"
     };
-    if(configData.dolibarrHttpAuthEnabled && configData.dolibarrHttpAuthUser.length > 0){
-        headers['Authorization'] = 'Basic ' + btoa(configData.dolibarrHttpAuthUser + ':' + configData.dolibarrHttpAuthPassword);
+    if(connection.httpAuthEnabled && (connection.httpAuthUser || '').length > 0){
+        headers['Authorization'] = 'Basic ' + btoa(connection.httpAuthUser + ':' + (connection.httpAuthPassword || ''));
     }
 
     let cacheMode = "default";
@@ -902,15 +1007,13 @@ export async function getDolibarrTrackIdFromMessage(id){
 }
 
 
-export async function getDolibarrUrl() {
-    let configData = await messenger.storage.local.get({
-        dolibarrApiUrl: '',
-        dolibarrApiKey: ''
-    });
-
-    let apiKey = configData.dolibarrApiKey;
-    let dolUrl = configData.dolibarrApiUrl;
-
+/**
+ * @param {string} [accountId]
+ * @returns {Promise<string>}
+ */
+export async function getDolibarrUrl(accountId) {
+    let connection = await resolveDolibarrConnection(accountId);
+    let dolUrl = connection ? (connection.apiUrl || '') : '';
 
     if(dolUrl.length > 0 && dolUrl.slice(-1) != '/'){ dolUrl = dolUrl + '/';  }
     return dolUrl;

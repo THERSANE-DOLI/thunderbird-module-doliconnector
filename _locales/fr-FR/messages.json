@@ -430,5 +430,62 @@
   },
   "Type": {
     "message": "Type"
+  },
+  "DolibarrConnections": {
+    "message": "Connexions Dolibarr"
+  },
+  "AddDolibarrConnection": {
+    "message": "+ Ajouter une connexion"
+  },
+  "DolibarrConnectionName": {
+    "message": "Nom de la connexion"
+  },
+  "DolibarrConnectionSetDefault": {
+    "message": "Connexion par défaut"
+  },
+  "DolibarrConnectionRemove": {
+    "message": "Supprimer"
+  },
+  "DolibarrConnectionDefaultName": {
+    "message": "Dolibarr"
+  },
+  "DolibarrConnectionDefaultOption": {
+    "message": "(Connexion par défaut : $1)"
+  },
+  "DolibarrAccountMapping": {
+    "message": "Association des boîtes mail"
+  },
+  "DolibarrAccountMappingDesc": {
+    "message": "Une boîte mail utilise toujours une seule connexion Dolibarr à la fois. Celles non associées ici utilisent la connexion par défaut."
+  },
+  "DolibarrUsageOptionsTitle": {
+    "message": "Options et paramètres d'usage"
+  },
+  "DolibarrPermissionNotice": {
+    "message": "Lors de l'enregistrement d'une connexion Dolibarr, ce module demande automatiquement l'autorisation d'accéder à son adresse (une autorisation propre à ce site). Si cette autorisation ne suffit pas et qu'une ou plusieurs connexions restent bloquées, vous pouvez en dernier recours élargir l'accès du module à tous les sites web via le bouton ci-dessous - cela débloquera toutes les connexions Dolibarr configurées d'un coup. Cette permission plus large est cependant à éviter par défaut, pour limiter l'accès du module au strict nécessaire."
+  },
+  "DolibarrRequestPermission": {
+    "message": "Autoriser l'accès"
+  },
+  "DolibarrPermissionNoticeFallback": {
+    "message": "Si le bouton ci-dessus échoue, vous pouvez aussi activer cette permission manuellement :"
+  },
+  "DolibarrRequestPermissionGranted": {
+    "message": "Permission accordée"
+  },
+  "DolibarrRequestPermissionDenied": {
+    "message": "Permission refusée - vous pouvez réessayer ou suivre la procédure manuelle ci-dessous"
+  },
+  "DolibarrPermissionStep1": {
+    "message": "Ouvrez le menu « Outils » > « Modules complémentaires et thèmes » (ou l'icône puzzle dans la barre d'outils)."
+  },
+  "DolibarrPermissionStep2": {
+    "message": "Cliquez sur « Dolibarr connector » dans la liste des modules."
+  },
+  "DolibarrPermissionStep3": {
+    "message": "Ouvrez l'onglet « Permissions »."
+  },
+  "DolibarrPermissionStep4": {
+    "message": "Activez le bouton « Accéder à vos données pour tous les sites web »."
   }
 }

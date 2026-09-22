@@ -116,19 +116,27 @@ function injectDoliCss(tabId){
  * @param message
  */
 async function checkAndInjectDolibarrBanner(tab, message){
-    let hasConfig = await dolLib.checkConfig();
+    // A mailbox always talks to exactly one Dolibarr connection (see
+    // dolLib.resolveDolibarrConnection()'s doc comment). Unlike messagePopup/popup.js (one
+    // message per page load), this background script is a shared, non-persistent event page that
+    // can process onMessageDisplayed for two different tabs/accounts concurrently - so accountId
+    // is resolved once here and threaded explicitly through every call below instead of relying
+    // on dolLib's shared setActiveAccountContext(), which would race between concurrent calls.
+    let accountId = message.folder.accountId;
+
+    let hasConfig = await dolLib.checkConfig(accountId);
     if(!hasConfig){
         // Extension not connected to a Dolibarr at all : nothing to check against, so this isn't
         // the "no Dolibarr content for this mail" case the empty banner is about - stay silent.
         return;
     }
 
-    let crmConnectorEnabled = await dolLib.isCrmConnectorEnabled();
+    let crmConnectorEnabled = await dolLib.isCrmConnectorEnabled(accountId);
 
     let [trackidInfo, notesInfo, linkedDocsInfo] = await Promise.all([
-        resolveTrackidInfo(message),
-        crmConnectorEnabled ? resolveNotesInfo(tab, message) : Promise.resolve(null),
-        crmConnectorEnabled ? resolveLinkedDocsInfo(message) : Promise.resolve([])
+        resolveTrackidInfo(message, accountId),
+        crmConnectorEnabled ? resolveNotesInfo(tab, message, accountId) : Promise.resolve(null),
+        crmConnectorEnabled ? resolveLinkedDocsInfo(message, accountId) : Promise.resolve([])
     ]);
 
     injectDoliCss(tab.id);
@@ -175,9 +183,10 @@ const DOLI_BOX_STYLE = 'display:flex!important;visibility:visible!important;opac
  * one, or the configured Dolibarr URL isn't set. Independent of the CRM Client Connector module -
  * unlike resolveNotesInfo() below, this only needs the regular Dolibarr REST API.
  * @param message
+ * @param {string} accountId
  * @returns {Promise<{type:string, id:number, typeLabel:string, refLabel:string}|null>}
  */
-async function resolveTrackidInfo(message){
+async function resolveTrackidInfo(message, accountId){
     let ref = await dolLib.getDolibarrTrackIdFromMessage(message.id);
     if(!ref){
         return null;
@@ -189,7 +198,7 @@ async function resolveTrackidInfo(message){
         return null;
     }
 
-    let dolUrl = await dolLib.getDolibarrUrl();
+    let dolUrl = await dolLib.getDolibarrUrl(accountId);
     if(!dolLib.getDolibarrCardUrl(dolUrl, ref.type, ref.id)){
         return null;
     }
@@ -213,7 +222,7 @@ async function resolveTrackidInfo(message){
                 typeLabel: browser.i18n.getMessage(meta.labelKey),
                 refLabel: '#' + ref.id
             });
-        }, true);
+        }, true, accountId);
     });
 }
 
@@ -244,9 +253,10 @@ async function resolveAccountEmailForMessage(message){
  * if there's no EmailLink for this mail at all (nothing shared on it yet).
  * @param tab
  * @param message
+ * @param {string} accountId
  * @returns {Promise<Array|null>}
  */
-async function resolveNotesInfo(tab, message){
+async function resolveNotesInfo(tab, message, accountId){
     const accountEmail = await resolveAccountEmailForMessage(message);
     if(!accountEmail){
         return null;
@@ -261,8 +271,8 @@ async function resolveNotesInfo(tab, message){
             dolLib.callDolibarrApi('crmclientconnector/emailusermsgs', {sqlfilters: `(fk_email_link:=:${resData.id})`}, 'GET', {}, (resDataMsg)=>{
                 dolLib.updateBadgeMessageDisplayAction(tab, resDataMsg.length);
                 resolve(resDataMsg);
-            }, () => resolve(null));
-        }, () => resolve(null));
+            }, () => resolve(null), false, accountId);
+        }, () => resolve(null), false, accountId);
     });
 }
 
@@ -274,9 +284,10 @@ async function resolveNotesInfo(tab, message){
  * only called when it's enabled. Empty array if there's no EmailLink for this mail, or nothing
  * linked to it yet.
  * @param message
+ * @param {string} accountId
  * @returns {Promise<Array>}
  */
-async function resolveLinkedDocsInfo(message){
+async function resolveLinkedDocsInfo(message, accountId){
     const accountEmail = await resolveAccountEmailForMessage(message);
     if(!accountEmail){
         return [];
@@ -287,7 +298,7 @@ async function resolveLinkedDocsInfo(message){
     return new Promise((resolve) => {
         dolLib.callDolibarrApi('crmclientconnector/emaillinks/linkedobjects', {accountEmail: accountEmail, msgId: msgId}, 'GET', {}, (resData)=>{
             resolve(Array.isArray(resData) ? resData : []);
-        }, () => resolve([]));
+        }, () => resolve([]), false, accountId);
     });
 }
 

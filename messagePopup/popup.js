@@ -70,6 +70,14 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         message = dolibarrMsg;
     }
 
+    // A mailbox always talks to exactly one Dolibarr connection (see
+    // dolLib.resolveDolibarrConnection()'s doc comment) - set once here, before any config-
+    // dependent call below, so every dolLib.callDolibarrApi()/checkConfig()/etc. call in the rest
+    // of this page resolves to the right one without having to pass an accountId each time (this
+    // page is a fresh module instance per popup open, one message, so sharing this via module
+    // state is safe - unlike background.js, which threads accountId explicitly instead).
+    dolLib.setActiveAccountContext(message ? message.folder.accountId : null);
+
     let messageBody = message ? await dolLib.getMessageBody(message.id) : '';
 
 
