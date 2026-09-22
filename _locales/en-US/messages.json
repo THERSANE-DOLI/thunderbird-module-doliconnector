@@ -158,6 +158,9 @@
   "NoThirdpartyNoDocuments" :{
     "message": "No thirdparty identified : no document can be displayed"
   },
+  "NoThirdpartyOnDocument" :{
+    "message": "No thirdparty attached"
+  },
   "dolibarrQuotationTrustedSenders" :{
     "message": "Trusted senders for quotation headers"
   },
@@ -335,6 +338,15 @@
   "DolibarrTypeAgendaEvent": {
     "message": "Agenda event"
   },
+  "ThirdpartyTypeClient": {
+    "message": "Customer"
+  },
+  "ThirdpartyTypeSupplier": {
+    "message": "Supplier"
+  },
+  "UnrecognizedSender": {
+    "message": "No thirdparty identified"
+  },
   "TabInfo": {
     "message": "Info"
   },
@@ -374,8 +386,14 @@
   "SearchDocumentToLinkPlaceholder": {
     "message": "Search a reference..."
   },
+  "LinkSearchFilterSoc": {
+    "message": "Filter by thirdparty \"$1\""
+  },
   "SearchDocumentToLinkNoResults": {
     "message": "No results"
+  },
+  "SearchDocumentToLinkAlreadyLinked": {
+    "message": "This search matches a document already linked to this email"
   },
   "SearchDocumentToLinkError": {
     "message": "Search failed"
@@ -392,6 +410,9 @@
   "Actions": {
     "message": "Actions"
   },
+  "Refresh": {
+    "message": "Refresh"
+  },
   "LinkSuccess": {
     "message": "Document linked"
   },
@@ -406,5 +427,62 @@
   },
   "Type": {
     "message": "Type"
+  },
+  "DolibarrConnections": {
+    "message": "Dolibarr connections"
+  },
+  "AddDolibarrConnection": {
+    "message": "+ Add a connection"
+  },
+  "DolibarrConnectionName": {
+    "message": "Connection name"
+  },
+  "DolibarrConnectionSetDefault": {
+    "message": "Default connection"
+  },
+  "DolibarrConnectionRemove": {
+    "message": "Remove"
+  },
+  "DolibarrConnectionDefaultName": {
+    "message": "Dolibarr"
+  },
+  "DolibarrConnectionDefaultOption": {
+    "message": "(Default connection: $1)"
+  },
+  "DolibarrAccountMapping": {
+    "message": "Mailbox association"
+  },
+  "DolibarrAccountMappingDesc": {
+    "message": "A mailbox always uses a single Dolibarr connection at a time. Mailboxes not mapped here use the default connection."
+  },
+  "DolibarrUsageOptionsTitle": {
+    "message": "Usage & behaviour options"
+  },
+  "DolibarrPermissionNotice": {
+    "message": "When you save a Dolibarr connection, this add-on automatically requests permission to access its address (a permission scoped to that one site). If that isn't enough and one or more connections stay blocked, you can, as a last resort, widen the add-on's access to all websites using the button below - this unblocks every configured Dolibarr connection at once. This broader permission should otherwise be avoided, to keep the add-on's access to the strict minimum."
+  },
+  "DolibarrRequestPermission": {
+    "message": "Allow access"
+  },
+  "DolibarrPermissionNoticeFallback": {
+    "message": "If the button above fails, you can also enable this permission manually:"
+  },
+  "DolibarrRequestPermissionGranted": {
+    "message": "Permission granted"
+  },
+  "DolibarrRequestPermissionDenied": {
+    "message": "Permission denied - you can try again or follow the manual steps below"
+  },
+  "DolibarrPermissionStep1": {
+    "message": "Open the \"Tools\" menu > \"Add-ons and Themes\" (or the puzzle-piece icon in the toolbar)."
+  },
+  "DolibarrPermissionStep2": {
+    "message": "Click on \"Dolibarr connector\" in the add-ons list."
+  },
+  "DolibarrPermissionStep3": {
+    "message": "Open the \"Permissions\" tab."
+  },
+  "DolibarrPermissionStep4": {
+    "message": "Turn on the \"Access your data for all websites\" toggle."
   }
 }

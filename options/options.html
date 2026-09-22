@@ -10,64 +10,39 @@
 <body>
 <div class="option-page">
 
+	<div class="options-header">
+		<a id="label-for-link-to-modules-doc" href="https://www.thersane.fr/fr/content/58-nos-modules-dolibarr">__MSG_SeeModuleDoc__</a>
+	</div>
+
 	<form>
+
+		<h2 id="dolibarr-connections-title">__MSG_DolibarrConnections__</h2>
+		<div id="dolibarr-connections-list"></div>
+		<button id="add-dolibarr-connection" type="button" class="btn">__MSG_AddDolibarrConnection__</button>
+
+		<details class="dolibarr-connector-detail" id="dolibarr-account-mapping-details">
+			<summary id="dolibarr-account-mapping-title">__MSG_DolibarrAccountMapping__</summary>
+			<p id="dolibarr-account-mapping-desc" class="dolibarr-connector-desc"></p>
+			<table class="dolibarr-table" id="dolibarr-account-mapping-table"></table>
+		</details>
+
+		<div id="dolibarr-permission-notice" class="dolibarr-notice">
+			<p id="dolibarr-permission-notice-text"></p>
+			<button id="request-all-urls-permission" type="button" class="btn">__MSG_DolibarrRequestPermission__</button>
+			<p id="dolibarr-permission-notice-fallback-text" class="dolibarr-notice-fallback"></p>
+			<ol id="dolibarr-permission-notice-steps"></ol>
+		</div>
+
+		<hr/>
+
+		<h2 id="dolibarr-usage-options-title">__MSG_DolibarrUsageOptionsTitle__</h2>
+
 		<table class="dolibarr-table" >
-			<tr>
-				<td><label id="label-for-dolibarr-api-url" for="dolibarr-api-url">__MSG_dolibarrUrl__</label></td>
-				<td><input class="dol-input" type="text" id="dolibarr-api-url" name="dolibarr-api-url" /></td>
-			</tr>
-
-			<tr>
-				<td><label id="label-for-dolibarr-api-key" for="dolibarr-api-key">__MSG_dolibarrApiKey__</label></td>
-				<td><input class="dol-input" type="password" id="dolibarr-api-key" name="dolibarr-api-key" /></td>
-			</tr>
-			
-			<tr>
-				<td><label id="label-for-dolibarr-api-entity" for="dolibarr-api-entity">__MSG_dolibarrApiEntity__</label></td>
-				<td><input class="dol-input" type="number" step="1" min="1" id="dolibarr-api-entity" name="dolibarr-api-entity" /></td>
-			</tr>
-
-			<tr>
-				<td>
-					<label id="label-for-dolibarr-http-auth-enabled" for="dolibarr-http-auth-enabled">__MSG_dolibarrHttpAuthEnabled__</label>
-					<br/><small id="label-for-dolibarr-http-auth-enabled_desc" ></small>
-				</td>
-				<td>
-					<label class="dol-input-swith" >
-						<input type="checkbox" class="dol-input" id="dolibarr-http-auth-enabled" name="dolibarr-http-auth-enabled" />
-						<span class="dol-input-slider"></span>
-					</label>
-				</td>
-			</tr>
-
-			<tr id="dolibarr-http-auth-user-row" class="hidden-field">
-				<td><label id="label-for-dolibarr-http-auth-user" for="dolibarr-http-auth-user">__MSG_dolibarrHttpAuthUser__</label></td>
-				<td><input class="dol-input" type="text" id="dolibarr-http-auth-user" name="dolibarr-http-auth-user" autocomplete="off" /></td>
-			</tr>
-
-			<tr id="dolibarr-http-auth-password-row" class="hidden-field">
-				<td><label id="label-for-dolibarr-http-auth-password" for="dolibarr-http-auth-password">__MSG_dolibarrHttpAuthPassword__</label></td>
-				<td><input class="dol-input" type="password" id="dolibarr-http-auth-password" name="dolibarr-http-auth-password" autocomplete="off" /></td>
-			</tr>
-
 			<tr>
 				<td><label id="label-for-dolibarr-search-domain" for="dolibarr-search-domain">__MSG_dolibarrOptSearchDomain__</label></td>
 				<td>
 					<label class="dol-input-swith" >
 						<input type="checkbox" class="dol-input" id="dolibarr-search-domain" name="dolibarr-search-domain" />
-						<span class="dol-input-slider"></span>
-					</label>
-				</td>
-			</tr>
-
-			<tr>
-				<td>
-					<label id="label-for-dolibarr-crm-connector-enabled" for="dolibarr-crm-connector-enabled">__MSG_DolibarrCrmConnectorEnabled__</label>
-					<br/><small id="label-for-dolibarr-crm-connector-enabled_desc" ></small>
-				</td>
-				<td>
-					<label class="dol-input-swith" >
-						<input type="checkbox" class="dol-input" id="dolibarr-crm-connector-enabled" name="dolibarr-crm-connector-enabled" />
 						<span class="dol-input-slider"></span>
 					</label>
 				</td>
@@ -144,15 +119,10 @@
 
 	</details>
 
-	<p>
-		<a id="label-for-link-to-modules-doc" href="https://www.thersane.fr/fr/content/58-nos-modules-dolibarr">__MSG_SeeModuleDoc__</a>
-	</p>
-
 	<hr/>
-	<button id="save-dolibarr-options" type="submit">__MSG_Save__</button>
-	<div id="save-feed-back"></div>
+	<button id="save-dolibarr-options" type="submit" class="btn btn-primary">__MSG_Save__</button>
 	</form>
-	<script src="options.js"></script>
+	<script type="module" src="options.js"></script>
 
 </div>
 </body>

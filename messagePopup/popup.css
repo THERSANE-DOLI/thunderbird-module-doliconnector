@@ -12,7 +12,52 @@
 	font-size: 16px;
 	color: #3c4043;
 	font-weight: 300;
+	margin-bottom: 5px;
+	margin-top: 0px;
+}
 
+/* Type (Client/Fournisseur) and tags lines under the thirdparty's name - see
+   renderSocTypeAndTags() in popup.js. :not(.hidden-field), not plain ".soc-meta-line" : both
+   would be single-class selectors of equal specificity, and this one comes later in the cascade
+   (global.css's .hidden-field is @import'ed at the top of this file) - a plain selector's
+   "display:flex" would beat .hidden-field's "display:none" and keep the line visible even when
+   hidden-field is toggled on it (see #info-linked-list's own :not(.hidden-field) for the same
+   fix, and this exact bug on .discreet-notice--info before it was fixed the same way). */
+.soc-meta-line:not(.hidden-field) {
+	margin: 2px 0;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+}
+
+.soc-type-badge {
+	font-weight: 600 !important;
+	font-size: 11px;
+	padding: 2px 8px;
+	border-radius: 10px;
+	color: #fff !important;
+}
+
+.soc-type-badge--client {
+	background-color: #2563eb;
+}
+
+.soc-type-badge--supplier {
+	background-color: #0d9488;
+}
+
+/* Default fallback for a category with no color set in Dolibarr - overridden inline per-tag via
+   renderSocTypeAndTags()'s normalizeDolibarrColor() otherwise. */
+.soc-tag-pill {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1.4;
+	background-color: #e5e7eb;
+	color: #374151;
 }
 
 .hightlight {
@@ -174,45 +219,66 @@
 	flex: 1 1 auto;
 }
 
+/* :not(.hidden-field), not plain ".link-search-filter-soc" - same cascade-order pitfall as
+   .soc-meta-line/.discreet-notice--info elsewhere in this file : this label starts with
+   hidden-field in the markup (see popup.html), and a later same-specificity "display:flex" would
+   otherwise beat its "display:none". */
+.link-search-filter-soc:not(.hidden-field) {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 10px;
+	font-size: 12px;
+	color: #5a5b62;
+	cursor: pointer;
+}
+
 #link-detected-refs .alert {
 	margin-bottom: 8px;
 }
 
-/* LINK TAB SEARCH RESULTS TABLE */
+/* LINK TAB SEARCH RESULTS - card list (see buildSearchResultCard() in popup.js), same look as
+   the "already linked" cards below it in the DOM (buildLinkedDocCard()) other than the action. */
 
-#link-search-results .dolibarr-table {
-	border-collapse: collapse;
+#link-search-results {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
 }
 
-#link-search-results .dolibarr-table th {
-	text-align: left;
-	padding: 6px 8px;
-	border-bottom: 1px solid #d0d8e0;
+#link-search-results .linked-doc-card {
+	/* The base 32px right padding reserves room for the "already linked" cards' absolutely
+	   positioned ⋯ corner button - these cards don't use that, their Link button is in normal
+	   flow (see .linked-doc-card__fields-row below), so it'd otherwise just be wasted space. */
+	padding-right: 10px;
 }
 
-#link-search-results .dolibarr-table td {
-	padding: 7px 8px;
-	border-bottom: 1px solid #edf0f3;
-	vertical-align: middle;
+/* Fields + Link button on the same row (see buildSearchResultCard()) rather than the Link button
+   sitting on its own row below, like the "already linked" cards' ⋯ dropdown does. */
+.linked-doc-card__fields-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-top: 6px;
 }
 
-#link-search-results .dolibarr-table td:last-child,
-#link-search-results .dolibarr-table th:last-child {
-	width: 1%;
-	white-space: nowrap;
-	text-align: right;
+.linked-doc-card__fields-row .linked-doc-card__fields {
+	margin-top: 0;
 }
 
-#link-search-results .btn-tiny-action {
-	border: 1px solid #94acc2;
-	border-radius: 4px;
-	padding: 3px 10px;
-	font-size: 12px;
+.linked-doc-card__fields-row .linked-doc-card__actions {
+	/* Unlike the "already linked" cards' ⋯ dropdown trigger (a small fixed corner overlay), the
+	   Link button here is a normal in-flow button, sharing the row with .linked-doc-card__fields. */
+	position: static;
+	flex-shrink: 0;
 }
 
-#link-search-results .btn-tiny-action:hover {
-	background-color: #94acc2;
-	color: #ffffff;
+/* Skeleton state (see buildSearchResultSkeletonCard()) : its placeholder "ref" bar needs to grow
+   to fill the row like the real .linked-doc-card__ref link does, unlike the fixed-width "type"
+   bar next to it. */
+.linked-doc-card__skeleton-ref {
+	flex: 1 1 auto;
 }
 
 /* DETECTED REF BLOCK (document found via email headers) */
@@ -300,6 +366,35 @@
 	position: absolute;
 	top: 6px;
 	right: 8px;
+}
+
+/* Document's own tags footer (see appendDocCardTags() in popup.js) - same .soc-tag-pill look as
+   the thirdparty's tags in the header, reused here for a consistent "tag" visual language. */
+.linked-doc-card__tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 8px;
+}
+
+/* This document's own thirdparty name (see appendDocCardThirdparty()), shown only when it isn't
+   the one already prominent in the popup header - prepended as the card's own first line, bold,
+   since which company a result belongs to matters as much as its ref (especially for an
+   unfiltered "Lier" tab search, which can span every thirdparty at once). */
+.linked-doc-card__thirdparty {
+	margin-bottom: 4px;
+	font-size: 13px;
+	font-weight: bold;
+	color: #3c4043;
+}
+
+/* "No thirdparty at all" variant (see appendDocCardThirdparty()) : still the first line, but
+   italic/muted rather than solid-dark, since it's flagging an absence rather than naming a
+   specific (possibly unexpected) company. */
+.linked-doc-card__thirdparty--none {
+	font-weight: normal;
+	font-style: italic;
+	color: #94a0ab;
 }
 
 .text-center {
@@ -460,8 +555,13 @@
 
 /* "Info" variant : same discreet size/weight as .discreet-notice, but blue-toned like .alert-info
    instead of the plain grey default - for a notice that's informative rather than a disabled
-   feature (e.g. "an event was detected in this mail"), a plain grey read as too easy to miss. */
-.discreet-notice--info {
+   feature (e.g. "an event was detected in this mail"), a plain grey read as too easy to miss.
+   :not(.hidden-field), not plain ".discreet-notice--info" : both are single-class selectors of
+   equal specificity, and this one comes later in the cascade (global.css's .hidden-field is
+   @import'ed at the top of this file) - a plain selector's "display:flex" would beat
+   .hidden-field's "display:none" and keep #info-agenda-invitation visible even when hidden-field
+   is toggled on it (see #info-linked-list's own :not(.hidden-field) above for the same fix). */
+.discreet-notice--info:not(.hidden-field) {
 	color: #0c5460;
 	background-color: #eaf6f8;
 	border-left: 3px solid #9fd8e3;

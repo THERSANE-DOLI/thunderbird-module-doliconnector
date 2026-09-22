@@ -6,6 +6,16 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
     const POPUP_TABS = ['info', 'documents', 'link', 'agenda'];
 
+    // Set by the "Rafraîchir" action (see setSocInfos()'s Actions dropdown), which reloads this
+    // page with ?noCache=1 rather than a plain reload - a plain reload alone wouldn't actually
+    // guarantee fresh data, since the cache:true calls below use fetch()'s "force-cache" mode,
+    // which is unaffected by navigation/reload. Consumed immediately (both here and by stripping
+    // it from the URL) so it only affects this one load, not every future reload of this popup.
+    if(new URLSearchParams(location.search).get('noCache') === '1'){
+        dolLib.setForceFreshLoad(true);
+        history.replaceState(null, '', location.pathname);
+    }
+
     // Workaround for a Linux/GTK bug: when this UI is shown in a detached "popup" type
     // window (see browser.windows.create in background.js), pressing Ctrl or Alt on its
     // own is interpreted by the window manager as a request to close the window, which
@@ -16,6 +26,20 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             event.preventDefault();
         }
     });
+
+    /**
+     * URL of this same popup page, with ?noCache=1 added - used by the Actions dropdown's
+     * "Rafraîchir" item (no click handler needed : buildDropdownMenu()'s items are plain links,
+     * see its own doc comment - navigating to this URL, with no target so it replaces the popup
+     * itself rather than opening a new tab, reloads the page, and popup.js's own top-of-file
+     * check turns that querystring into dolLib.setForceFreshLoad(true) for this one load).
+     * @returns {URL}
+     */
+    function buildRefreshUrl(){
+        let url = new URL(location.href);
+        url.searchParams.set('noCache', '1');
+        return url;
+    }
 
     async function getEmailAccountFromBackground(messageId) {
         const response = await browser.runtime.sendMessage({
@@ -46,6 +70,14 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         message = dolibarrMsg;
     }
 
+    // A mailbox always talks to exactly one Dolibarr connection (see
+    // dolLib.resolveDolibarrConnection()'s doc comment) - set once here, before any config-
+    // dependent call below, so every dolLib.callDolibarrApi()/checkConfig()/etc. call in the rest
+    // of this page resolves to the right one without having to pass an accountId each time (this
+    // page is a fresh module instance per popup open, one message, so sharing this via module
+    // state is safe - unlike background.js, which threads accountId explicitly instead).
+    dolLib.setActiveAccountContext(message ? message.folder.accountId : null);
+
     let messageBody = message ? await dolLib.getMessageBody(message.id) : '';
 
 
@@ -63,10 +95,11 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     let authorEmail = message ? dolLib.extractEmailAddressFromString(message.author)[0] : '';
 
     // Identity of the account this mail was received on, and its Message-Id : sent along when
-    // creating a devis/commande from this popup (see setSocInfos()'s new-quotation-link), so the
-    // crmclientconnector module's PROPAL_CREATE/ORDER_CREATE trigger can auto-link the newly
-    // created object back to this mail. Same values/convention already used for notes (see
-    // initNotesForMessage() below : accountEmail via getEmailAccountFromBackground(), msgId via
+    // creating a devis/commande/ticket from this popup's "Actions" dropdown (see setSocInfos()'s
+    // newPropalUrl/newOrderUrl/newTicketUrl), so the crmclientconnector module's
+    // PROPAL_CREATE/ORDER_CREATE/TICKET_CREATE trigger can auto-link the newly created object
+    // back to this mail. Same values/convention already used for notes (see initNotesForMessage()
+    // below : accountEmail via getEmailAccountFromBackground(), msgId via
     // message.headerMessageId).
     let ownerAccountEmail = message ? await getEmailAccountFromBackground(message.id) : null;
     let ownerMsgId = message ? message.headerMessageId : null;
@@ -109,10 +142,6 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     // ref is known, so its row lights up the same way a ref mentioned in the
     // message body/subject already does.
     let detectedRefSearchText = '';
-    // Populated once resolveSocFromId() (called when the trackid's referenced
-    // object carries a thirdparty id) fetches that thirdparty's name, so the
-    // detected-ref card can show it alongside the document reference.
-    let detectedRefThirdpartyName = null;
 
     //Filter on propal objects status
     let propalDisplayStatus = await dolLib.filterPropalStatus();
@@ -123,6 +152,13 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     // notes, the "Lier" tab, the detected-ref card's Link button, linked documents on the Info
     // tab, ref auto-detection) - see isCrmConnectorEnabled()'s doc comment.
     let crmConnectorEnabled = await dolLib.isCrmConnectorEnabled();
+
+    // The thirdparty currently shown in the popup header (see setSocInfos()), so document cards
+    // (buildDocCardBase() and friends) can tell whether a document's own thirdparty is the same
+    // one already prominent in the header - id 0 means none was found. Declared this early for
+    // the same reason as the "Lier" tab state right below : some of its readers can run before
+    // the script would otherwise reach setSocInfos()'s own declaration site.
+    let currentSoc = {id: 0, name: ''};
 
     // "Lier" tab state (see its own section below for the functions using these) - declared
     // here rather than down there because updateAgendaEventLinkState() reads
@@ -183,6 +219,9 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
         if(detectedRef){
             LOG('trackid detected, fetching referenced object', detectedRefMeta.api + '/' + detectedRef.id);
+            // cache:true - this same endpoint may also have just been fetched by background.js's
+            // own trackid resolution for the mail-body banner (checkAndInjectDolibarrBanner()),
+            // so this can potentially be served from the browser's HTTP cache.
             dolLib.callDolibarrApi(detectedRefMeta.api + '/' + detectedRef.id, {}, 'GET', {}, (objData)=>{
                 LOG('referenced object fetched OK', objData);
                 detectedRefObjectData = objData;
@@ -205,7 +244,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                 detectedRefObjectFetchDone = true;
                 maybeRenderDetectedRefBlock();
                 searchCompanyByEmail();
-            });
+            }, true);
 
             if(!DETECTED_REF_TABLE_BACKED_TYPES.includes(detectedRef.type)){
                 // No table will ever be checked for this type, so we already
@@ -226,6 +265,9 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
      * @param socId
      */
     function resolveSocFromId(socId){
+        // cache:true - renderSocTypeAndTags() fetches this exact same thirdparties/{id} shortly
+        // after (to read client/fournisseur/codes), so this lets that second call be served from
+        // the browser's own HTTP cache instead of hitting the Dolibarr API again.
         dolLib.callDolibarrApi('thirdparties/' + socId, {}, 'GET', {}, (socData)=>{
             LOG('thirdparty resolved from trackid', socData);
             setSocInfos({
@@ -233,7 +275,6 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                 name: socData.name
             });
 
-            detectedRefThirdpartyName = socData.name || null;
             maybeRenderDetectedRefBlock();
 
             loadDocumentsInfos({
@@ -249,7 +290,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             loadDocumentsInfos({
                 socId : socId
             });
-        });
+        }, true);
     }
 
     /**
@@ -418,17 +459,27 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
         }, socData);
 
+        // Read by buildDocCardBase() (via appendDocCardThirdparty()) to tell whether a document
+        // card's own thirdparty is the one already shown in this header - id stays 0 in the "not
+        // found" branch below, which is exactly the "always show it" case that helper wants.
+        currentSoc = {id: parseInt(soc.id) || 0, name: soc.name};
+
         // Add soc actions dropdown
         let socActions = document.getElementById("soc-actions");
         let titleDiv =  document.getElementById("popup-header");
 
+        // Reset here rather than only in the "not found" branch below, so a stale type/tags line
+        // or "unrecognized sender" badge from a previous setSocInfos() call (this popup can call
+        // it more than once as the thirdparty search progresses through its fallbacks) never
+        // lingers while the new one is being fetched, see renderSocTypeAndTags().
+        document.getElementById('soc-type-line')?.classList.add('hidden-field');
+        document.getElementById('soc-tags-line')?.classList.add('hidden-field');
+        document.getElementById('soc-unknown-badge')?.classList.add('hidden-field');
+
         // console.log(message);
 
         if(soc.id == 0 || soc.id == '' || soc.id == null){
-            displayTpl("soc-not-found-tpl");
-
-            let newSocieteLink= document.getElementById("new-soc-link");
-            let newContactLink= document.getElementById("new-contact-link");
+            document.getElementById('soc-unknown-badge')?.classList.remove('hidden-field');
 
             let quotationData = quotationActive ? (quotation.data || {}) : {};
 
@@ -474,7 +525,6 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             if(quotationData.vat_number){
                 newThirdURL.searchParams.set('tva_intra', quotationData.vat_number);
             }
-            newSocieteLink.href = newThirdURL;
 
             titleDiv.textContent =  soc.name;
 
@@ -486,7 +536,17 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             newContactURL.searchParams.set('phone_pro',  soc.phone_pro);
             newContactURL.searchParams.set('phone_mobile',  soc.phone_mobile);
             newContactURL.searchParams.set('phone_perso',  soc.phone_perso);
-            newContactLink.href = newContactURL;
+
+            socActions.innerHTML = '';
+            socActions.appendChild(dolLib.buildDropdownMenu({
+                triggerLabel: chrome.i18n.getMessage('Actions'),
+                items: [
+                    {label: chrome.i18n.getMessage('CreateNewCompany'), href: newThirdURL, target: '_blank', icon: 'icon-building-filled'},
+                    {label: chrome.i18n.getMessage('CreateNewContact'), href: newContactURL, target: '_blank', icon: 'icon-user-plus'},
+                    {label: chrome.i18n.getMessage('Refresh'), href: buildRefreshUrl(), iconChar: '⟳', separatorBefore: true}
+                ]
+            }));
+            displayTpl("soc-actions");
 
             LOG('no thirdparty found for this contact/email');
             // No thirdparty found means loadDocumentsInfos() never runs, so
@@ -506,14 +566,15 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         displayTpl("soc-actions");
 
         titleDiv.textContent =  soc.name;
+        renderSocTypeAndTags(soc.id);
 
         let socCardUrl = new URL(confDolibarUrl + "societe/card.php");
         socCardUrl.searchParams.set('socid', soc.id);
 
         // Créer un devis / une commande / un ticket : accountEmail+msgId let the
         // crmclientconnector PROPAL_CREATE/ORDER_CREATE/TICKET_CREATE trigger auto-link the
-        // newly created object back to this mail (see initNotesForMessage()'s comment above and
-        // new-quotation-link below for the same convention).
+        // newly created object back to this mail (see initNotesForMessage()'s comment above for
+        // the same convention).
         let newPropalUrl = new URL(confDolibarUrl + "comm/propal/card.php");
         newPropalUrl.searchParams.set('action', "create");
         newPropalUrl.searchParams.set('socid', soc.id);
@@ -536,25 +597,13 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         socActions.appendChild(dolLib.buildDropdownMenu({
             triggerLabel: chrome.i18n.getMessage('Actions'),
             items: [
-                {label: chrome.i18n.getMessage('FicheDolibarr'), href: socCardUrl, target: '_blank'},
-                {label: chrome.i18n.getMessage('CreateNewQuotation'), href: newPropalUrl, target: '_blank'},
-                {label: chrome.i18n.getMessage('CreateNewOrder'), href: newOrderUrl, target: '_blank'},
-                {label: chrome.i18n.getMessage('CreateNewTicket'), href: newTicketUrl, target: '_blank'}
+                {label: chrome.i18n.getMessage('FicheDolibarr'), href: socCardUrl, target: '_blank', icon: 'icon-doc-text'},
+                {label: chrome.i18n.getMessage('CreateNewQuotation'), href: newPropalUrl, target: '_blank', icon: 'icon-plus'},
+                {label: chrome.i18n.getMessage('CreateNewOrder'), href: newOrderUrl, target: '_blank', icon: 'icon-plus'},
+                {label: chrome.i18n.getMessage('CreateNewTicket'), href: newTicketUrl, target: '_blank', icon: 'icon-plus'},
+                {label: chrome.i18n.getMessage('Refresh'), href: buildRefreshUrl(), iconChar: '⟳', separatorBefore: true}
             ]
         }));
-
-        if(quotationActive){
-            displayTpl("new-quotation-link");
-            let newQuotationLink = document.getElementById("new-quotation-link");
-            let newQuotationURL = new URL(confDolibarUrl + "comm/propal/card.php");
-            newQuotationURL.searchParams.set('action', "create");
-            newQuotationURL.searchParams.set('socid', soc.id);
-            if(ownerAccountEmail && ownerMsgId){
-                newQuotationURL.searchParams.set('accountEmail', ownerAccountEmail);
-                newQuotationURL.searchParams.set('msgId', ownerMsgId);
-            }
-            newQuotationLink.href = newQuotationURL;
-        }
 
         if(!crmConnectorEnabled){
             // Without the crmClientConnector module, the Info tab has nothing useful left to
@@ -564,6 +613,127 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             // actionable (create company/contact).
             switchPopupTab('documents');
         }
+    }
+
+    /**
+     * Below the thirdparty's name in the popup header : its type(s) - Client/Fournisseur, a
+     * thirdparty can be both at once (Dolibarr's client and fournisseur flags are independent),
+     * each with its own reference code (code_client/code_fournisseur) - and below that, its tags
+     * (Dolibarr categories : customer ones if it's a client, supplier ones if it's a supplier,
+     * both when it's both), each rendered as a colored pill using the category's own color.
+     * Does its own thirdparties/{id} fetch rather than relying on callers to have this data
+     * already (some do, e.g. resolveSocFromId(), some don't, e.g. the contact-based
+     * searchCompanyByEmail()) - one extra lightweight GET, in exchange for this always working
+     * regardless of which search path resolved the thirdparty.
+     * @param {number} socId
+     */
+    function renderSocTypeAndTags(socId){
+        let typeLine = document.getElementById('soc-type-line');
+        let tagsLine = document.getElementById('soc-tags-line');
+        if(!typeLine || !tagsLine){
+            return;
+        }
+
+        // cache:true - may be served from the browser's HTTP cache if resolveSocFromId() (or an
+        // earlier call to this same function) already fetched this exact URL.
+        dolLib.callDolibarrApi('thirdparties/' + socId, {}, 'GET', {}, (socData) => {
+            let isClient = parseInt(socData.client) >= 1;
+            let isSupplier = parseInt(socData.fournisseur) >= 1;
+
+            typeLine.innerHTML = '';
+            let addTypeBadge = (labelKey, code, cssClass) => {
+                let badge = document.createElement('span');
+                badge.classList.add('badge', 'soc-type-badge', cssClass);
+                badge.textContent = chrome.i18n.getMessage(labelKey) + (code ? ' · ' + code : '');
+                typeLine.appendChild(badge);
+            };
+            if(isClient){
+                addTypeBadge('ThirdpartyTypeClient', socData.code_client, 'soc-type-badge--client');
+            }
+            if(isSupplier){
+                addTypeBadge('ThirdpartyTypeSupplier', socData.code_fournisseur, 'soc-type-badge--supplier');
+            }
+            typeLine.classList.toggle('hidden-field', !isClient && !isSupplier);
+
+            let categoryRequests = [];
+            if(isClient){
+                categoryRequests.push(new Promise((resolve) => {
+                    dolLib.callDolibarrApi('thirdparties/' + socId + '/categories', {}, 'GET', {}, (cats) => resolve(Array.isArray(cats) ? cats : []), () => resolve([]), true);
+                }));
+            }
+            if(isSupplier){
+                categoryRequests.push(new Promise((resolve) => {
+                    dolLib.callDolibarrApi('thirdparties/' + socId + '/supplier_categories', {}, 'GET', {}, (cats) => resolve(Array.isArray(cats) ? cats : []), () => resolve([]), true);
+                }));
+            }
+
+            Promise.all(categoryRequests).then((results) => {
+                let allTags = [];
+                let seenIds = new Set();
+                results.flat().forEach((cat) => {
+                    if(!seenIds.has(cat.id)){
+                        seenIds.add(cat.id);
+                        allTags.push(cat);
+                    }
+                });
+
+                tagsLine.innerHTML = '';
+                allTags.forEach((cat) => {
+                    let pill = document.createElement('span');
+                    pill.classList.add('soc-tag-pill');
+                    pill.textContent = cat.label;
+                    let color = normalizeDolibarrColor(cat.color);
+                    if(color){
+                        pill.style.backgroundColor = color;
+                        pill.style.color = isColorLight(color) ? '#000' : '#fff';
+                    }
+                    tagsLine.appendChild(pill);
+                });
+                tagsLine.classList.toggle('hidden-field', allTags.length === 0);
+            });
+        }, (errorMsg) => {
+            LOG('renderSocTypeAndTags: failed to fetch thirdparty details for id ' + socId, errorMsg);
+        }, true);
+    }
+
+    /**
+     * Dolibarr stores a category's color as either "RRGGBB"/"#RRGGBB" hex or a comma-separated
+     * "r,g,b" triplet (see categorie.class.php's colorIsLight(), which handles the same two
+     * formats) - normalizes either into a CSS color string, or null when there's no color set.
+     * @param {?string} color
+     * @returns {?string}
+     */
+    function normalizeDolibarrColor(color){
+        if(!color){
+            return null;
+        }
+        if(color.includes(',')){
+            let parts = color.split(',').map((c) => parseInt(c.trim(), 10));
+            if(parts.length >= 3 && parts.every((n) => !isNaN(n))){
+                return 'rgb('+parts[0]+', '+parts[1]+', '+parts[2]+')';
+            }
+            return null;
+        }
+        return color.startsWith('#') ? color : '#'+color;
+    }
+
+    /**
+     * Perceived-brightness check (same formula as Dolibarr's own colorIsLight()) to pick a
+     * readable text color for a background of this color.
+     * @param {string} color a normalizeDolibarrColor() result
+     * @returns {boolean}
+     */
+    function isColorLight(color){
+        let r, g, b;
+        if(color.startsWith('rgb')){
+            [r, g, b] = color.match(/\d+/g).map(Number);
+        }else{
+            let hex = color.replace('#', '');
+            r = parseInt(hex.substring(0, 2), 16);
+            g = parseInt(hex.substring(2, 4), 16);
+            b = parseInt(hex.substring(4, 6), 16);
+        }
+        return ((r*299 + g*587 + b*114) / 1000) > 128;
     }
 
     /**
@@ -586,33 +756,32 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     }
 
     /**
-     * Renders the "detected reference" fallback block, but only once we both
-     * know it needs to be shown (the referenced object didn't show up in its
-     * matching table - too old, or a type with no table at all) and have the
-     * API response for the referenced object (for its ref name). Re-runs
-     * (idempotently) once the thirdparty name resolves too, see
+     * Renders the "detected reference" fallback block above the tabs, but only once we both know
+     * it needs to be shown (the referenced object didn't show up in its matching table - too old,
+     * or a type with no table at all) and have the API response for the referenced object (for
+     * its ref name). Re-runs (idempotently) once the thirdparty name resolves too, see
      * resolveSocFromId(), so the card can be completed in place.
+     *
+     * Also refreshes the Info tab's own linked-documents section every time this is called
+     * (regardless of whether the above-tabs block itself ends up shown), since
+     * updateInfoTabLinkedDocumentsSection() reacts to detectedRef/detectedRefObjectData too - see
+     * its own doc comment. This runs on every detectedRef, table-backed or not, matched-in-table
+     * or not, because the trackid object fetch (see the caller of this function) always happens
+     * regardless of those - unlike the above-tabs block, which resolveDetectedRefTableCheck()
+     * only turns on for the "not matched in table" case.
      */
     function maybeRenderDetectedRefBlock(){
-        if(!detectedRefShouldShowBlock || !detectedRefObjectFetchDone){
-            LOG('maybeRenderDetectedRefBlock: not ready yet', { detectedRefShouldShowBlock, detectedRefObjectFetchDone });
-            return;
+        if(detectedRefShouldShowBlock && detectedRefObjectFetchDone){
+            LOG('rendering detected ref block', detectedRef, detectedRefObjectData);
+            let block = document.getElementById("dolibarr-detected-ref");
+            let cardContainer = document.getElementById("dolibarr-detected-ref-card");
+            if(block && cardContainer){
+                cardContainer.innerHTML = '';
+                cardContainer.appendChild(buildDetectedRefCard());
+                block.classList.remove('hidden-field');
+            }
         }
 
-        LOG('rendering detected ref block', detectedRef, detectedRefObjectData);
-        let block = document.getElementById("dolibarr-detected-ref");
-        let cardContainer = document.getElementById("dolibarr-detected-ref-card");
-        if(!block || !cardContainer){
-            return;
-        }
-
-        cardContainer.innerHTML = '';
-        cardContainer.appendChild(buildDetectedRefCard());
-
-        block.classList.remove('hidden-field');
-
-        // This card's visibility feeds into the Info tab's own empty state, see
-        // updateInfoTabLinkedDocumentsSection().
         updateInfoTabLinkedDocumentsSection();
     }
 
@@ -670,8 +839,6 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             field.append(value);
             fields.appendChild(field);
         };
-
-        addField(chrome.i18n.getMessage('Thirdparty'), detectedRefThirdpartyName);
 
         if(['sord', 'sinv'].includes(detectedRef.type) && data.ref_supplier){
             addField(chrome.i18n.getMessage('RefSupplier'), data.ref_supplier);
@@ -731,6 +898,11 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         }
 
         card.appendChild(actions);
+
+        // Bold first line naming this document's own thirdparty, but only when it isn't already
+        // the one shown in the popup header - same rule as every other document card in this
+        // popup, see appendDocCardThirdparty()'s own doc comment.
+        appendDocCardThirdparty(card, {socid: parseInt(data.socid || data.fk_soc) || null});
 
         return card;
     }
@@ -812,6 +984,51 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
 
     /**
+     * Discreet "⋯" actions menu appended to the end of each Documents-tab table row (see
+     * setQuotationsInfos()/setOrdersInfos()/setInvoicesInfos()/setSupplierordersInfos() below) :
+     * "Voir fiche" always, "Lier" only when this document isn't already linked to this mail (and
+     * the crmClientConnector module/accountEmail+msgId needed to link it are available) - same
+     * Link semantics as the "Lier" tab's own search results, see buildSearchResultCard().
+     * @param {string} type short type code (see DOLIBARR_OBJECT_TYPES)
+     * @param {number} id
+     * @returns {{node: HTMLElement, class: string}} a jsonToTable() cell value
+     */
+    function buildDocumentRowActions(type, id){
+        let items = [
+            {
+                label: chrome.i18n.getMessage('FicheDolibarr'),
+                href: dolLib.getDolibarrCardUrl(confDolibarUrl, type, id),
+                target: '_blank'
+            }
+        ];
+
+        if(crmConnectorEnabled && ownerAccountEmail && ownerMsgId && !linkedDocumentKeys.has(type+':'+id)){
+            items.push({
+                label: chrome.i18n.getMessage('Link'),
+                onClick: () => {
+                    linkDocument(type, id, (success, errorMsg) => {
+                        if(success || (errorMsg && errorMsg.indexOf('Duplicate entry') !== -1)){
+                            dolLib.showToast(chrome.i18n.getMessage('LinkSuccess'), 'success');
+                        }else{
+                            dolLib.showToast(chrome.i18n.getMessage('LinkError')+' ('+errorMsg+')', 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        return {
+            node: dolLib.buildDropdownMenu({
+                triggerLabel: '⋯',
+                triggerTitle: chrome.i18n.getMessage('Actions'),
+                discreet: true,
+                items: items
+            }),
+            class: 'text-center'
+        };
+    }
+
+    /**
      * display propal history
      * @param object confData
      */
@@ -851,7 +1068,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                     'refClient': '',
                     'date': '',
                     'total_ht': '',
-                    'status': ''
+                    'status': '',
+                    'actions': buildDocumentRowActions('pro', propal.id)
                 }
 
                 item.ref = {
@@ -933,7 +1151,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                     'refClient': chrome.i18n.getMessage('RefClient'),
                     'date': chrome.i18n.getMessage('Date'),
                     'total_ht': chrome.i18n.getMessage('Total'),
-                    'status': chrome.i18n.getMessage('Status')
+                    'status': chrome.i18n.getMessage('Status'),
+                    'actions': ''
                 },
                 tableItems,
                 document.getElementById("data-from-dolibarr"),
@@ -983,7 +1202,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                     'refClient': '',
                     'date': '',
                     'total_ht': '',
-                    'status': ''
+                    'status': '',
+                    'actions': buildDocumentRowActions('ord', order.id)
                 }
 
                 item.ref = {
@@ -1059,7 +1279,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                     'refClient': chrome.i18n.getMessage('RefClient'),
                     'date': chrome.i18n.getMessage('Date'),
                     'total_ht': chrome.i18n.getMessage('Total'),
-                    'status': chrome.i18n.getMessage('Status')
+                    'status': chrome.i18n.getMessage('Status'),
+                    'actions': ''
                 },
                 tableItems,
                 document.getElementById("data-from-dolibarr"),
@@ -1109,7 +1330,8 @@ function setInvoicesInfos(confData){
                 'refClient': '',
                 'date': '',
                 'total_ht': '',
-                'status': ''
+                'status': '',
+                'actions': buildDocumentRowActions('inv', invoice.id)
             }
 
             item.ref = {
@@ -1185,7 +1407,8 @@ function setInvoicesInfos(confData){
                 'refClient': chrome.i18n.getMessage('RefClient'),
                 'date': chrome.i18n.getMessage('Date'),
                 'total_ht': chrome.i18n.getMessage('Total'),
-                'status': chrome.i18n.getMessage('Status')
+                'status': chrome.i18n.getMessage('Status'),
+                'actions': ''
             },
             tableItems,
             document.getElementById("data-from-dolibarr"),
@@ -1234,7 +1457,8 @@ function setSupplierordersInfos(confData){
                 'refFourn': '',//todo translate
                 'date': '',
                 'total_ht': '',
-                'status': ''
+                'status': '',
+                'actions': buildDocumentRowActions('sord', supplierorder.id)
             }
 
             item.ref = {
@@ -1327,7 +1551,8 @@ function setSupplierordersInfos(confData){
                 'refClient': chrome.i18n.getMessage('RefClient'),
                 'date': chrome.i18n.getMessage('Date'),
                 'total_ht': chrome.i18n.getMessage('Total'),
-                'status': chrome.i18n.getMessage('Status')
+                'status': chrome.i18n.getMessage('Status'),
+                'actions': ''
             },
             tableItems,
             document.getElementById("data-from-dolibarr")
@@ -1680,7 +1905,17 @@ function initLinkTab(){
 
     let searchInput = document.getElementById('link-search-input');
     let typeSelect = document.getElementById('link-search-type');
+    let filterSocLabel = document.getElementById('link-search-filter-soc-label');
+    let filterSocCheckbox = document.getElementById('link-search-filter-soc');
     let searchTimer = null;
+
+    // Only offered when the popup actually knows a thirdparty for this mail - nothing to filter
+    // by otherwise (see searchDocumentsToLink()'s own use of currentSoc/this checkbox).
+    if(currentSoc.id > 0){
+        document.getElementById('link-search-filter-soc-text').textContent =
+            chrome.i18n.getMessage('LinkSearchFilterSoc', [currentSoc.name]);
+        filterSocLabel.classList.remove('hidden-field');
+    }
 
     searchInput.addEventListener('input', () => {
         clearTimeout(searchTimer);
@@ -1688,6 +1923,7 @@ function initLinkTab(){
     });
 
     typeSelect.addEventListener('change', () => searchDocumentsToLink(searchInput.value.trim()));
+    filterSocCheckbox.addEventListener('change', () => searchDocumentsToLink(searchInput.value.trim()));
 }
 
 function populateLinkSearchTypeSelect(){
@@ -1768,10 +2004,23 @@ function detectedRefCardVisible(){
 
 /**
  * Mirrors the "Lier" tab's linked-documents list (lastLinkedDocumentsList, refreshed by
- * renderLinkedDocuments()) into the Info tab : as cards when there are any, or an empty state
- * with a CTA to the Link tab's search field when there's nothing linked *and* nothing already
- * shown by the detected-ref card either. Also called from maybeRenderDetectedRefBlock(), since
- * that card's own visibility affects this section's empty state.
+ * renderLinkedDocuments()) into the Info tab : as cards when there are any, a one-click Link
+ * card for the mail's detected trackid ref when there's nothing linked yet but we do know a
+ * candidate document (see detectedRefLinkable below), or - only when neither applies - the empty
+ * state with a CTA to the Link tab's search field.
+ *
+ * The detected-ref card above the tabs (buildDetectedRefCard(), via maybeRenderDetectedRefBlock())
+ * only appears for a trackid whose referenced object didn't show up in its matching Documents-tab
+ * table (see resolveDetectedRefTableCheck()) - for one that did (e.g. a recent quotation the
+ * trackid points to), nothing above the tabs ever acknowledged it, and this section fell back to
+ * the plain "no linked document" empty state despite already knowing exactly which document the
+ * mail is about. detectedRefLinkable below covers that gap : whenever detectedRef exists and
+ * isn't linked yet, a Link card is shown regardless of whether it's also visible in the Documents
+ * tab or in the above-tabs block. When the above-tabs block IS shown for it, this section instead
+ * stays hidden entirely to avoid showing the same document's Link button twice.
+ *
+ * Called from maybeRenderDetectedRefBlock() (detectedRef/detectedRefObjectData changed) and from
+ * renderLinkedDocuments() (lastLinkedDocumentsList changed).
  */
 function updateInfoTabLinkedDocumentsSection(){
     let container = document.getElementById('info-linked-documents-container');
@@ -1799,21 +2048,51 @@ function updateInfoTabLinkedDocumentsSection(){
     container.classList.remove('hidden-field');
 
     listEl.innerHTML = '';
-    lastLinkedDocumentsList.forEach((item) => listEl.appendChild(buildLinkedDocCard(item)));
 
-    listEl.classList.toggle('hidden-field', !hasLinked);
-    emptyEl.classList.toggle('hidden-field', hasLinked);
+    if(hasLinked){
+        lastLinkedDocumentsList.forEach((item) => listEl.appendChild(buildLinkedDocCard(item)));
+        listEl.classList.remove('hidden-field');
+        emptyEl.classList.add('hidden-field');
+        return;
+    }
+
+    let detectedRefLinkable = detectedRef && detectedRefMeta && linkedDocumentsFetched
+        && !linkedDocumentKeys.has(detectedRef.type+':'+detectedRef.id);
+
+    if(detectedRefLinkable){
+        // detectedRefObjectData may still be null at this point (its own fetch is independent of
+        // linkedDocumentsFetched) - mapSearchResultItem()/buildSearchResultCard() both cope fine
+        // with a bare {id}, falling back to "#id" for the ref and leaving the other fields blank
+        // until detectedRefObjectData arrives and this function runs again.
+        let mapped = mapSearchResultItem(detectedRef.type, detectedRefObjectData || {id: detectedRef.id});
+        listEl.appendChild(buildSearchResultCard(mapped));
+        listEl.classList.remove('hidden-field');
+        emptyEl.classList.add('hidden-field');
+        return;
+    }
+
+    listEl.classList.add('hidden-field');
+    emptyEl.classList.remove('hidden-field');
 }
 
 /**
- * One linked document, as a card : ref/type/status up top, then whichever of ref client/
- * supplier/date/total the backend sent for that document type (not every field applies to
- * every type - see getEmailLinkLinkedObjects() on the Dolibarr side), and an unlink action. The
- * status badge is built from statusCode via getDetectedRefStatusInfo() rather than from the
- * backend's own status label (unused here - see the comment where statusCode is read below).
- * @param {{type:string, id:number, ref:string, refClient:?string, refSupplier:?string, statusCode:?number, date:?number, totalTtc:?number}} item
+ * Header (type/ref/status) + fields (ref client|supplier, date, total) common to every "document
+ * card" built from a {type, id, ref, refClient, refSupplier, statusCode, date, totalTtc} item -
+ * an already-linked document (buildLinkedDocCard()) or a search-to-link result
+ * (buildSearchResultCard()). Callers append their own .linked-doc-card__actions row. The type
+ * label is deliberately styled discreet/secondary (small, uppercase, muted grey - see
+ * .linked-doc-card__type in popup.css) since the ref is what a user actually recognizes a
+ * document by, not its type. The status badge is built from statusCode via
+ * getDetectedRefStatusInfo() rather than from the backend's own status label - see
+ * buildLinkedDocCard()'s callers for why (long, sometimes HTML-entity encoded, e.g. a supplier
+ * order's raw label is "Tous les produits reçus - Factur&eacute;e").
+ * @param {{type:string, id:number, ref:?string, refClient:?string, refSupplier:?string, statusCode:?number, date:?number, totalTtc:?number}} item
+ * @returns {{card:HTMLElement, fields:HTMLElement}} card (header already appended) and fields
+ *          (NOT appended yet - the "already linked" card appends it on its own row, the
+ *          search-to-link card puts it on the same row as its Link action, see their own
+ *          functions below)
  */
-function buildLinkedDocCard(item){
+function buildDocCardBase(item){
     let meta = dolLib.getDolibarrObjectTypeMeta(item.type);
     let locale = navigator.language || navigator.browserLanguage || (navigator.languages || ['en'])[0];
 
@@ -1838,11 +2117,6 @@ function buildLinkedDocCard(item){
     }
     header.appendChild(ref);
 
-    // Ignores item.status (Dolibarr's own getLibStatut(0) label : long, sometimes HTML-entity
-    // encoded depending on the object type - e.g. a supplier order shows up as "Tous les
-    // produits reçus - Factur&eacute;e") in favor of the same short, plain-text, locale-aware
-    // mapping the detected-ref card uses (see buildDetectedRefCard() above and
-    // getDetectedRefStatusInfo()'s own doc comment).
     let statusInfo = getDetectedRefStatusInfo(item.type, item.statusCode);
     if(statusInfo){
         let status = document.createElement('span');
@@ -1882,6 +2156,119 @@ function buildLinkedDocCard(item){
         addField(chrome.i18n.getMessage('Total'), new Intl.NumberFormat(locale, {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(item.totalTtc));
     }
 
+    return {card, fields};
+}
+
+/**
+ * Prepends a bold first line naming the document's own thirdparty, but only when it's worth
+ * pointing out : either it's a different company than the one already shown prominently in the
+ * popup header (currentSoc, see setSocInfos()), or the header doesn't have one at all
+ * (currentSoc.id === 0) - in either case, the ref/fields alone could otherwise read as if this
+ * document belongs to the thirdparty in the header, which may not be true (e.g. an unfiltered
+ * search result, or a document linked to this mail some other way). Silently does nothing when
+ * item.socid is missing (not every type has a thirdparty - a member, for instance), when it
+ * matches currentSoc, or when the thirdparty's name can't be fetched. Async, same pattern as
+ * appendDocCardTags() - the card is already in the page by the time this resolves.
+ * @param {HTMLElement} card
+ * @param {{socid:?number}} item
+ */
+function appendDocCardThirdparty(card, item){
+    let socId = parseInt(item.socid) || 0;
+
+    if(socId === currentSoc.id){
+        // Same thirdparty as the header (both 0 counts as "neither has one" - nothing to flag),
+        // or genuinely the same company.
+        return;
+    }
+
+    if(!socId){
+        // The header does have a thirdparty, but this document has none at all - still worth
+        // flagging, since it doesn't belong to the one in the header either (this was the bug :
+        // the old check bailed out here unconditionally, so a document with no thirdparty never
+        // got flagged even when the header's thirdparty was known - e.g. an internal project
+        // with no client attached, shown under a supplier's popup).
+        let line = document.createElement('div');
+        line.classList.add('linked-doc-card__thirdparty', 'linked-doc-card__thirdparty--none');
+        line.textContent = chrome.i18n.getMessage('NoThirdpartyOnDocument');
+        card.insertBefore(line, card.firstChild);
+        return;
+    }
+
+    dolLib.callDolibarrApi('thirdparties/'+socId, {}, 'GET', {}, (socData) => {
+        if(!socData || !socData.name){
+            return;
+        }
+        let line = document.createElement('div');
+        line.classList.add('linked-doc-card__thirdparty');
+        line.textContent = socData.name;
+        card.insertBefore(line, card.firstChild);
+    }, (errorMsg) => {
+        LOG('appendDocCardThirdparty: failed to fetch thirdparty #'+socId, errorMsg);
+    }, true);
+}
+
+/**
+ * Dolibarr object types (this extension's short type code, see DOLIBARR_OBJECT_TYPES) whose
+ * categories/tags this extension can fetch - every type except 'con' (contrat) and 'shi'
+ * (shipping), which have no category type in Dolibarr's data model at all (see Categorie's own
+ * MAP_ID property on the Dolibarr side).
+ *
+ * Fetched via crmclientconnector's own objectcategories/{type}/{id} endpoint rather than
+ * Dolibarr core's GET categories/object/{type}/{id} : core's endpoint only allows a specific
+ * whitelist of types (product, contact, customer, supplier, member, project,
+ * knowledgemanagement, actioncomm, user, warehouse, ticket, fichinter) and 403s for
+ * order/invoice/propal/supplier_order/supplier_invoice even though Dolibarr's data model fully
+ * supports categories for them too - see api_crmclientconnector.class.php's
+ * getObjectCategories() doc comment on the Dolibarr side.
+ */
+const DOCUMENT_CATEGORY_TYPES = new Set(['ord', 'pro', 'inv', 'sord', 'sinv', 'tic', 'proj', 'int', 'mem', 'act']);
+
+/**
+ * Appends a footer row of colored tag pills (same look as the thirdparty's own tags, see
+ * renderSocTypeAndTags()) for this document's Dolibarr categories, if its type is in
+ * DOCUMENT_CATEGORY_TYPES, the crmClientConnector module is enabled (its endpoint is what this
+ * uses, see DOCUMENT_CATEGORY_TYPES' doc comment), and the request succeeds - silently does
+ * nothing otherwise (an unsupported type, the module being disabled, a rights setup that rejects
+ * the request, or simply no tags on this particular document all look the same from here : no
+ * footer). Async, so the card is returned to its caller and inserted into the page before this
+ * resolves - the footer is appended in place once (if) it does.
+ * @param {HTMLElement} card
+ * @param {{type:string, id:number}} item
+ */
+function appendDocCardTags(card, item){
+    if(!crmConnectorEnabled || !DOCUMENT_CATEGORY_TYPES.has(item.type)){
+        return;
+    }
+
+    dolLib.callDolibarrApi('crmclientconnector/objectcategories/'+item.type+'/'+item.id, {}, 'GET', {}, (cats) => {
+        if(!Array.isArray(cats) || cats.length === 0){
+            return;
+        }
+        let footer = document.createElement('div');
+        footer.classList.add('linked-doc-card__tags');
+        cats.forEach((cat) => {
+            let pill = document.createElement('span');
+            pill.classList.add('soc-tag-pill');
+            pill.textContent = cat.label;
+            let color = normalizeDolibarrColor(cat.color);
+            if(color){
+                pill.style.backgroundColor = color;
+                pill.style.color = isColorLight(color) ? '#000' : '#fff';
+            }
+            footer.appendChild(pill);
+        });
+        card.appendChild(footer);
+    }, (errorMsg) => {
+        LOG('appendDocCardTags: categories not available for '+item.type+' #'+item.id, errorMsg);
+    }, true);
+}
+
+/**
+ * One linked document, as a card (see buildDocCardBase()) with an unlink action.
+ * @param {{type:string, id:number, ref:?string, refClient:?string, refSupplier:?string, statusCode:?number, date:?number, totalTtc:?number}} item
+ */
+function buildLinkedDocCard(item){
+    let {card, fields} = buildDocCardBase(item);
     if(fields.childNodes.length > 0){
         card.appendChild(fields);
     }
@@ -1903,7 +2290,119 @@ function buildLinkedDocCard(item){
     }));
     card.appendChild(actions);
 
+    appendDocCardThirdparty(card, item);
+    appendDocCardTags(card, item);
+
     return card;
+}
+
+/**
+ * One search-to-link result, as a card (see buildDocCardBase()) with a Link action - the
+ * search-to-link list's answer to the same "not linked yet" case buildLinkedDocCard() covers for
+ * already-linked documents. Unlike that card's ⋯ dropdown (which floats in the top-right corner),
+ * the Link button sits on the same row as the fields (see .linked-doc-card__fields-row in
+ * popup.css) rather than on its own row below them - there's only ever this one action here, so
+ * it doesn't need a dropdown or its own row.
+ * @param {{type:string, id:number, ref:?string, refClient:?string, refSupplier:?string, statusCode:?number, date:?number, totalTtc:?number}} item
+ */
+function buildSearchResultCard(item){
+    let {card, fields} = buildDocCardBase(item);
+
+    let actions = document.createElement('div');
+    actions.classList.add('linked-doc-card__actions');
+
+    let linkBtn = document.createElement('button');
+    linkBtn.type = 'button';
+    linkBtn.classList.add('btn', 'btn-primary');
+    linkBtn.textContent = chrome.i18n.getMessage('Link');
+    linkBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        linkBtn.disabled = true;
+        linkDocument(item.type, item.id, (success, errorMsg) => {
+            if(success || (errorMsg && errorMsg.indexOf('Duplicate entry') !== -1)){
+                card.remove();
+                dolLib.showToast(chrome.i18n.getMessage('LinkSuccess'), 'success');
+            }else{
+                linkBtn.disabled = false;
+                dolLib.showToast(chrome.i18n.getMessage('LinkError')+' ('+errorMsg+')', 'error');
+            }
+        });
+    });
+    actions.appendChild(linkBtn);
+
+    let fieldsRow = document.createElement('div');
+    fieldsRow.classList.add('linked-doc-card__fields-row');
+    fieldsRow.appendChild(fields);
+    fieldsRow.appendChild(actions);
+    card.appendChild(fieldsRow);
+
+    appendDocCardThirdparty(card, item);
+
+    return card;
+}
+
+/**
+ * Skeleton placeholder card (shimmering grey bars, see .text-placeholder in global.css) shown in
+ * the search-to-link results while searchDocumentsToLink()'s requests (one per document type)
+ * are in flight, so the user gets an immediate "search is running" signal instead of the results
+ * list staying empty and unchanged until every request resolves - see renderSearchResultsSkeleton().
+ */
+function buildSearchResultSkeletonCard(){
+    let card = document.createElement('div');
+    card.classList.add('linked-doc-card', 'linked-doc-card--skeleton');
+
+    let header = document.createElement('div');
+    header.classList.add('linked-doc-card__header');
+    header.innerHTML = '<div class="text-placeholder --short"></div>'
+        + '<div class="text-placeholder --medium linked-doc-card__skeleton-ref"></div>';
+    card.appendChild(header);
+
+    let fields = document.createElement('div');
+    fields.classList.add('linked-doc-card__fields');
+    fields.innerHTML = '<div class="text-placeholder --medium"></div>';
+    card.appendChild(fields);
+
+    return card;
+}
+
+/**
+ * Replaces the search-to-link results with a handful of skeleton cards - called synchronously
+ * when a search starts, before any of its requests have resolved.
+ */
+function renderSearchResultsSkeleton(){
+    let resultsEl = document.getElementById('link-search-results');
+    resultsEl.innerHTML = '';
+    for(let i = 0; i < 3; i++){
+        resultsEl.appendChild(buildSearchResultSkeletonCard());
+    }
+}
+
+/**
+ * Maps one raw object from a Dolibarr REST API list (GET /orders, /proposals, ...) into the
+ * {type, id, ref, refClient, refSupplier, statusCode, date, totalTtc} shape buildDocCardBase()
+ * expects - the search-to-link results' equivalent of what getEmailLinkLinkedObjects() already
+ * does server-side for already-linked documents (see api_crmclientconnector.class.php), since
+ * here the raw Dolibarr objects come straight from the client-side search instead. Field names
+ * (ref_client/ref_supplier, statut vs status, date/date_commande/datep) vary by document type -
+ * not every field applies to every type, left null when absent.
+ * @param {string} type short type code (see DOLIBARR_OBJECT_TYPES)
+ * @param {Object} rawItem raw object as returned by the Dolibarr REST API
+ * @returns {{type:string, id:number, ref:?string, refClient:?string, refSupplier:?string, statusCode:?number, date:?number, totalTtc:?number}}
+ */
+function mapSearchResultItem(type, rawItem){
+    return {
+        type: type,
+        id: rawItem.id,
+        ref: rawItem.ref,
+        refClient: rawItem.ref_client || null,
+        refSupplier: rawItem.ref_supplier || null,
+        statusCode: (rawItem.statut !== undefined && rawItem.statut !== null && rawItem.statut !== '')
+            ? parseInt(rawItem.statut)
+            : ((rawItem.status !== undefined && rawItem.status !== null && rawItem.status !== '') ? parseInt(rawItem.status) : null),
+        date: rawItem.date || rawItem.date_commande || rawItem.datep || null,
+        totalTtc: (rawItem.total_ttc !== undefined && rawItem.total_ttc !== null && rawItem.total_ttc !== '') ? parseFloat(rawItem.total_ttc) : null,
+        socid: parseInt(rawItem.socid || rawItem.fk_soc) || null
+    };
 }
 
 function unlinkDocument(type, elementid, onDone){
@@ -1952,58 +2451,116 @@ function linkDocument(type, elementid, onDone){
     );
 }
 
+/**
+ * Extra ref-like columns to search alongside the main t.ref, per short type code - not every
+ * type has a ref_client/ref_supplier column at all (a ticket or an agenda event doesn't, for
+ * instance), and none has both, so this can't be applied uniformly like the fk_soc filter above:
+ * referencing a column a type's table doesn't have would 500 that type's whole search instead of
+ * just finding nothing. Checked directly against each type's own Dolibarr class (propal/commande/
+ * facture have ref_client, the supplier-side documents have ref_supplier, fichinter has
+ * ref_client, everything else here has neither) rather than assumed.
+ */
+const SEARCH_EXTRA_REF_COLUMNS = {
+    pro: ['ref_client'],
+    ord: ['ref_client'],
+    inv: ['ref_client'],
+    sord: ['ref_supplier'],
+    sinv: ['ref_supplier'],
+    int: ['ref_client']
+};
+
+/**
+ * Builds the sqlfilters ref condition for one type's search : matches term against t.ref, plus
+ * whichever of SEARCH_EXTRA_REF_COLUMNS[type] that type actually has (ref_client and/or
+ * ref_supplier), so e.g. typing a customer's own reference finds the quotation it's on even when
+ * it doesn't appear in the quotation's own Dolibarr ref.
+ * @param {string} type
+ * @param {string} term
+ * @returns {string}
+ */
+function buildSearchRefFilter(type, term){
+    let columns = ['ref', ...(SEARCH_EXTRA_REF_COLUMNS[type] || [])];
+    let conditions = columns.map((col) => "(t."+col+":like:'%"+term+"%')");
+    return conditions.length > 1 ? '(' + conditions.join(' or ') + ')' : conditions[0];
+}
+
 function searchDocumentsToLink(term){
     let resultsEl = document.getElementById('link-search-results');
-    resultsEl.innerHTML = '';
 
     if(!term || term.length < 2){
+        resultsEl.innerHTML = '';
         return;
     }
+
+    renderSearchResultsSkeleton();
 
     let selectedType = document.getElementById('link-search-type').value;
     let typesToSearch = selectedType
         ? [[selectedType, dolLib.DOLIBARR_OBJECT_TYPES[selectedType]]]
         : Object.entries(dolLib.DOLIBARR_OBJECT_TYPES);
 
+    // "Filtrer sur le tiers" checkbox (only present/checkable when currentSoc.id > 0 - see
+    // initLinkTab()) : every type's own table has a fk_soc column, so this applies uniformly.
+    let filterSocCheckbox = document.getElementById('link-search-filter-soc');
+    let filterBySoc = currentSoc.id > 0 && filterSocCheckbox && filterSocCheckbox.checked;
+
     let allResults = [];
     let errors = [];
+    // Counts matches filtered out because they're already linked to this mail (see the
+    // linkedDocumentKeys check below), so renderSearchResults() can tell that apart from a
+    // genuine "no results" or a real search failure - a 403 from one type's search (e.g. no
+    // rights on agenda events) shouldn't drown out the fact that another type's search actually
+    // found the ref the user typed, just already linked.
+    let alreadyLinkedMatches = 0;
     let pending = typesToSearch.length;
 
     typesToSearch.forEach(([type, meta]) => {
+        let sqlfilters = buildSearchRefFilter(type, term);
+        if(filterBySoc){
+            sqlfilters += " and (t.fk_soc:=:"+currentSoc.id+")";
+        }
+
         dolLib.callDolibarrApi(meta.api, {
             limit: 10,
-            sqlfilters: "(t.ref:like:'%"+term+"%')"
+            sqlfilters: sqlfilters
         }, 'GET', {}, (resData)=>{
             if(Array.isArray(resData)){
-                resData.forEach((item) => {
-                    if(!linkedDocumentKeys.has(type+':'+item.id)){
-                        allResults.push({type: type, id: item.id, ref: item.ref});
+                resData.forEach((rawItem) => {
+                    if(linkedDocumentKeys.has(type+':'+rawItem.id)){
+                        alreadyLinkedMatches++;
+                    }else{
+                        allResults.push(mapSearchResultItem(type, rawItem));
                     }
                 });
             }
             pending--;
             if(pending === 0){
-                renderSearchResults(allResults, term, errors);
+                renderSearchResults(allResults, errors, alreadyLinkedMatches);
             }
         }, (errorMsg)=>{
             LOG('searchDocumentsToLink: '+meta.api+' failed', errorMsg);
             errors.push({type: type, errorMsg: errorMsg});
             pending--;
             if(pending === 0){
-                renderSearchResults(allResults, term, errors);
+                renderSearchResults(allResults, errors, alreadyLinkedMatches);
             }
         });
     });
 }
 
-function renderSearchResults(results, term, errors){
+function renderSearchResults(results, errors, alreadyLinkedMatches){
     let resultsEl = document.getElementById('link-search-results');
     resultsEl.innerHTML = '';
 
     if(results.length === 0){
         let empty = document.createElement('div');
         empty.classList.add('opacitymedium');
-        if(errors && errors.length > 0){
+        if(alreadyLinkedMatches > 0){
+            // Takes priority over errors below : a match was found (just already linked), which
+            // is a more useful and more likely explanation than an unrelated permission error
+            // from some other type's search (see searchDocumentsToLink()'s own comment).
+            empty.textContent = chrome.i18n.getMessage('SearchDocumentToLinkAlreadyLinked');
+        }else if(errors && errors.length > 0){
             empty.textContent = chrome.i18n.getMessage('SearchDocumentToLinkError')+' ('+errors[0].errorMsg+')';
         }else{
             empty.textContent = chrome.i18n.getMessage('SearchDocumentToLinkNoResults');
@@ -2012,42 +2569,7 @@ function renderSearchResults(results, term, errors){
         return;
     }
 
-    let tableItems = results.map((item) => {
-        let meta = dolLib.getDolibarrObjectTypeMeta(item.type);
-        return {
-            type: meta ? chrome.i18n.getMessage(meta.labelKey) : item.type,
-            ref: item.ref || ('#'+item.id),
-            action: {
-                html: '<button type="button" class="btn-tiny-action link-link-btn" '
-                    +'data-type="'+item.type+'" data-id="'+item.id+'">'
-                    +chrome.i18n.getMessage('Link')+'</button>'
-            }
-        };
-    });
-
-    dolLib.jsonToTable(
-        {type: chrome.i18n.getMessage('Type'), ref: chrome.i18n.getMessage('Ref'), action: ''},
-        tableItems,
-        resultsEl,
-        'dolibarr-table dolibarr-table-stripped',
-        term
-    );
-
-    resultsEl.querySelectorAll('.link-link-btn').forEach((btn) => {
-        btn.addEventListener('click', (event) => {
-            event.preventDefault();
-            btn.disabled = true;
-            linkDocument(btn.getAttribute('data-type'), btn.getAttribute('data-id'), (success, errorMsg) => {
-                if(success || (errorMsg && errorMsg.indexOf('Duplicate entry') !== -1)){
-                    btn.closest('tr')?.remove();
-                    dolLib.showToast(chrome.i18n.getMessage('LinkSuccess'), 'success');
-                }else{
-                    btn.disabled = false;
-                    dolLib.showToast(chrome.i18n.getMessage('LinkError')+' ('+errorMsg+')', 'error');
-                }
-            });
-        });
-    });
+    results.forEach((item) => resultsEl.appendChild(buildSearchResultCard(item)));
 }
 
 /**

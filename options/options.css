@@ -1,5 +1,11 @@
 @import "../global.css";
 
+.option-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+
 .dol-input-swith {
     --switch-btn-width: 30px;
     --switch-btn-space: 1px;
@@ -65,10 +71,78 @@ input:checked + .dol-input-slider:before {
     border-radius: 50%;
 }
 
-#save-feed-back{
-    margin-top: 5px;
-}
 #ave-dolibarr-options{
     cursor: pointer;
 
+}
+
+.dolibarr-connection-details {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+}
+
+.dolibarr-connection-details summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.dolibarr-connection-card {
+    margin-top: 8px;
+}
+
+.options-header {
+    text-align: right;
+    margin-bottom: 12px;
+}
+
+#dolibarr-account-mapping-details {
+    margin-top: 20px;
+}
+
+#dolibarr-account-mapping-title {
+    font-weight: 600;
+    font-size: 1.15em;
+}
+
+.dolibarr-connector-desc {
+    color: #666;
+    font-size: 12px;
+    margin-top: 0;
+}
+
+.dolibarr-notice {
+    background-color: #eef5fb;
+    border: 1px solid #cfe3f2;
+    border-left: 4px solid #5a8fc2;
+    border-radius: 0 6px 6px 0;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #2c4a63;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.dolibarr-notice p {
+    margin-top: 0;
+}
+
+.dolibarr-notice-fallback {
+    margin-top: 14px;
+    font-style: italic;
+    color: #7a5b1e;
+}
+
+.dolibarr-notice ol {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.dolibarr-notice li {
+    margin-bottom: 4px;
+}
+
+.dolibarr-notice li:last-child {
+    margin-bottom: 0;
 }

@@ -29,9 +29,13 @@
 
 		<table class="dolibarr-table" >
 			<tr>
-				<td ><h4 id="popup-header"><div class="text-placeholder --medium">&nbsp;</div></h4></td>
+				<td >
+					<h4 id="popup-header"><div class="text-placeholder --medium">&nbsp;</div></h4>
+					<div id="soc-unknown-badge" class="hidden-field soc-meta-line"><span class="badge badge-status0">__MSG_UnrecognizedSender__</span></div>
+					<div id="soc-type-line" class="hidden-field soc-meta-line"></div>
+					<div id="soc-tags-line" class="hidden-field soc-meta-line"></div>
+				</td>
 				<td style="text-align: right;" >
-					<a id="new-quotation-link" class="hidden-field btn btn-primary" href=""><i class="icon-plus"></i> __MSG_CreateNewQuotation__</a>
 					<div id="soc-actions" class="hidden-field"></div>
 				</td>
 			</tr>
@@ -82,16 +86,6 @@
 						</div>
 					</div>
 
-					<div id="soc-infos">
-						<div id="soc-not-found-tpl" class="hidden-field" >
-							<hr/>
-							<div class="row" >
-								<a id="new-soc-link" class="btn btn-primary" href="" ><i class="icon-plus"></i> __MSG_CreateNewCompany__</a>
-								<a id="new-contact-link"  class="btn btn-primary" href=""><i class="icon-user-plus"></i> __MSG_CreateNewContact__</a>
-							</div>
-						</div>
-					</div>
-
 				</div>
 
 				<div id="tab-panel-documents" class="popup-tab-panel hidden-field">
@@ -125,6 +119,10 @@
 								<input type="text" id="link-search-input" class="dol-input" list="link-detected-refs-datalist" placeholder="__MSG_SearchDocumentToLinkPlaceholder__">
 								<datalist id="link-detected-refs-datalist"></datalist>
 							</div>
+							<label id="link-search-filter-soc-label" class="hidden-field link-search-filter-soc">
+								<input type="checkbox" id="link-search-filter-soc" checked />
+								<span id="link-search-filter-soc-text"></span>
+							</label>
 							<div id="link-search-results"></div>
 						</div>
 
