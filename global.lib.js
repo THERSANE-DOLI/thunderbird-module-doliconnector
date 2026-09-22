@@ -1051,68 +1051,51 @@ export function isValidHttpUrl(string) {
  */
 export function jsonToTable(JsonTitle, jsonData, container, tableClass = 'dolibarr-table dolibarr-table-stripped', searchInText = ''){
 
-    let appendToTable = false;
+    // If the container is itself a <table> (e.g. the Documents tab's #data-from-dolibarr, filled
+    // by four independent calls - one per document type - each appending their own rows to that
+    // same persistent table), rows are appended directly to it and it keeps whatever classes it
+    // already has. Otherwise a fresh <table> is created (carrying tableClass), filled, and
+    // inserted into the container once done.
+    let appendToTable = container.tagName === 'TABLE';
+    let table = appendToTable ? container : document.createElement('table');
 
-    if(container.tagName == 'table' ){
-        appendToTable = true;
+    if(!appendToTable && tableClass.length > 0){
+        table.classList.add(...tableClass.split(' '));
     }
-
-    // Create the table element
-    let table  = document.createElement("table");
-    if(tableClass.length > 0) {
-        table.classList.add(...tableClass.split(" "));
-    }
-
-
-
 
     // Get the keys (column names) of the first object in the JSON data
     let cols = Object.values(JsonTitle);
 
-    // Create the header element
-    let thead = document.createElement("thead");
-    let tr = document.createElement("tr");
-    tr.classList.add('table-title');
-
-    // Loop through the column names and create header cells
+    // Create and append the header row
+    let headerRow = document.createElement('tr');
+    headerRow.classList.add('table-title');
     cols.forEach((item) => {
-        let th = document.createElement("th");
+        let th = document.createElement('th');
         th.textContent = item; // Set the column name as the text of the header cell
-        tr.appendChild(th); // Append the header cell to the header row
+        headerRow.appendChild(th);
     });
-    thead.appendChild(tr); // Append the header row to the header
-
-    if(appendToTable) {
-        table.appendChild(tr);  // Append the header to the table
-    }
-    else{
-        container.appendChild(tr);  // Append the header to the table
-    }
-
+    table.appendChild(headerRow);
 
     // Loop through the JSON data and create table rows
     jsonData.forEach((item) => {
-        let tr = document.createElement("tr");
-
-        // Get the values of the current object in the JSON data
-        // let vals = Object.values(item);
+        let tr = document.createElement('tr');
 
         // Loop through the values and create table cells
         Object.entries(item).forEach(([colKey, elem]) => {
-            let td = document.createElement("td");
+            let td = document.createElement('td');
 
             if(typeof elem === 'object' && elem !== null){
                 td.appendChild(parseHTML(elem.html));
 
                 if(elem.hasOwnProperty('class') ){
-                    td.classList.add(...elem.class.split(" "));
+                    td.classList.add(...elem.class.split(' '));
                 }
 
                 if(elem.hasOwnProperty('hightLight') && searchInText && searchInText.length > 0){
                     if(searchInText.includes(elem.hightLight)){
                         td.classList.add('hightlight');
                     }
-                    td.classList.add(...elem.hightLight.split(" "));
+                    td.classList.add(...elem.hightLight.split(' '));
                 }
             }
             else{
@@ -1122,18 +1105,11 @@ export function jsonToTable(JsonTitle, jsonData, container, tableClass = 'doliba
             tr.appendChild(td); // Append the table cell to the table row
         });
 
-
-
-        if(appendToTable) {
-            table.appendChild(tr); // Append the table row to the table
-        }
-        else{
-            container.appendChild(tr); // Append the table row to the table
-        }
+        table.appendChild(tr);
     });
 
     if(!appendToTable) {
-        container.appendChild(table) // Append the table to the container element
+        container.appendChild(table); // Append the table to the container element
     }
 }
 

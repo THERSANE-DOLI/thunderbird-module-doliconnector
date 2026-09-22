@@ -178,41 +178,48 @@
 	margin-bottom: 8px;
 }
 
-/* LINK TAB SEARCH RESULTS TABLE */
+/* LINK TAB SEARCH RESULTS - card list (see buildSearchResultCard() in popup.js), same look as
+   the "already linked" cards below it in the DOM (buildLinkedDocCard()) other than the action. */
 
-#link-search-results .dolibarr-table {
-	border-collapse: collapse;
+#link-search-results {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
 }
 
-#link-search-results .dolibarr-table th {
-	text-align: left;
-	padding: 6px 8px;
-	border-bottom: 1px solid #d0d8e0;
+#link-search-results .linked-doc-card {
+	/* The base 32px right padding reserves room for the "already linked" cards' absolutely
+	   positioned ⋯ corner button - these cards don't use that, their Link button is in normal
+	   flow (see .linked-doc-card__fields-row below), so it'd otherwise just be wasted space. */
+	padding-right: 10px;
 }
 
-#link-search-results .dolibarr-table td {
-	padding: 7px 8px;
-	border-bottom: 1px solid #edf0f3;
-	vertical-align: middle;
+/* Fields + Link button on the same row (see buildSearchResultCard()) rather than the Link button
+   sitting on its own row below, like the "already linked" cards' ⋯ dropdown does. */
+.linked-doc-card__fields-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-top: 6px;
 }
 
-#link-search-results .dolibarr-table td:last-child,
-#link-search-results .dolibarr-table th:last-child {
-	width: 1%;
-	white-space: nowrap;
-	text-align: right;
+.linked-doc-card__fields-row .linked-doc-card__fields {
+	margin-top: 0;
 }
 
-#link-search-results .btn-tiny-action {
-	border: 1px solid #94acc2;
-	border-radius: 4px;
-	padding: 3px 10px;
-	font-size: 12px;
+.linked-doc-card__fields-row .linked-doc-card__actions {
+	/* Unlike the "already linked" cards' ⋯ dropdown trigger (a small fixed corner overlay), the
+	   Link button here is a normal in-flow button, sharing the row with .linked-doc-card__fields. */
+	position: static;
+	flex-shrink: 0;
 }
 
-#link-search-results .btn-tiny-action:hover {
-	background-color: #94acc2;
-	color: #ffffff;
+/* Skeleton state (see buildSearchResultSkeletonCard()) : its placeholder "ref" bar needs to grow
+   to fill the row like the real .linked-doc-card__ref link does, unlike the fixed-width "type"
+   bar next to it. */
+.linked-doc-card__skeleton-ref {
+	flex: 1 1 auto;
 }
 
 /* DETECTED REF BLOCK (document found via email headers) */
@@ -460,8 +467,13 @@
 
 /* "Info" variant : same discreet size/weight as .discreet-notice, but blue-toned like .alert-info
    instead of the plain grey default - for a notice that's informative rather than a disabled
-   feature (e.g. "an event was detected in this mail"), a plain grey read as too easy to miss. */
-.discreet-notice--info {
+   feature (e.g. "an event was detected in this mail"), a plain grey read as too easy to miss.
+   :not(.hidden-field), not plain ".discreet-notice--info" : both are single-class selectors of
+   equal specificity, and this one comes later in the cascade (global.css's .hidden-field is
+   @import'ed at the top of this file) - a plain selector's "display:flex" would beat
+   .hidden-field's "display:none" and keep #info-agenda-invitation visible even when hidden-field
+   is toggled on it (see #info-linked-list's own :not(.hidden-field) above for the same fix). */
+.discreet-notice--info:not(.hidden-field) {
 	color: #0c5460;
 	background-color: #eaf6f8;
 	border-left: 3px solid #9fd8e3;

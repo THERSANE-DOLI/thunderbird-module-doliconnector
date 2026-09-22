@@ -63,10 +63,11 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     let authorEmail = message ? dolLib.extractEmailAddressFromString(message.author)[0] : '';
 
     // Identity of the account this mail was received on, and its Message-Id : sent along when
-    // creating a devis/commande from this popup (see setSocInfos()'s new-quotation-link), so the
-    // crmclientconnector module's PROPAL_CREATE/ORDER_CREATE trigger can auto-link the newly
-    // created object back to this mail. Same values/convention already used for notes (see
-    // initNotesForMessage() below : accountEmail via getEmailAccountFromBackground(), msgId via
+    // creating a devis/commande/ticket from this popup's "Actions" dropdown (see setSocInfos()'s
+    // newPropalUrl/newOrderUrl/newTicketUrl), so the crmclientconnector module's
+    // PROPAL_CREATE/ORDER_CREATE/TICKET_CREATE trigger can auto-link the newly created object
+    // back to this mail. Same values/convention already used for notes (see initNotesForMessage()
+    // below : accountEmail via getEmailAccountFromBackground(), msgId via
     // message.headerMessageId).
     let ownerAccountEmail = message ? await getEmailAccountFromBackground(message.id) : null;
     let ownerMsgId = message ? message.headerMessageId : null;
@@ -512,8 +513,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
         // Créer un devis / une commande / un ticket : accountEmail+msgId let the
         // crmclientconnector PROPAL_CREATE/ORDER_CREATE/TICKET_CREATE trigger auto-link the
-        // newly created object back to this mail (see initNotesForMessage()'s comment above and
-        // new-quotation-link below for the same convention).
+        // newly created object back to this mail (see initNotesForMessage()'s comment above for
+        // the same convention).
         let newPropalUrl = new URL(confDolibarUrl + "comm/propal/card.php");
         newPropalUrl.searchParams.set('action', "create");
         newPropalUrl.searchParams.set('socid', soc.id);
@@ -542,19 +543,6 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                 {label: chrome.i18n.getMessage('CreateNewTicket'), href: newTicketUrl, target: '_blank'}
             ]
         }));
-
-        if(quotationActive){
-            displayTpl("new-quotation-link");
-            let newQuotationLink = document.getElementById("new-quotation-link");
-            let newQuotationURL = new URL(confDolibarUrl + "comm/propal/card.php");
-            newQuotationURL.searchParams.set('action', "create");
-            newQuotationURL.searchParams.set('socid', soc.id);
-            if(ownerAccountEmail && ownerMsgId){
-                newQuotationURL.searchParams.set('accountEmail', ownerAccountEmail);
-                newQuotationURL.searchParams.set('msgId', ownerMsgId);
-            }
-            newQuotationLink.href = newQuotationURL;
-        }
 
         if(!crmConnectorEnabled){
             // Without the crmClientConnector module, the Info tab has nothing useful left to
@@ -586,33 +574,32 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     }
 
     /**
-     * Renders the "detected reference" fallback block, but only once we both
-     * know it needs to be shown (the referenced object didn't show up in its
-     * matching table - too old, or a type with no table at all) and have the
-     * API response for the referenced object (for its ref name). Re-runs
-     * (idempotently) once the thirdparty name resolves too, see
+     * Renders the "detected reference" fallback block above the tabs, but only once we both know
+     * it needs to be shown (the referenced object didn't show up in its matching table - too old,
+     * or a type with no table at all) and have the API response for the referenced object (for
+     * its ref name). Re-runs (idempotently) once the thirdparty name resolves too, see
      * resolveSocFromId(), so the card can be completed in place.
+     *
+     * Also refreshes the Info tab's own linked-documents section every time this is called
+     * (regardless of whether the above-tabs block itself ends up shown), since
+     * updateInfoTabLinkedDocumentsSection() reacts to detectedRef/detectedRefObjectData too - see
+     * its own doc comment. This runs on every detectedRef, table-backed or not, matched-in-table
+     * or not, because the trackid object fetch (see the caller of this function) always happens
+     * regardless of those - unlike the above-tabs block, which resolveDetectedRefTableCheck()
+     * only turns on for the "not matched in table" case.
      */
     function maybeRenderDetectedRefBlock(){
-        if(!detectedRefShouldShowBlock || !detectedRefObjectFetchDone){
-            LOG('maybeRenderDetectedRefBlock: not ready yet', { detectedRefShouldShowBlock, detectedRefObjectFetchDone });
-            return;
+        if(detectedRefShouldShowBlock && detectedRefObjectFetchDone){
+            LOG('rendering detected ref block', detectedRef, detectedRefObjectData);
+            let block = document.getElementById("dolibarr-detected-ref");
+            let cardContainer = document.getElementById("dolibarr-detected-ref-card");
+            if(block && cardContainer){
+                cardContainer.innerHTML = '';
+                cardContainer.appendChild(buildDetectedRefCard());
+                block.classList.remove('hidden-field');
+            }
         }
 
-        LOG('rendering detected ref block', detectedRef, detectedRefObjectData);
-        let block = document.getElementById("dolibarr-detected-ref");
-        let cardContainer = document.getElementById("dolibarr-detected-ref-card");
-        if(!block || !cardContainer){
-            return;
-        }
-
-        cardContainer.innerHTML = '';
-        cardContainer.appendChild(buildDetectedRefCard());
-
-        block.classList.remove('hidden-field');
-
-        // This card's visibility feeds into the Info tab's own empty state, see
-        // updateInfoTabLinkedDocumentsSection().
         updateInfoTabLinkedDocumentsSection();
     }
 
@@ -1768,10 +1755,23 @@ function detectedRefCardVisible(){
 
 /**
  * Mirrors the "Lier" tab's linked-documents list (lastLinkedDocumentsList, refreshed by
- * renderLinkedDocuments()) into the Info tab : as cards when there are any, or an empty state
- * with a CTA to the Link tab's search field when there's nothing linked *and* nothing already
- * shown by the detected-ref card either. Also called from maybeRenderDetectedRefBlock(), since
- * that card's own visibility affects this section's empty state.
+ * renderLinkedDocuments()) into the Info tab : as cards when there are any, a one-click Link
+ * card for the mail's detected trackid ref when there's nothing linked yet but we do know a
+ * candidate document (see detectedRefLinkable below), or - only when neither applies - the empty
+ * state with a CTA to the Link tab's search field.
+ *
+ * The detected-ref card above the tabs (buildDetectedRefCard(), via maybeRenderDetectedRefBlock())
+ * only appears for a trackid whose referenced object didn't show up in its matching Documents-tab
+ * table (see resolveDetectedRefTableCheck()) - for one that did (e.g. a recent quotation the
+ * trackid points to), nothing above the tabs ever acknowledged it, and this section fell back to
+ * the plain "no linked document" empty state despite already knowing exactly which document the
+ * mail is about. detectedRefLinkable below covers that gap : whenever detectedRef exists and
+ * isn't linked yet, a Link card is shown regardless of whether it's also visible in the Documents
+ * tab or in the above-tabs block. When the above-tabs block IS shown for it, this section instead
+ * stays hidden entirely to avoid showing the same document's Link button twice.
+ *
+ * Called from maybeRenderDetectedRefBlock() (detectedRef/detectedRefObjectData changed) and from
+ * renderLinkedDocuments() (lastLinkedDocumentsList changed).
  */
 function updateInfoTabLinkedDocumentsSection(){
     let container = document.getElementById('info-linked-documents-container');
@@ -1799,21 +1799,51 @@ function updateInfoTabLinkedDocumentsSection(){
     container.classList.remove('hidden-field');
 
     listEl.innerHTML = '';
-    lastLinkedDocumentsList.forEach((item) => listEl.appendChild(buildLinkedDocCard(item)));
 
-    listEl.classList.toggle('hidden-field', !hasLinked);
-    emptyEl.classList.toggle('hidden-field', hasLinked);
+    if(hasLinked){
+        lastLinkedDocumentsList.forEach((item) => listEl.appendChild(buildLinkedDocCard(item)));
+        listEl.classList.remove('hidden-field');
+        emptyEl.classList.add('hidden-field');
+        return;
+    }
+
+    let detectedRefLinkable = detectedRef && detectedRefMeta && linkedDocumentsFetched
+        && !linkedDocumentKeys.has(detectedRef.type+':'+detectedRef.id);
+
+    if(detectedRefLinkable){
+        // detectedRefObjectData may still be null at this point (its own fetch is independent of
+        // linkedDocumentsFetched) - mapSearchResultItem()/buildSearchResultCard() both cope fine
+        // with a bare {id}, falling back to "#id" for the ref and leaving the other fields blank
+        // until detectedRefObjectData arrives and this function runs again.
+        let mapped = mapSearchResultItem(detectedRef.type, detectedRefObjectData || {id: detectedRef.id});
+        listEl.appendChild(buildSearchResultCard(mapped));
+        listEl.classList.remove('hidden-field');
+        emptyEl.classList.add('hidden-field');
+        return;
+    }
+
+    listEl.classList.add('hidden-field');
+    emptyEl.classList.remove('hidden-field');
 }
 
 /**
- * One linked document, as a card : ref/type/status up top, then whichever of ref client/
- * supplier/date/total the backend sent for that document type (not every field applies to
- * every type - see getEmailLinkLinkedObjects() on the Dolibarr side), and an unlink action. The
- * status badge is built from statusCode via getDetectedRefStatusInfo() rather than from the
- * backend's own status label (unused here - see the comment where statusCode is read below).
- * @param {{type:string, id:number, ref:string, refClient:?string, refSupplier:?string, statusCode:?number, date:?number, totalTtc:?number}} item
+ * Header (type/ref/status) + fields (ref client|supplier, date, total) common to every "document
+ * card" built from a {type, id, ref, refClient, refSupplier, statusCode, date, totalTtc} item -
+ * an already-linked document (buildLinkedDocCard()) or a search-to-link result
+ * (buildSearchResultCard()). Callers append their own .linked-doc-card__actions row. The type
+ * label is deliberately styled discreet/secondary (small, uppercase, muted grey - see
+ * .linked-doc-card__type in popup.css) since the ref is what a user actually recognizes a
+ * document by, not its type. The status badge is built from statusCode via
+ * getDetectedRefStatusInfo() rather than from the backend's own status label - see
+ * buildLinkedDocCard()'s callers for why (long, sometimes HTML-entity encoded, e.g. a supplier
+ * order's raw label is "Tous les produits reçus - Factur&eacute;e").
+ * @param {{type:string, id:number, ref:?string, refClient:?string, refSupplier:?string, statusCode:?number, date:?number, totalTtc:?number}} item
+ * @returns {{card:HTMLElement, fields:HTMLElement}} card (header already appended) and fields
+ *          (NOT appended yet - the "already linked" card appends it on its own row, the
+ *          search-to-link card puts it on the same row as its Link action, see their own
+ *          functions below)
  */
-function buildLinkedDocCard(item){
+function buildDocCardBase(item){
     let meta = dolLib.getDolibarrObjectTypeMeta(item.type);
     let locale = navigator.language || navigator.browserLanguage || (navigator.languages || ['en'])[0];
 
@@ -1838,11 +1868,6 @@ function buildLinkedDocCard(item){
     }
     header.appendChild(ref);
 
-    // Ignores item.status (Dolibarr's own getLibStatut(0) label : long, sometimes HTML-entity
-    // encoded depending on the object type - e.g. a supplier order shows up as "Tous les
-    // produits reçus - Factur&eacute;e") in favor of the same short, plain-text, locale-aware
-    // mapping the detected-ref card uses (see buildDetectedRefCard() above and
-    // getDetectedRefStatusInfo()'s own doc comment).
     let statusInfo = getDetectedRefStatusInfo(item.type, item.statusCode);
     if(statusInfo){
         let status = document.createElement('span');
@@ -1882,6 +1907,15 @@ function buildLinkedDocCard(item){
         addField(chrome.i18n.getMessage('Total'), new Intl.NumberFormat(locale, {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(item.totalTtc));
     }
 
+    return {card, fields};
+}
+
+/**
+ * One linked document, as a card (see buildDocCardBase()) with an unlink action.
+ * @param {{type:string, id:number, ref:?string, refClient:?string, refSupplier:?string, statusCode:?number, date:?number, totalTtc:?number}} item
+ */
+function buildLinkedDocCard(item){
+    let {card, fields} = buildDocCardBase(item);
     if(fields.childNodes.length > 0){
         card.appendChild(fields);
     }
@@ -1904,6 +1938,112 @@ function buildLinkedDocCard(item){
     card.appendChild(actions);
 
     return card;
+}
+
+/**
+ * One search-to-link result, as a card (see buildDocCardBase()) with a Link action - the
+ * search-to-link list's answer to the same "not linked yet" case buildLinkedDocCard() covers for
+ * already-linked documents. Unlike that card's ⋯ dropdown (which floats in the top-right corner),
+ * the Link button sits on the same row as the fields (see .linked-doc-card__fields-row in
+ * popup.css) rather than on its own row below them - there's only ever this one action here, so
+ * it doesn't need a dropdown or its own row.
+ * @param {{type:string, id:number, ref:?string, refClient:?string, refSupplier:?string, statusCode:?number, date:?number, totalTtc:?number}} item
+ */
+function buildSearchResultCard(item){
+    let {card, fields} = buildDocCardBase(item);
+
+    let actions = document.createElement('div');
+    actions.classList.add('linked-doc-card__actions');
+
+    let linkBtn = document.createElement('button');
+    linkBtn.type = 'button';
+    linkBtn.classList.add('btn', 'btn-primary');
+    linkBtn.textContent = chrome.i18n.getMessage('Link');
+    linkBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        linkBtn.disabled = true;
+        linkDocument(item.type, item.id, (success, errorMsg) => {
+            if(success || (errorMsg && errorMsg.indexOf('Duplicate entry') !== -1)){
+                card.remove();
+                dolLib.showToast(chrome.i18n.getMessage('LinkSuccess'), 'success');
+            }else{
+                linkBtn.disabled = false;
+                dolLib.showToast(chrome.i18n.getMessage('LinkError')+' ('+errorMsg+')', 'error');
+            }
+        });
+    });
+    actions.appendChild(linkBtn);
+
+    let fieldsRow = document.createElement('div');
+    fieldsRow.classList.add('linked-doc-card__fields-row');
+    fieldsRow.appendChild(fields);
+    fieldsRow.appendChild(actions);
+    card.appendChild(fieldsRow);
+
+    return card;
+}
+
+/**
+ * Skeleton placeholder card (shimmering grey bars, see .text-placeholder in global.css) shown in
+ * the search-to-link results while searchDocumentsToLink()'s requests (one per document type)
+ * are in flight, so the user gets an immediate "search is running" signal instead of the results
+ * list staying empty and unchanged until every request resolves - see renderSearchResultsSkeleton().
+ */
+function buildSearchResultSkeletonCard(){
+    let card = document.createElement('div');
+    card.classList.add('linked-doc-card', 'linked-doc-card--skeleton');
+
+    let header = document.createElement('div');
+    header.classList.add('linked-doc-card__header');
+    header.innerHTML = '<div class="text-placeholder --short"></div>'
+        + '<div class="text-placeholder --medium linked-doc-card__skeleton-ref"></div>';
+    card.appendChild(header);
+
+    let fields = document.createElement('div');
+    fields.classList.add('linked-doc-card__fields');
+    fields.innerHTML = '<div class="text-placeholder --medium"></div>';
+    card.appendChild(fields);
+
+    return card;
+}
+
+/**
+ * Replaces the search-to-link results with a handful of skeleton cards - called synchronously
+ * when a search starts, before any of its requests have resolved.
+ */
+function renderSearchResultsSkeleton(){
+    let resultsEl = document.getElementById('link-search-results');
+    resultsEl.innerHTML = '';
+    for(let i = 0; i < 3; i++){
+        resultsEl.appendChild(buildSearchResultSkeletonCard());
+    }
+}
+
+/**
+ * Maps one raw object from a Dolibarr REST API list (GET /orders, /proposals, ...) into the
+ * {type, id, ref, refClient, refSupplier, statusCode, date, totalTtc} shape buildDocCardBase()
+ * expects - the search-to-link results' equivalent of what getEmailLinkLinkedObjects() already
+ * does server-side for already-linked documents (see api_crmclientconnector.class.php), since
+ * here the raw Dolibarr objects come straight from the client-side search instead. Field names
+ * (ref_client/ref_supplier, statut vs status, date/date_commande/datep) vary by document type -
+ * not every field applies to every type, left null when absent.
+ * @param {string} type short type code (see DOLIBARR_OBJECT_TYPES)
+ * @param {Object} rawItem raw object as returned by the Dolibarr REST API
+ * @returns {{type:string, id:number, ref:?string, refClient:?string, refSupplier:?string, statusCode:?number, date:?number, totalTtc:?number}}
+ */
+function mapSearchResultItem(type, rawItem){
+    return {
+        type: type,
+        id: rawItem.id,
+        ref: rawItem.ref,
+        refClient: rawItem.ref_client || null,
+        refSupplier: rawItem.ref_supplier || null,
+        statusCode: (rawItem.statut !== undefined && rawItem.statut !== null && rawItem.statut !== '')
+            ? parseInt(rawItem.statut)
+            : ((rawItem.status !== undefined && rawItem.status !== null && rawItem.status !== '') ? parseInt(rawItem.status) : null),
+        date: rawItem.date || rawItem.date_commande || rawItem.datep || null,
+        totalTtc: (rawItem.total_ttc !== undefined && rawItem.total_ttc !== null && rawItem.total_ttc !== '') ? parseFloat(rawItem.total_ttc) : null
+    };
 }
 
 function unlinkDocument(type, elementid, onDone){
@@ -1954,11 +2094,13 @@ function linkDocument(type, elementid, onDone){
 
 function searchDocumentsToLink(term){
     let resultsEl = document.getElementById('link-search-results');
-    resultsEl.innerHTML = '';
 
     if(!term || term.length < 2){
+        resultsEl.innerHTML = '';
         return;
     }
+
+    renderSearchResultsSkeleton();
 
     let selectedType = document.getElementById('link-search-type').value;
     let typesToSearch = selectedType
@@ -1975,28 +2117,28 @@ function searchDocumentsToLink(term){
             sqlfilters: "(t.ref:like:'%"+term+"%')"
         }, 'GET', {}, (resData)=>{
             if(Array.isArray(resData)){
-                resData.forEach((item) => {
-                    if(!linkedDocumentKeys.has(type+':'+item.id)){
-                        allResults.push({type: type, id: item.id, ref: item.ref});
+                resData.forEach((rawItem) => {
+                    if(!linkedDocumentKeys.has(type+':'+rawItem.id)){
+                        allResults.push(mapSearchResultItem(type, rawItem));
                     }
                 });
             }
             pending--;
             if(pending === 0){
-                renderSearchResults(allResults, term, errors);
+                renderSearchResults(allResults, errors);
             }
         }, (errorMsg)=>{
             LOG('searchDocumentsToLink: '+meta.api+' failed', errorMsg);
             errors.push({type: type, errorMsg: errorMsg});
             pending--;
             if(pending === 0){
-                renderSearchResults(allResults, term, errors);
+                renderSearchResults(allResults, errors);
             }
         });
     });
 }
 
-function renderSearchResults(results, term, errors){
+function renderSearchResults(results, errors){
     let resultsEl = document.getElementById('link-search-results');
     resultsEl.innerHTML = '';
 
@@ -2012,42 +2154,7 @@ function renderSearchResults(results, term, errors){
         return;
     }
 
-    let tableItems = results.map((item) => {
-        let meta = dolLib.getDolibarrObjectTypeMeta(item.type);
-        return {
-            type: meta ? chrome.i18n.getMessage(meta.labelKey) : item.type,
-            ref: item.ref || ('#'+item.id),
-            action: {
-                html: '<button type="button" class="btn-tiny-action link-link-btn" '
-                    +'data-type="'+item.type+'" data-id="'+item.id+'">'
-                    +chrome.i18n.getMessage('Link')+'</button>'
-            }
-        };
-    });
-
-    dolLib.jsonToTable(
-        {type: chrome.i18n.getMessage('Type'), ref: chrome.i18n.getMessage('Ref'), action: ''},
-        tableItems,
-        resultsEl,
-        'dolibarr-table dolibarr-table-stripped',
-        term
-    );
-
-    resultsEl.querySelectorAll('.link-link-btn').forEach((btn) => {
-        btn.addEventListener('click', (event) => {
-            event.preventDefault();
-            btn.disabled = true;
-            linkDocument(btn.getAttribute('data-type'), btn.getAttribute('data-id'), (success, errorMsg) => {
-                if(success || (errorMsg && errorMsg.indexOf('Duplicate entry') !== -1)){
-                    btn.closest('tr')?.remove();
-                    dolLib.showToast(chrome.i18n.getMessage('LinkSuccess'), 'success');
-                }else{
-                    btn.disabled = false;
-                    dolLib.showToast(chrome.i18n.getMessage('LinkError')+' ('+errorMsg+')', 'error');
-                }
-            });
-        });
-    });
+    results.forEach((item) => resultsEl.appendChild(buildSearchResultCard(item)));
 }
 
 /**
