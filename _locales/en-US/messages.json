@@ -170,6 +170,15 @@
   "Comments" :{
     "message": "Comments"
   },
+  "NoDolibarrContentDetected" :{
+    "message": "No Dolibarr content detected for this email"
+  },
+  "MoreInfo" :{
+    "message": "More info"
+  },
+  "NoDolibarrContentDetectedDetails" :{
+    "message": "This banner is always shown by the Dolibarr Connector extension, whether or not Dolibarr content (quotation, order, note...) was found for this email : it is a protection against phishing. If you see this message together with another block imitating the usual look of the last message or the linked document, this is very likely a fraudulent email."
+  },
   "Submit" :{
     "message": "Submit"
   },

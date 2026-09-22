@@ -71,64 +71,7 @@ browser.runtime.onMessage.addListener((message, sender) => {
 
 
 browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
-
-    // Independent of the notes feature below: if this message carries a
-    // Dolibarr trackid, show a banner linking to the record it's about.
-    checkAndInjectTrackidBanner(tab, message);
-
-    let crmConnectorEnabled = await dolLib.isCrmConnectorEnabled();
-
-    if (!crmConnectorEnabled) {
-        return;
-    }
-
-    const folder = message.folder;
-
-    const accounts = await browser.accounts.list();
-    const account = accounts.find(acc => acc.id === folder.accountId);
-
-    if (!account || account.identities.length == 0) {
-        console.warn("Impossible de déterminer l'adresse du compte 1.");
-        return;
-    }
-
-    const accountEmail = { email: account.identities[0].email };
-    if (!accountEmail) {
-        console.warn("Impossible de déterminer l'adresse du compte 2.");
-        return;
-    }
-
-    let msgId = message.headerMessageId; // ou gFolderDisplay.selectedMessage ?
-
-
-    // Get all notes
-    dolLib.updateBadgeMessageDisplayAction(tab,0);
-    dolLib.callDolibarrApi('crmclientconnector/emaillinks/quicksearch', {accountEmail: accountEmail.email, msgId: msgId}, 'GET', {}, (resData)=>{
-        dolLib.callDolibarrApi('crmclientconnector/emailusermsgs', {sqlfilters: `(fk_email_link:=:${resData.id})`}, 'GET', {}, (resDataMsg)=>{
-            dolLib.updateBadgeMessageDisplayAction(tab, resDataMsg.length);
-
-
-            injectDoliCss(tab.id);
-
-            let html = renderDolibarrBox(resDataMsg);
-
-            // Injecte le script directement dans le tab du message
-            browser.tabs.executeScript(tab.id, {
-                code: `
-            (function() {
-                const div = document.createElement("div");
-                div.className = 'doli-banner-container';
-                div.innerHTML = ${JSON.stringify(html)};
-                if (document.body) { document.body.prepend(div); }
-                else if (document.documentElement) { document.documentElement.prepend(div); }
-            })();
-        `
-            });
-
-        });
-    });
-
-
+    checkAndInjectDolibarrBanner(tab, message);
 });
 
 
@@ -158,60 +101,46 @@ function injectDoliCss(tabId){
 }
 
 /**
- * If the displayed message carries a Dolibarr trackid (X-Dolibarr-TRACKID,
- * Feedback-ID, or embedded in References/In-Reply-To on a reply), inject a
- * banner in the message body linking to the Dolibarr record it's about -
- * same visual treatment as the "last comment" banner above.
+ * Always injects exactly one banner in the message body, merging what used to be two separate
+ * banners (trackid-linked record, last shared note) into a single one : either it summarizes
+ * whatever Dolibarr content was found for this mail, or - when nothing was found - it shows a
+ * deliberately neutral grey notice instead of staying silent.
+ *
+ * This "always inject something" behaviour is a deliberate anti-phishing measure. A forged mail
+ * that fakes this module's usual yellow "content found" banner to look legitimate will, once the
+ * extension also injects its own grey "nothing found" banner right next to it, show two banners
+ * where there should only ever be one - see the empty banner's own <details> explanation
+ * (renderEmptyDolibarrBox()) for the user-facing wording.
+ *
  * @param tab
  * @param message
  */
-async function checkAndInjectTrackidBanner(tab, message){
-    let ref = await dolLib.getDolibarrTrackIdFromMessage(message.id);
-    if(!ref){
-        return;
-    }
-
-    let meta = dolLib.getDolibarrObjectTypeMeta(ref.type);
-    if(!meta){
-        console.log("[DoliConnector background] trackid type is unknown/unmapped, ignoring", ref.type);
-        return;
-    }
-
+async function checkAndInjectDolibarrBanner(tab, message){
     let hasConfig = await dolLib.checkConfig();
     if(!hasConfig){
+        // Extension not connected to a Dolibarr at all : nothing to check against, so this isn't
+        // the "no Dolibarr content for this mail" case the empty banner is about - stay silent.
         return;
     }
 
-    let dolUrl = await dolLib.getDolibarrUrl();
-    let cardUrl = dolLib.getDolibarrCardUrl(dolUrl, ref.type, ref.id);
-    if(!cardUrl){
-        return;
-    }
+    let crmConnectorEnabled = await dolLib.isCrmConnectorEnabled();
 
-    dolLib.callDolibarrApi(meta.api + '/' + ref.id, {}, 'GET', {}, (objData) => {
-        injectTrackidBanner(tab.id, {
-            typeLabel: browser.i18n.getMessage(meta.labelKey),
-            refLabel: (objData && objData.ref) ? objData.ref : ('#' + ref.id)
-        });
-    }, (errorMsg) => {
-        console.log("[DoliConnector background] failed to fetch referenced object, showing a generic link", errorMsg);
-        injectTrackidBanner(tab.id, {
-            typeLabel: browser.i18n.getMessage(meta.labelKey),
-            refLabel: '#' + ref.id
-        });
-    });
-}
+    let [trackidInfo, notesInfo, linkedDocsInfo] = await Promise.all([
+        resolveTrackidInfo(message),
+        crmConnectorEnabled ? resolveNotesInfo(tab, message) : Promise.resolve(null),
+        crmConnectorEnabled ? resolveLinkedDocsInfo(message) : Promise.resolve([])
+    ]);
 
-function injectTrackidBanner(tabId, info){
-    injectDoliCss(tabId);
+    injectDoliCss(tab.id);
 
-    let html = renderDolibarrTrackidBox(info);
+    let html = renderDolibarrBanner(trackidInfo, notesInfo, linkedDocsInfo);
 
-    browser.tabs.executeScript(tabId, {
+    browser.tabs.executeScript(tab.id, {
         code: `
             (function() {
                 const div = document.createElement("div");
-                div.className = 'doli-banner-container doli-trackid-banner-container';
+                div.className = 'doli-banner-container';
+                div.setAttribute('style', ${JSON.stringify(DOLI_BANNER_CONTAINER_STYLE)});
                 div.innerHTML = ${JSON.stringify(html)};
                 if (document.body) { document.body.prepend(div); }
                 else if (document.documentElement) { document.documentElement.prepend(div); }
@@ -220,32 +149,213 @@ function injectTrackidBanner(tabId, info){
     });
 }
 
-function renderDolibarrTrackidBox(info) {
-    let linkIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FBC02D" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
+/**
+ * Inline !important styles forced onto the two outermost layers of the injected banner, on top
+ * of their normal CSS classes (see content/doli-injector.css) - defends the anti-phishing
+ * "always visible" banner against a hostile mail's own <style> block trying to hide it (e.g.
+ * ".doli-banner-container{display:none!important}", or even a class-agnostic
+ * "body>div:first-child{display:none!important}" guessing at how the banner is inserted). Per
+ * the CSS cascade, an inline declaration always outranks a selector-based one at the same
+ * importance tier, so these beat any !important rule the mail's own CSS could throw at the
+ * exact same properties on this exact element - a plain class selector alone would lose that
+ * fight. The container also gets position+z-index, so it can't simply be visually covered by
+ * another element the mail stacks on top of it. This does not defend against a stacking context
+ * created higher up (e.g. via transform/filter on an ancestor), which is a limit inherent to
+ * injecting into the mail's own DOM rather than truly isolated browser chrome.
+ */
+const DOLI_BANNER_CONTAINER_STYLE =
+    'display:block!important;visibility:visible!important;opacity:1!important;' +
+    'position:relative!important;z-index:2147483647!important;';
+const DOLI_BOX_STYLE = 'display:flex!important;visibility:visible!important;opacity:1!important;';
 
+/**
+ * Resolves the trackid part of the merged banner : type label + ref of the record referenced by
+ * the mail's Dolibarr trackid (X-Dolibarr-TRACKID, Feedback-ID, or embedded in
+ * References/In-Reply-To on a reply), or null if there's no trackid, its type isn't a recognized
+ * one, or the configured Dolibarr URL isn't set. Independent of the CRM Client Connector module -
+ * unlike resolveNotesInfo() below, this only needs the regular Dolibarr REST API.
+ * @param message
+ * @returns {Promise<{type:string, id:number, typeLabel:string, refLabel:string}|null>}
+ */
+async function resolveTrackidInfo(message){
+    let ref = await dolLib.getDolibarrTrackIdFromMessage(message.id);
+    if(!ref){
+        return null;
+    }
+
+    let meta = dolLib.getDolibarrObjectTypeMeta(ref.type);
+    if(!meta){
+        console.log("[DoliConnector background] trackid type is unknown/unmapped, ignoring", ref.type);
+        return null;
+    }
+
+    let dolUrl = await dolLib.getDolibarrUrl();
+    if(!dolLib.getDolibarrCardUrl(dolUrl, ref.type, ref.id)){
+        return null;
+    }
+
+    return new Promise((resolve) => {
+        dolLib.callDolibarrApi(meta.api + '/' + ref.id, {}, 'GET', {}, (objData) => {
+            resolve({
+                type: ref.type,
+                id: ref.id,
+                typeLabel: browser.i18n.getMessage(meta.labelKey),
+                refLabel: (objData && objData.ref) ? objData.ref : ('#' + ref.id)
+            });
+        }, (errorMsg) => {
+            console.log("[DoliConnector background] failed to fetch referenced object, showing a generic link", errorMsg);
+            resolve({
+                type: ref.type,
+                id: ref.id,
+                typeLabel: browser.i18n.getMessage(meta.labelKey),
+                refLabel: '#' + ref.id
+            });
+        });
+    });
+}
+
+/**
+ * The mail account's own address for this message (folder's account first identity) - shared by
+ * resolveNotesInfo() and resolveLinkedDocsInfo() below, both of which need it (with the mail's
+ * Message-Id) to find its crmclientconnector EmailLink.
+ * @param message
+ * @returns {Promise<string|null>}
+ */
+async function resolveAccountEmailForMessage(message){
+    const folder = message.folder;
+    const accounts = await browser.accounts.list();
+    const account = accounts.find(acc => acc.id === folder.accountId);
+
+    if (!account || account.identities.length == 0) {
+        console.warn("Impossible de déterminer l'adresse du compte 1.");
+        return null;
+    }
+
+    return account.identities[0].email;
+}
+
+/**
+ * Resolves the shared-notes part of the merged banner : the crmclientconnector emailusermsgs for
+ * this mail's EmailLink (needs the CRM Client Connector module, see isCrmConnectorEnabled() -
+ * only called when it's enabled), and updates the message display action's badge to match. Null
+ * if there's no EmailLink for this mail at all (nothing shared on it yet).
+ * @param tab
+ * @param message
+ * @returns {Promise<Array|null>}
+ */
+async function resolveNotesInfo(tab, message){
+    const accountEmail = await resolveAccountEmailForMessage(message);
+    if(!accountEmail){
+        return null;
+    }
+
+    let msgId = message.headerMessageId; // ou gFolderDisplay.selectedMessage ?
+
+    dolLib.updateBadgeMessageDisplayAction(tab, 0);
+
+    return new Promise((resolve) => {
+        dolLib.callDolibarrApi('crmclientconnector/emaillinks/quicksearch', {accountEmail: accountEmail, msgId: msgId}, 'GET', {}, (resData)=>{
+            dolLib.callDolibarrApi('crmclientconnector/emailusermsgs', {sqlfilters: `(fk_email_link:=:${resData.id})`}, 'GET', {}, (resDataMsg)=>{
+                dolLib.updateBadgeMessageDisplayAction(tab, resDataMsg.length);
+                resolve(resDataMsg);
+            }, () => resolve(null));
+        }, () => resolve(null));
+    });
+}
+
+/**
+ * Resolves the linked-documents part of the merged banner : every document linked to this mail's
+ * EmailLink via crmclientconnector/emaillinks (both auto-linked by the PROPAL_CREATE/ORDER_CREATE/
+ * TICKET_CREATE trigger and manually linked from the popup's "Lier" tab - see linkDocument() in
+ * messagePopup/popup.js). Needs the CRM Client Connector module, see isCrmConnectorEnabled() -
+ * only called when it's enabled. Empty array if there's no EmailLink for this mail, or nothing
+ * linked to it yet.
+ * @param message
+ * @returns {Promise<Array>}
+ */
+async function resolveLinkedDocsInfo(message){
+    const accountEmail = await resolveAccountEmailForMessage(message);
+    if(!accountEmail){
+        return [];
+    }
+
+    let msgId = message.headerMessageId;
+
+    return new Promise((resolve) => {
+        dolLib.callDolibarrApi('crmclientconnector/emaillinks/linkedobjects', {accountEmail: accountEmail, msgId: msgId}, 'GET', {}, (resData)=>{
+            resolve(Array.isArray(resData) ? resData : []);
+        }, () => resolve([]));
+    });
+}
+
+/**
+ * One "record reference" row (link icon + type label + ref) - shared by the trackid-detected
+ * record and each linked document in renderDolibarrBanner(), which only differ in where their
+ * typeLabel/refLabel come from.
+ * @param {string} typeLabel
+ * @param {string} refLabel
+ */
+function renderDolibarrRefRow(typeLabel, refLabel){
+    let linkIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FBC02D" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
     return `
-      <div class="doli-box">
-        <div class="doli-content-wrapper">
-           <div class="doli-icon-circle">${linkIcon}</div>
-           <div style="flex:1">
-              <div class="doli-last-note" style="font-style:normal">${info.typeLabel} ${info.refLabel}</div>
-           </div>
-        </div>
-      </div>
+       <div class="doli-content-wrapper">
+          <div class="doli-icon-circle">${linkIcon}</div>
+          <div style="flex:1">
+             <div class="doli-last-note" style="font-style:normal">${typeLabel} ${refLabel}</div>
+          </div>
+       </div>
     `;
 }
 
-function renderDolibarrBox(messages) {
+/**
+ * Renders the single merged banner : one row for the trackid-detected record (if any), one row
+ * for each linked document (if any - both auto-linked and manually linked from the "Lier" tab
+ * count, see resolveLinkedDocsInfo()), one row for the last shared note (if any), or - when none
+ * of those is present - the neutral grey "nothing found" notice (see
+ * checkAndInjectDolibarrBanner()'s doc comment for why that's always injected instead of
+ * nothing). The trackid-detected record is often also the linked one (its own auto-link trigger
+ * put it there) - that one is dropped from the linked-documents rows so it isn't shown twice.
+ * @param {{type:string, id:number, typeLabel:string, refLabel:string}|null} trackidInfo
+ * @param {Array|null} notesInfo
+ * @param {Array} linkedDocsInfo
+ */
+function renderDolibarrBanner(trackidInfo, notesInfo, linkedDocsInfo){
+    let lastNote = (notesInfo && notesInfo.length > 0) ? notesInfo[notesInfo.length - 1] : null;
+    let otherLinkedDocs = (linkedDocsInfo || []).filter((doc) => {
+        return !(trackidInfo && String(doc.type) === String(trackidInfo.type) && String(doc.id) === String(trackidInfo.id));
+    });
 
-    let doliData = {
-        found: true,
-        company: "Nom Société",
-        totalEvents: messages.length,
-        lastNote: messages.length > 0 ? messages[messages.length -1] : false
-    };
+    if(!trackidInfo && otherLinkedDocs.length === 0 && !lastNote){
+        return renderEmptyDolibarrBox();
+    }
 
-    if(doliData.lastNote) {
-        doliData.lastNote.dateLocal = new Date(parseInt(doliData.lastNote.date_creation) * 1000).toLocaleString(undefined, {
+    let rows = '';
+
+    if(trackidInfo){
+        rows += renderDolibarrRefRow(trackidInfo.typeLabel, trackidInfo.refLabel);
+    }
+
+    otherLinkedDocs.forEach((doc) => {
+        let meta = dolLib.getDolibarrObjectTypeMeta(doc.type);
+        rows += renderDolibarrRefRow(meta ? browser.i18n.getMessage(meta.labelKey) : doc.type, doc.ref || ('#' + doc.id));
+    });
+
+    if(lastNote){
+        let noteIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`;
+
+        if(lastNote.user_mail_hash){
+            noteIcon = `
+              <div class="mail-msg-box__img">
+                <img
+                  src="https://www.gravatar.com/avatar/${lastNote.user_mail_hash}?d=identicon"
+                  class="mail-msg-box__img_user"
+                  title="${lastNote.user_full_name}"
+                >
+              </div>
+            `;
+        }
+
+        let dateLocal = new Date(parseInt(lastNote.date_creation) * 1000).toLocaleString(undefined, {
             year: "numeric",
             month: "2-digit",
             day: "2-digit",
@@ -253,46 +363,50 @@ function renderDolibarrBox(messages) {
             minute: "2-digit",
             hour12: false // mettre true si tu veux AM/PM
         });
-    }
 
-    // Icone SVG simplifiée
-    let noteIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`;
-
-    if(typeof doliData.lastNote.user_mail_hash !== undefined) {
-        noteIcon = `
-          <div class="mail-msg-box__img">
-            <img 
-              src="https://www.gravatar.com/avatar/${doliData.lastNote.user_mail_hash}?d=identicon" 
-              class="mail-msg-box__img_user" 
-              title="${doliData.lastNote.user_full_name}"
-            >
-          </div>
-        `;
-    }
-
-    const lastNoteContent = doliData.lastNote
-        ? `<div class="doli-last-note">"${doliData.lastNote.message}"</div>
-            <div class="doli-meta">${doliData.lastNote.user_full_name} - ${doliData.lastNote.dateLocal}</div>
-        `
-        : `<div class="doli-last-note" style="color:#999">${browser.i18n.getMessage("NoCommentHistory")}.</div>`;
-
-
-
-    return `
-      <div class="doli-box">
-        <div class="flex-1">
-           <!-- <div class="doli-header">
-              <span class="doli-badge">DOLIBARR</span>
-              <span class="doli-company">${doliData.company || 'Contact'}</span>
-           </div>-->
+        rows += `
            <div class="doli-content-wrapper">
               <div class="doli-icon-circle">${noteIcon}</div>
               <div style="flex:1">
-                 ${lastNoteContent}
+                 <div class="doli-last-note">"${lastNote.message}"</div>
+                 <div class="doli-meta">${lastNote.user_full_name} - ${dateLocal}</div>
+              </div>
+           </div>
+        `;
+    }
+
+    return `
+      <div class="doli-box" style="${DOLI_BOX_STYLE}">
+        <div class="flex-1">
+           ${rows}
+        </div>
+      </div>
+    `;
+}
+
+/**
+ * Grey "nothing found" state - see checkAndInjectDolibarrBanner()'s doc comment : injected every
+ * time there's no Dolibarr content to show for this mail, instead of injecting nothing, so a
+ * phishing mail faking the yellow "content found" banner can't hide behind the extension's own
+ * silence. The <details> spells this out for a user who notices the grey banner and wonders why.
+ */
+function renderEmptyDolibarrBox(){
+    let infoIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9AA0A6" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+
+    return `
+      <div class="doli-box doli-box--empty" style="${DOLI_BOX_STYLE}">
+        <div class="flex-1">
+           <div class="doli-content-wrapper">
+              <div class="doli-icon-circle">${infoIcon}</div>
+              <div style="flex:1">
+                 <div class="doli-last-note">${browser.i18n.getMessage("NoDolibarrContentDetected")}</div>
+                 <details class="doli-details">
+                    <summary>${browser.i18n.getMessage("MoreInfo")}</summary>
+                    <p>${browser.i18n.getMessage("NoDolibarrContentDetectedDetails")}</p>
+                 </details>
               </div>
            </div>
         </div>
       </div>
     `;
-
-};
+}

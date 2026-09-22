@@ -1,6 +1,11 @@
 /* css/doli-injector.css */
 .doli-banner-container {
-    margin: 0;
+    margin: 0 0 12px 0;
+    padding-bottom: 12px;
+    /* Clear separation from the actual mail content below, so the banner (injected by the
+       extension) can never be mistaken for part of the message itself - see
+       background.js's checkAndInjectDolibarrBanner() for why that boundary matters. */
+    border-bottom: 1px solid #ddd;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -21,6 +26,10 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
+    /* Without this, a mail whose own body sets text-align:center (common in centered email
+       templates) would inherit into the box - most visible on the "no content" state's
+       <summary>/<details> : it opens centered, then re-wraps and visibly jumps sideways. */
+    text-align: left;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     position: relative;
     overflow: hidden;
@@ -83,5 +92,47 @@
     font-size: 11px;
     color: #666;
     margin-bottom: 2px;
+}
+
+/* "Nothing found for this mail" state (see background.js's renderEmptyDolibarrBox()) :
+   deliberately grey rather than the yellow/orange used above, so it can never be mistaken for
+   (or easily imitated as) the "content found" state - this box is injected on every mail once
+   the extension is configured, precisely so its absence/presence is a reliable signal. */
+.doli-box--empty {
+    background-color: #F5F6F7;
+    border: 1px solid #E0E3E6;
+    border-left: 4px solid #9AA0A6;
+}
+
+.doli-box--empty .doli-icon-circle {
+    border-color: #E0E3E6;
+}
+
+.doli-box--empty .doli-last-note {
+    background-color: transparent;
+    border: none;
+    font-style: normal;
+    color: #5f6368;
+}
+
+.doli-details {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #777;
+}
+
+.doli-details summary {
+    cursor: pointer;
+    color: #5a5b62;
+    font-weight: 600;
+}
+
+.doli-details summary::-webkit-details-marker {
+    color: #9AA0A6;
+}
+
+.doli-details p {
+    margin: 4px 0 0 0;
+    color: #777;
 }
 

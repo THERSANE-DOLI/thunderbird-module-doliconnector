@@ -1354,7 +1354,6 @@ async function initNotesForMessage(){
 
     let msgId = message.headerMessageId; // ou gFolderDisplay.selectedMessage ?
     let textArea = document.getElementById("dolibarr-note-input");
-    let sendCommentBTN = document.getElementById('send-comment');
 
     // Display input form
     // Add new note
@@ -1374,7 +1373,7 @@ async function initNotesForMessage(){
         });
 
 
-    sendCommentBTN.addEventListener('click', function() {
+    function submitComment(){
         if(textArea.value.length > 0){
 
             // TODO : add feedback animation see Dolibarr experimental Doc
@@ -1398,7 +1397,16 @@ async function initNotesForMessage(){
                 //     document.getElementById('dolibarr-note-input-errors').innerText = err.message;
             });
         }
-    })
+    }
+
+    // No more submit button : Enter alone submits, Shift+Enter / Ctrl+Enter inserts a newline
+    // (the textarea's own default behaviour for Enter, which preventDefault() below skips).
+    textArea.addEventListener('keydown', function(event) {
+        if(event.key === 'Enter' && !event.shiftKey && !event.ctrlKey){
+            event.preventDefault();
+            submitComment();
+        }
+    });
 }
 
 /**
@@ -1629,8 +1637,10 @@ function updateInfoTabLinkedDocumentsSection(){
 /**
  * One linked document, as a card : ref/type/status up top, then whichever of ref client/
  * supplier/date/total the backend sent for that document type (not every field applies to
- * every type - see getEmailLinkLinkedObjects() on the Dolibarr side), and an unlink action.
- * @param {{type:string, id:number, ref:string, refClient:?string, refSupplier:?string, status:?string, statusCode:?number, date:?number, totalTtc:?number}} item
+ * every type - see getEmailLinkLinkedObjects() on the Dolibarr side), and an unlink action. The
+ * status badge is built from statusCode via getDetectedRefStatusInfo() rather than from the
+ * backend's own status label (unused here - see the comment where statusCode is read below).
+ * @param {{type:string, id:number, ref:string, refClient:?string, refSupplier:?string, statusCode:?number, date:?number, totalTtc:?number}} item
  */
 function buildLinkedDocCard(item){
     let meta = dolLib.getDolibarrObjectTypeMeta(item.type);
@@ -1657,16 +1667,16 @@ function buildLinkedDocCard(item){
     }
     header.appendChild(ref);
 
-    if(item.status){
+    // Ignores item.status (Dolibarr's own getLibStatut(0) label : long, sometimes HTML-entity
+    // encoded depending on the object type - e.g. a supplier order shows up as "Tous les
+    // produits reçus - Factur&eacute;e") in favor of the same short, plain-text, locale-aware
+    // mapping the detected-ref card uses (see buildDetectedRefCard() above and
+    // getDetectedRefStatusInfo()'s own doc comment).
+    let statusInfo = getDetectedRefStatusInfo(item.type, item.statusCode);
+    if(statusInfo){
         let status = document.createElement('span');
-        status.classList.add('badge');
-        if(Number.isInteger(item.statusCode) && item.statusCode >= 0 && item.statusCode <= 10){
-            status.classList.add('badge-status'+item.statusCode);
-        }
-        // item.status is a Dolibarr-side language key (e.g. "StatusOrderDelivered"), not
-        // already-translated text - translate it here, falling back to the raw key so an
-        // untranslated status is still visible rather than silently blank.
-        status.textContent = chrome.i18n.getMessage(item.status) || item.status;
+        status.classList.add('badge', 'badge-status'+statusInfo.code);
+        status.textContent = statusInfo.label;
         header.appendChild(status);
     }
 

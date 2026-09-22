@@ -336,19 +336,9 @@ details.dolibarr-connector-detail > :where(div,p) {
 .dolibarr-form-box__body {
 	padding: calc(var(--spacing) * 2);
 	background-color: var(--color-white);
-	border-top-left-radius: var(--radius-lg);
-	border-top-right-radius: var(--radius-lg);
+	border-radius: var(--radius-lg);
 }
 
-
-.dolibarr-form-box__footer {
-	display: flex;
-	padding: calc(var(--spacing) * 2);
-	justify-content: space-between;
-	align-items: center;
-	border-color: var(--color-gray-200);
-
-}
 .btn.--submit{
 	color: var(--color-white);
 	font-weight: 600;

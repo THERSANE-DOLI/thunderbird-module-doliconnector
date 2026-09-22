@@ -170,6 +170,15 @@
   "NoCommentHistory" :{
     "message": "Aucun historique récent"
   },
+  "NoDolibarrContentDetected" :{
+    "message": "Aucun contenu Dolibarr détecté pour cet email"
+  },
+  "MoreInfo" :{
+    "message": "En savoir plus"
+  },
+  "NoDolibarrContentDetectedDetails" :{
+    "message": "Ce bandeau est toujours affiché par l'extension Dolibarr Connector, qu'un contenu Dolibarr (devis, commande, note...) ait été trouvé ou non pour cet email : c'est une protection contre le hameçonnage. Si vous voyez ce message en même temps qu'un autre bloc imitant l'apparence habituelle du dernier message ou du document lié, il s'agit très probablement d'un email frauduleux."
+  },
   "Submit" :{
     "message": "Envoyer"
   },
