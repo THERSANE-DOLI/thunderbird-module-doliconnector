@@ -7,13 +7,12 @@
     "storage",
     "messagesRead",
     "accountsRead",
-    "messagesModify",
-    "activeTab"
+    "messagesModify"
   ],
   "optional_permissions": [
     "<all_urls>"
   ],
-  "version": "1.10.1",
+  "version": "2.0.0",
   "author": "THERSANE",
   "homepage_url": "https://www.thersane.fr",
   "browser_specific_settings": {
@@ -23,12 +22,10 @@
     }
   },
   "message_display_action": {
-    "default_popup": "messagePopup/popup.html",
     "default_title": "Dolibarr",
     "default_icon": "images/dolibarr-32.png"
   },
   "browser_action": {
-    "default_popup": "messagePopup/popup.html",
     "default_title": "Dolibarr",
     "default_icon": "images/dolibarr-32.png"
   },
@@ -46,8 +43,5 @@
     "type": "module",
     "scripts": ["background.js"],
     "persistent": false
-  },
-  "web_accessible_resources": [
-    "exclude-domains.json"
-  ]
+  }
 }

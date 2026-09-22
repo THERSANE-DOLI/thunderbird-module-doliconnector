@@ -8,6 +8,18 @@
   "Save": {
     "message": "Save"
   },
+  "Edit": {
+    "message": "Edit"
+  },
+  "Cancel": {
+    "message": "Cancel"
+  },
+  "EditSuccess": {
+    "message": "Message edited"
+  },
+  "EditError": {
+    "message": "Error while editing the message"
+  },
   "dolibarrApiKey": {
     "message": "REST API key"
   },
@@ -44,6 +56,15 @@
   "CreateNewContact": {
     "message": "Create a new contact"
   },
+  "CreateNewQuotation": {
+    "message": "Create a quotation"
+  },
+  "CreateNewOrder": {
+    "message": "Create an order"
+  },
+  "CreateNewTicket": {
+    "message": "Create a ticket"
+  },
   "FicheDolibarr": {
     "message": "Show thirdparty"
   },
@@ -53,8 +74,32 @@
   "RefClient": {
     "message": "Client Ref"
   },
+  "RefSupplier": {
+    "message": "Supplier Ref"
+  },
+  "Thirdparty": {
+    "message": "Thirdparty"
+  },
   "CheckYourModuleConfig": {
     "message": "Configuration incomplete : Check your module configuration"
+  },
+  "CheckYourCredentials": {
+    "message": "Invalid credentials : Check your API key (and your HTTP Basic Auth credentials if applicable) in the module configuration"
+  },
+  "CheckServerConnection": {
+    "message": "Connection failed : Unable to reach the Dolibarr server. Check the configured URL and your network connection"
+  },
+  "dolibarrHttpAuthEnabled": {
+    "message": "HTTP Basic Auth"
+  },
+  "dolibarrHttpAuthEnabledDesc": {
+    "message": "Enable if calls to the Dolibarr API are protected by HTTP Basic Auth (e.g. web server level access restriction)"
+  },
+  "dolibarrHttpAuthUser": {
+    "message": "HTTP username"
+  },
+  "dolibarrHttpAuthPassword": {
+    "message": "HTTP password"
   },
   "refFourn": {
     "message": "Vendor Ref"
@@ -98,14 +143,29 @@
   "PleaseSelectAnEmailBefore" :{
     "message": "Please select an email"
   },
-  "DoubleClickToDelete" :{
-    "message": "Double click to delete"
+  "ConfirmDelete" :{
+    "message": "Delete permanently"
   },
-  "DolibarrUseNotes" :{
-    "message": "Allow viewing and adding shared notes on emails"
+  "DolibarrCrmConnectorEnabled" :{
+    "message": "CRM Client Connector module features"
   },
-  "DolibarrUseNotesDesc" :{
-    "message": "Requires the CRM client connector module installed on your Dolibarr"
+  "DolibarrCrmConnectorEnabledDesc" :{
+    "message": "Enables shared notes on emails, the \"Link\" tab (search/link quotations, orders, invoices...) and automatic reference detection in emails. Requires the CRM Client Connector module installed and enabled on your Dolibarr."
+  },
+  "CrmConnectorFeatureDisabled" :{
+    "message": "Feature disabled : enable the CRM Client Connector connection in the extension settings"
+  },
+  "NoThirdpartyNoDocuments" :{
+    "message": "No thirdparty identified : no document can be displayed"
+  },
+  "dolibarrQuotationTrustedSenders" :{
+    "message": "Trusted senders for quotation headers"
+  },
+  "dolibarrQuotationTrustedSendersDesc" :{
+    "message": "If an email comes from one of these senders (exact address or domain, e.g. : @myshop.com) and contains the X-Quotation-Mail / X-Quotation-Data headers (Prestashop tsquotationform module), the thirdparty will be searched/created from these headers instead of the mail sender."
+  },
+  "dolibarrQuotationTrustedSendersPlaceholder" :{
+    "message": "One address or domain per line, e.g.:\nshop@example.com\n@myshop.com"
   },
   "Comments" :{
     "message": "Comments"
@@ -191,6 +251,9 @@
   "StatusOrderDeliveredShort": {
     "message": "Shipped"
   },
+  "StatusOrderDelivered": {
+    "message": "Shipped"
+  },
   "StatusDelivered": {
     "message": "Delivered"
   },
@@ -220,5 +283,98 @@
   },
   "StatusSupplierOrderRefusedShort": {
     "message": "Refused"
+  },
+  "DolibarrRefDetected": {
+    "message": "Reference detected in this email:"
+  },
+  "OpenDocument": {
+    "message": "Show record"
+  },
+  "DolibarrTypeOrder": {
+    "message": "Order"
+  },
+  "DolibarrTypeProposal": {
+    "message": "Proposal"
+  },
+  "DolibarrTypeInvoice": {
+    "message": "Invoice"
+  },
+  "DolibarrTypeSupplierOrder": {
+    "message": "Supplier order"
+  },
+  "DolibarrTypeSupplierInvoice": {
+    "message": "Supplier invoice"
+  },
+  "DolibarrTypeShipment": {
+    "message": "Shipment"
+  },
+  "DolibarrTypeContract": {
+    "message": "Contract"
+  },
+  "DolibarrTypeTicket": {
+    "message": "Ticket"
+  },
+  "DolibarrTypeProject": {
+    "message": "Project"
+  },
+  "DolibarrTypeIntervention": {
+    "message": "Intervention sheet"
+  },
+  "DolibarrTypeMember": {
+    "message": "Member"
+  },
+  "TabInfo": {
+    "message": "Info"
+  },
+  "TabDocuments": {
+    "message": "Documents"
+  },
+  "TabLinkDocument": {
+    "message": "Link"
+  },
+  "LinkedDocuments": {
+    "message": "Linked documents"
+  },
+  "NoLinkedDocument": {
+    "message": "No document linked to this mail"
+  },
+  "SearchDocumentToLink": {
+    "message": "Link an existing document"
+  },
+  "SearchDocumentToLinkPlaceholder": {
+    "message": "Search a reference..."
+  },
+  "SearchDocumentToLinkNoResults": {
+    "message": "No results"
+  },
+  "SearchDocumentToLinkError": {
+    "message": "Search failed"
+  },
+  "LinkAllTypes": {
+    "message": "All types"
+  },
+  "Link": {
+    "message": "Link"
+  },
+  "Unlink": {
+    "message": "Unlink"
+  },
+  "Actions": {
+    "message": "Actions"
+  },
+  "LinkSuccess": {
+    "message": "Document linked"
+  },
+  "UnlinkSuccess": {
+    "message": "Document unlinked"
+  },
+  "UnlinkError": {
+    "message": "Error while unlinking the document"
+  },
+  "LinkError": {
+    "message": "Error while linking the document"
+  },
+  "Type": {
+    "message": "Type"
   }
 }

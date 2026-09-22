@@ -1,46 +1,84 @@
 // background.js (ES module)
 import * as dolLib from '../global.lib.js';
 
-browser.runtime.onMessage.addListener(async (message, sender) => {
+/**
+ * Open the popup UI in its own detached window rather than the small toolbar dropdown - used by
+ * the "comment" button injected in the mail body, and by Ctrl+click on the toolbar/message
+ * display action buttons (see onClicked listeners below).
+ * @param tabId tab the mail is displayed in, used to know which message to load in the popup
+ */
+async function openDetachedPopupWindow(tabId){
+    let message = await browser.messageDisplay.getDisplayedMessage(tabId);
+    await browser.storage.local.set({dolibarrMsg: message});
+
+    browser.windows.create({
+        url: browser.runtime.getURL("messagePopup/popup.html"),
+        type: "popup",
+        width: 600,
+        height: 500
+    });
+}
+
+/**
+ * Neither messageDisplayAction nor browserAction have a default_popup configured (see
+ * manifest.json) : this is what lets onClicked fire at all, so we can check for Ctrl before
+ * deciding what to open. On a plain click, the popup is opened the same way it would have been
+ * with a default_popup set (set it, open it, then clear it again so onClicked keeps firing on
+ * the next click - see https://bugzilla.mozilla.org/show_bug.cgi?id=1681131).
+ * @param action browser.messageDisplayAction or browser.browserAction
+ * @param tab tab passed to the onClicked listener
+ * @param info OnClickData passed to the onClicked listener
+ */
+async function handleActionClick(action, tab, info){
+    // Note: on macOS, Ctrl+click is treated as a right click by default and MacCtrl is not
+    // forwarded here, so this only reliably works on Windows/Linux.
+    if(info && Array.isArray(info.modifiers) && info.modifiers.includes('Ctrl')){
+        await openDetachedPopupWindow(tab.id);
+        return;
+    }
+
+    await action.setPopup({tabId: tab.id, popup: 'messagePopup/popup.html'});
+    await action.openPopup();
+    await action.setPopup({tabId: tab.id, popup: ''});
+}
+
+browser.messageDisplayAction.onClicked.addListener((tab, info) => handleActionClick(browser.messageDisplayAction, tab, info));
+browser.browserAction.onClicked.addListener((tab, info) => handleActionClick(browser.browserAction, tab, info));
+
+browser.runtime.onMessage.addListener((message, sender) => {
     if (message.type === "getEmailAccount") {
-        try {
-            const msg = await browser.messages.get(message.messageId);
-            const folder = msg.folder;
-            const accounts = await browser.accounts.list();
-            const account = accounts.find(acc => acc.id === folder.accountId);
+        return (async () => {
+            try {
+                const msg = await browser.messages.get(message.messageId);
+                const folder = msg.folder;
+                const accounts = await browser.accounts.list();
+                const account = accounts.find(acc => acc.id === folder.accountId);
 
-            if (account && account.identities.length > 0) {
-                return { email: account.identities[0].email };
+                if (account && account.identities.length > 0) {
+                    return { email: account.identities[0].email };
+                }
+            } catch (err) {
+                console.error("Erreur récupération compte :", err);
             }
-        } catch (err) {
-            console.error("Erreur récupération compte :", err);
-        }
 
-        return { email: null };
+            return { email: null };
+        })();
     }
 
-    if (message.action === "openDolibarr") {
-        // Dans le cas d'une ouverture depuis le mail il faut récupérer les infos de la tab source d'ouverture et les envoyer à la popup
-        let tabId = sender.tab.id;
-        let message = await browser.messageDisplay.getDisplayedMessage(tabId);
-        await browser.storage.local.set({dolibarrMsg: message});
-
-        browser.windows.create({
-            url: browser.runtime.getURL("messagePopup/popup.html"),
-            type: "popup",
-            width: 600,
-            height: 500
-        });
-    }
+    // Not handled by this listener - do not claim the message so other listeners can respond.
+    return undefined;
 });
 
 
 browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
 
+    // Independent of the notes feature below: if this message carries a
+    // Dolibarr trackid, show a banner linking to the record it's about.
+    checkAndInjectTrackidBanner(tab, message);
 
-    let config = await browser.storage.local.get({dolibarrUseNotes: false});
+    let crmConnectorEnabled = await dolLib.isCrmConnectorEnabled();
 
-    if (!config.dolibarrUseNotes) {
+    if (!crmConnectorEnabled) {
         return;
     }
 
@@ -70,22 +108,7 @@ browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
             dolLib.updateBadgeMessageDisplayAction(tab, resDataMsg.length);
 
 
-            // Dans ton background.js ou callback
-            const cssPath = browser.runtime.getURL("content/doli-injector.css");
-            fetch(cssPath)
-                .then(res => res.text())
-                .then(css => {
-                    browser.tabs.executeScript(tab.id, {
-                        code: `
-                          (function() {
-                              const style = document.createElement("style");
-                              style.type = "text/css";
-                              style.innerHTML = ${JSON.stringify(css)};
-                              (document.head || document.documentElement).appendChild(style);
-                          })();
-                        `
-                    });
-                });
+            injectDoliCss(tab.id);
 
             let html = renderDolibarrBox(resDataMsg);
 
@@ -98,16 +121,7 @@ browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
                 div.innerHTML = ${JSON.stringify(html)};
                 if (document.body) { document.body.prepend(div); }
                 else if (document.documentElement) { document.documentElement.prepend(div); }
-                console.log("Div injecté avec succès");
-                
-                document.addEventListener("click", (ev) => {
-                  if (ev.target && ev.target.id === "doli-open-btn") {
-                    browser.runtime.sendMessage({action: "openDolibarr"});
-                  }
-                });
             })();
-            
-            
         `
             });
 
@@ -117,6 +131,109 @@ browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
 
 });
 
+
+/**
+ * Injects content/doli-injector.css into the message tab, once. Both the
+ * "last comment" banner and the trackid banner rely on it.
+ * @param tabId
+ */
+function injectDoliCss(tabId){
+    const cssPath = browser.runtime.getURL("content/doli-injector.css");
+    fetch(cssPath)
+        .then(res => res.text())
+        .then(css => {
+            browser.tabs.executeScript(tabId, {
+                code: `
+                  (function() {
+                      if (document.getElementById('doli-injected-css')) { return; }
+                      const style = document.createElement("style");
+                      style.id = 'doli-injected-css';
+                      style.type = "text/css";
+                      style.innerHTML = ${JSON.stringify(css)};
+                      (document.head || document.documentElement).appendChild(style);
+                  })();
+                `
+            });
+        });
+}
+
+/**
+ * If the displayed message carries a Dolibarr trackid (X-Dolibarr-TRACKID,
+ * Feedback-ID, or embedded in References/In-Reply-To on a reply), inject a
+ * banner in the message body linking to the Dolibarr record it's about -
+ * same visual treatment as the "last comment" banner above.
+ * @param tab
+ * @param message
+ */
+async function checkAndInjectTrackidBanner(tab, message){
+    let ref = await dolLib.getDolibarrTrackIdFromMessage(message.id);
+    if(!ref){
+        return;
+    }
+
+    let meta = dolLib.getDolibarrObjectTypeMeta(ref.type);
+    if(!meta){
+        console.log("[DoliConnector background] trackid type is unknown/unmapped, ignoring", ref.type);
+        return;
+    }
+
+    let hasConfig = await dolLib.checkConfig();
+    if(!hasConfig){
+        return;
+    }
+
+    let dolUrl = await dolLib.getDolibarrUrl();
+    let cardUrl = dolLib.getDolibarrCardUrl(dolUrl, ref.type, ref.id);
+    if(!cardUrl){
+        return;
+    }
+
+    dolLib.callDolibarrApi(meta.api + '/' + ref.id, {}, 'GET', {}, (objData) => {
+        injectTrackidBanner(tab.id, {
+            typeLabel: browser.i18n.getMessage(meta.labelKey),
+            refLabel: (objData && objData.ref) ? objData.ref : ('#' + ref.id)
+        });
+    }, (errorMsg) => {
+        console.log("[DoliConnector background] failed to fetch referenced object, showing a generic link", errorMsg);
+        injectTrackidBanner(tab.id, {
+            typeLabel: browser.i18n.getMessage(meta.labelKey),
+            refLabel: '#' + ref.id
+        });
+    });
+}
+
+function injectTrackidBanner(tabId, info){
+    injectDoliCss(tabId);
+
+    let html = renderDolibarrTrackidBox(info);
+
+    browser.tabs.executeScript(tabId, {
+        code: `
+            (function() {
+                const div = document.createElement("div");
+                div.className = 'doli-banner-container doli-trackid-banner-container';
+                div.innerHTML = ${JSON.stringify(html)};
+                if (document.body) { document.body.prepend(div); }
+                else if (document.documentElement) { document.documentElement.prepend(div); }
+            })();
+        `
+    });
+}
+
+function renderDolibarrTrackidBox(info) {
+    let linkIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FBC02D" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
+
+    return `
+      <div class="doli-box">
+        <div class="doli-content-wrapper">
+           <div class="doli-icon-circle">${linkIcon}</div>
+           <div style="flex:1">
+              <div class="doli-last-note" style="font-style:normal">${info.typeLabel} ${info.refLabel}</div>
+           </div>
+        </div>
+      </div>
+    `;
+}
 
 function renderDolibarrBox(messages) {
 
@@ -174,12 +291,6 @@ function renderDolibarrBox(messages) {
                  ${lastNoteContent}
               </div>
            </div>
-        </div>
-        <div class="doli-actions">
-           <button id="doli-open-btn" class="doli-btn-history">
-              ${browser.i18n.getMessage("Comments")} &nbsp;
-              ${doliData.totalEvents > 0 ? `<span class="doli-counter">${doliData.totalEvents}</span>` : ''}
-           </button>
         </div>
       </div>
     `;

@@ -2,7 +2,10 @@
 
 
 .grid-container{
-	min-width: 500px;
+	/* Fixed (not min-) width: the two popup tabs have different natural content widths, and this
+	   is rendered as an auto-sizing WebExtension toolbar popup in some contexts - a min-width
+	   would let the popup grow/shrink visibly when switching tabs. */
+	width: 560px;
 }
 
 #popup-header{
@@ -15,6 +18,273 @@
 .hightlight {
 	background-color: #f3e000;
 }
+
+/* VERTICAL TABS */
+
+.popup-body-layout {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+}
+
+.popup-tabs {
+	display: flex;
+	flex-direction: column;
+	flex: 0 0 auto;
+	border-right: 1px solid #e0e0e0;
+	position: sticky;
+	top: 0;
+	align-self: flex-start;
+}
+
+.popup-tab-btn {
+	position: relative;
+	writing-mode: vertical-rl;
+	text-orientation: mixed;
+	padding: 10px 6px;
+	border: none;
+	background: transparent;
+	cursor: pointer;
+	color: #6b7280;
+	font-size: 0.85em;
+	border-left: 3px solid transparent;
+}
+
+.popup-tab-badge {
+	position: absolute;
+	top: 3px;
+	left: 50%;
+	transform: translateX(-50%);
+	writing-mode: horizontal-tb;
+	background-color: #007bff;
+	color: #fff;
+	font-size: 9px;
+	font-weight: bold;
+	line-height: 1;
+	padding: 2px 4px;
+	border-radius: 8px;
+	min-width: 14px;
+	text-align: center;
+}
+
+.popup-tab-btn:hover {
+	background-color: #f3f4f6;
+	color: #3c4043;
+}
+
+.popup-tab-btn.active {
+	color: #007bff;
+	border-left-color: #007bff;
+	background-color: #f3f4f6;
+}
+
+.popup-tab-panels {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+#link-linked-container,
+#link-search-container,
+#info-linked-documents-container {
+	padding: 6px 2px;
+}
+
+#link-linked-container h5,
+#link-search-container h5 {
+	margin: 0 0 8px 0;
+}
+
+/* Not plain "#info-linked-list { display: flex; ... }" : an ID selector's specificity beats
+   the plain class selector .hidden-field uses for "display: none", which would keep the list
+   force-shown (as an empty flex box, harmless) but also force-shows #info-linked-empty's real
+   text right along with it - :not(.hidden-field) keeps this rule from ever fighting that
+   toggle. */
+#info-linked-list:not(.hidden-field) {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+/* Styled like a low-key linked-doc-card (see LINKED DOCUMENT CARDS below) so it reads as one
+   more item among the document cards rather than a loud banner - kept deliberately quiet
+   (small, low-contrast grey) since "no document" isn't something that needs to grab attention. */
+#info-linked-empty:not(.hidden-field) {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 4px 8px;
+	border: 1px solid #e0e5ea;
+	border-radius: 6px;
+	padding: 8px 10px;
+	background-color: #fff;
+	font-size: 11px;
+}
+
+#info-linked-empty-text {
+	color: #94a0ab;
+}
+
+.link-cta-btn {
+	background: none;
+	border: none;
+	padding: 0;
+	margin: 0;
+	color: #94a0ab;
+	font-family: inherit;
+	font-size: 11px;
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+.link-cta-btn:hover {
+	color: #6b7280;
+}
+
+.link-search-box {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 10px;
+}
+
+.link-search-box select.dol-input,
+.link-search-box input.dol-input {
+	padding: 5px 8px;
+	border-radius: 4px;
+	font-size: 13px;
+}
+
+.link-search-box input[type="text"] {
+	flex: 1 1 auto;
+}
+
+#link-detected-refs .alert {
+	margin-bottom: 8px;
+}
+
+/* LINK TAB SEARCH RESULTS TABLE */
+
+#link-search-results .dolibarr-table {
+	border-collapse: collapse;
+}
+
+#link-search-results .dolibarr-table th {
+	text-align: left;
+	padding: 6px 8px;
+	border-bottom: 1px solid #d0d8e0;
+}
+
+#link-search-results .dolibarr-table td {
+	padding: 7px 8px;
+	border-bottom: 1px solid #edf0f3;
+	vertical-align: middle;
+}
+
+#link-search-results .dolibarr-table td:last-child,
+#link-search-results .dolibarr-table th:last-child {
+	width: 1%;
+	white-space: nowrap;
+	text-align: right;
+}
+
+#link-search-results .btn-tiny-action {
+	border: 1px solid #94acc2;
+	border-radius: 4px;
+	padding: 3px 10px;
+	font-size: 12px;
+}
+
+#link-search-results .btn-tiny-action:hover {
+	background-color: #94acc2;
+	color: #ffffff;
+}
+
+/* DETECTED REF BLOCK (document found via email headers) */
+
+.detected-ref-block {
+	margin-bottom: 10px;
+}
+
+.detected-ref-block__intro {
+	font-size: 12px;
+	color: #5a5b62;
+	margin-bottom: 4px;
+}
+
+.detected-ref-block .linked-doc-card {
+	padding-right: 10px;
+}
+
+.detected-ref-block .linked-doc-card__actions {
+	position: static;
+	margin-top: 6px;
+	text-align: right;
+}
+
+/* LINKED DOCUMENT CARDS */
+
+#link-linked-list {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.linked-doc-card {
+	position: relative;
+	border: 1px solid #e0e5ea;
+	border-radius: 6px;
+	padding: 8px 32px 8px 10px;
+	background-color: #fff;
+}
+
+.linked-doc-card__header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.linked-doc-card__type {
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+	color: #6b7280;
+	white-space: nowrap;
+}
+
+.linked-doc-card__ref {
+	font-weight: bold;
+	font-size: 13px;
+	color: #3c4043;
+	flex: 1 1 auto;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	text-decoration: none;
+}
+
+.linked-doc-card__ref:hover {
+	text-decoration: underline;
+	color: #007bff;
+}
+
+.linked-doc-card__fields {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 14px;
+	margin-top: 6px;
+	font-size: 12px;
+	color: #5a5b62;
+}
+
+.linked-doc-card__field-label {
+	color: #94a0ab;
+}
+
+.linked-doc-card__actions {
+	position: absolute;
+	top: 6px;
+	right: 8px;
+}
+
 .text-center {
 	text-align: center;
 }
@@ -159,4 +429,14 @@
 .badge-status10 {
 	color: #212529 !important;
 	border-color: #993013 !important;
+}
+
+/* Discreet notice shown instead of the notes / "Lier" tab content when the crmClientConnector
+   module is disabled in the extension settings - muted text rather than a colored alert box,
+   since this isn't an error, just an inactive optional feature. */
+.discreet-notice {
+	font-size: 12px;
+	color: #999999;
+	font-style: italic;
+	padding: 6px 0;
 }
