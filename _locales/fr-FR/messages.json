@@ -338,6 +338,12 @@
   "DolibarrTypeAgendaEvent": {
     "message": "Évènement agenda"
   },
+  "ThirdpartyTypeClient": {
+    "message": "Client"
+  },
+  "ThirdpartyTypeSupplier": {
+    "message": "Fournisseur"
+  },
   "TabInfo": {
     "message": "Infos"
   },

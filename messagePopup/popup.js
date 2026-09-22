@@ -423,6 +423,13 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         let socActions = document.getElementById("soc-actions");
         let titleDiv =  document.getElementById("popup-header");
 
+        // Reset here rather than only in the "not found" branch below, so a stale type/tags line
+        // from a previous setSocInfos() call (this popup can call it more than once as the
+        // thirdparty search progresses through its fallbacks) never lingers while the new one is
+        // being fetched, see renderSocTypeAndTags().
+        document.getElementById('soc-type-line')?.classList.add('hidden-field');
+        document.getElementById('soc-tags-line')?.classList.add('hidden-field');
+
         // console.log(message);
 
         if(soc.id == 0 || soc.id == '' || soc.id == null){
@@ -507,6 +514,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         displayTpl("soc-actions");
 
         titleDiv.textContent =  soc.name;
+        renderSocTypeAndTags(soc.id);
 
         let socCardUrl = new URL(confDolibarUrl + "societe/card.php");
         socCardUrl.searchParams.set('socid', soc.id);
@@ -552,6 +560,125 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             // actionable (create company/contact).
             switchPopupTab('documents');
         }
+    }
+
+    /**
+     * Below the thirdparty's name in the popup header : its type(s) - Client/Fournisseur, a
+     * thirdparty can be both at once (Dolibarr's client and fournisseur flags are independent),
+     * each with its own reference code (code_client/code_fournisseur) - and below that, its tags
+     * (Dolibarr categories : customer ones if it's a client, supplier ones if it's a supplier,
+     * both when it's both), each rendered as a colored pill using the category's own color.
+     * Does its own thirdparties/{id} fetch rather than relying on callers to have this data
+     * already (some do, e.g. resolveSocFromId(), some don't, e.g. the contact-based
+     * searchCompanyByEmail()) - one extra lightweight GET, in exchange for this always working
+     * regardless of which search path resolved the thirdparty.
+     * @param {number} socId
+     */
+    function renderSocTypeAndTags(socId){
+        let typeLine = document.getElementById('soc-type-line');
+        let tagsLine = document.getElementById('soc-tags-line');
+        if(!typeLine || !tagsLine){
+            return;
+        }
+
+        dolLib.callDolibarrApi('thirdparties/' + socId, {}, 'GET', {}, (socData) => {
+            let isClient = parseInt(socData.client) >= 1;
+            let isSupplier = parseInt(socData.fournisseur) >= 1;
+
+            typeLine.innerHTML = '';
+            let addTypeBadge = (labelKey, code, cssClass) => {
+                let badge = document.createElement('span');
+                badge.classList.add('badge', 'soc-type-badge', cssClass);
+                badge.textContent = chrome.i18n.getMessage(labelKey) + (code ? ' · ' + code : '');
+                typeLine.appendChild(badge);
+            };
+            if(isClient){
+                addTypeBadge('ThirdpartyTypeClient', socData.code_client, 'soc-type-badge--client');
+            }
+            if(isSupplier){
+                addTypeBadge('ThirdpartyTypeSupplier', socData.code_fournisseur, 'soc-type-badge--supplier');
+            }
+            typeLine.classList.toggle('hidden-field', !isClient && !isSupplier);
+
+            let categoryRequests = [];
+            if(isClient){
+                categoryRequests.push(new Promise((resolve) => {
+                    dolLib.callDolibarrApi('thirdparties/' + socId + '/categories', {}, 'GET', {}, (cats) => resolve(Array.isArray(cats) ? cats : []), () => resolve([]));
+                }));
+            }
+            if(isSupplier){
+                categoryRequests.push(new Promise((resolve) => {
+                    dolLib.callDolibarrApi('thirdparties/' + socId + '/supplier_categories', {}, 'GET', {}, (cats) => resolve(Array.isArray(cats) ? cats : []), () => resolve([]));
+                }));
+            }
+
+            Promise.all(categoryRequests).then((results) => {
+                let allTags = [];
+                let seenIds = new Set();
+                results.flat().forEach((cat) => {
+                    if(!seenIds.has(cat.id)){
+                        seenIds.add(cat.id);
+                        allTags.push(cat);
+                    }
+                });
+
+                tagsLine.innerHTML = '';
+                allTags.forEach((cat) => {
+                    let pill = document.createElement('span');
+                    pill.classList.add('soc-tag-pill');
+                    pill.textContent = cat.label;
+                    let color = normalizeDolibarrColor(cat.color);
+                    if(color){
+                        pill.style.backgroundColor = color;
+                        pill.style.color = isColorLight(color) ? '#000' : '#fff';
+                    }
+                    tagsLine.appendChild(pill);
+                });
+                tagsLine.classList.toggle('hidden-field', allTags.length === 0);
+            });
+        }, (errorMsg) => {
+            LOG('renderSocTypeAndTags: failed to fetch thirdparty details for id ' + socId, errorMsg);
+        });
+    }
+
+    /**
+     * Dolibarr stores a category's color as either "RRGGBB"/"#RRGGBB" hex or a comma-separated
+     * "r,g,b" triplet (see categorie.class.php's colorIsLight(), which handles the same two
+     * formats) - normalizes either into a CSS color string, or null when there's no color set.
+     * @param {?string} color
+     * @returns {?string}
+     */
+    function normalizeDolibarrColor(color){
+        if(!color){
+            return null;
+        }
+        if(color.includes(',')){
+            let parts = color.split(',').map((c) => parseInt(c.trim(), 10));
+            if(parts.length >= 3 && parts.every((n) => !isNaN(n))){
+                return 'rgb('+parts[0]+', '+parts[1]+', '+parts[2]+')';
+            }
+            return null;
+        }
+        return color.startsWith('#') ? color : '#'+color;
+    }
+
+    /**
+     * Perceived-brightness check (same formula as Dolibarr's own colorIsLight()) to pick a
+     * readable text color for a background of this color.
+     * @param {string} color a normalizeDolibarrColor() result
+     * @returns {boolean}
+     */
+    function isColorLight(color){
+        let r, g, b;
+        if(color.startsWith('rgb')){
+            [r, g, b] = color.match(/\d+/g).map(Number);
+        }else{
+            let hex = color.replace('#', '');
+            r = parseInt(hex.substring(0, 2), 16);
+            g = parseInt(hex.substring(2, 4), 16);
+            b = parseInt(hex.substring(4, 6), 16);
+        }
+        return ((r*299 + g*587 + b*114) / 1000) > 128;
     }
 
     /**

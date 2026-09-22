@@ -12,7 +12,52 @@
 	font-size: 16px;
 	color: #3c4043;
 	font-weight: 300;
+	margin-bottom: 5px;
+	margin-top: 0px;
+}
 
+/* Type (Client/Fournisseur) and tags lines under the thirdparty's name - see
+   renderSocTypeAndTags() in popup.js. :not(.hidden-field), not plain ".soc-meta-line" : both
+   would be single-class selectors of equal specificity, and this one comes later in the cascade
+   (global.css's .hidden-field is @import'ed at the top of this file) - a plain selector's
+   "display:flex" would beat .hidden-field's "display:none" and keep the line visible even when
+   hidden-field is toggled on it (see #info-linked-list's own :not(.hidden-field) for the same
+   fix, and this exact bug on .discreet-notice--info before it was fixed the same way). */
+.soc-meta-line:not(.hidden-field) {
+	margin: 2px 0;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+}
+
+.soc-type-badge {
+	font-weight: 600 !important;
+	font-size: 11px;
+	padding: 2px 8px;
+	border-radius: 10px;
+	color: #fff !important;
+}
+
+.soc-type-badge--client {
+	background-color: #2563eb;
+}
+
+.soc-type-badge--supplier {
+	background-color: #0d9488;
+}
+
+/* Default fallback for a category with no color set in Dolibarr - overridden inline per-tag via
+   renderSocTypeAndTags()'s normalizeDolibarrColor() otherwise. */
+.soc-tag-pill {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1.4;
+	background-color: #e5e7eb;
+	color: #374151;
 }
 
 .hightlight {
