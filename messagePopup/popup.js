@@ -54,6 +54,10 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     // document.getElementById("received").textContent = full.headers.received[0];
 
     let checkConfig = await dolLib.checkConfig();
+    // Only worth testing credentials/connectivity once the config itself looks complete -
+    // distinguishes "invalid API key / HTTP auth" and "server unreachable" from the
+    // "module not configured" case, which otherwise all looked the same to the user.
+    let connectionStatus = checkConfig ? await dolLib.checkDolibarrConnection() : null;
 
     // Extract email from author
     let authorEmail = message ? dolLib.extractEmailAddressFromString(message.author)[0] : '';
@@ -111,11 +115,20 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
     let confDolibarUrl = await dolLib.getDolibarrUrl();
 
-    let config = await browser.storage.local.get({dolibarrUseNotes: false});
+    // Gates every feature built on the crmclientconnector module's REST endpoints (shared
+    // notes, the "Lier" tab, the detected-ref card's Link button, linked documents on the Info
+    // tab, ref auto-detection) - see isCrmConnectorEnabled()'s doc comment.
+    let crmConnectorEnabled = await dolLib.isCrmConnectorEnabled();
 
     if(!checkConfig){
         LOG('module not configured, showing check-module-config template');
         displayTpl("check-module-config");
+    }else if(connectionStatus.status === 'auth'){
+        LOG('invalid credentials, showing check-module-auth template', connectionStatus.message);
+        displayTpl("check-module-auth");
+    }else if(connectionStatus.status === 'connection'){
+        LOG('cannot reach Dolibarr server, showing check-module-connection template', connectionStatus.message);
+        displayTpl("check-module-connection");
     }else{
         displayTpl("main-popup");
 
@@ -126,7 +139,14 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         initDocumentsTabBadge();
         initInfoTabLinkCta();
 
-        if(ownerAccountEmail && ownerMsgId){
+        if(!crmConnectorEnabled){
+            LOG('crmClientConnector module disabled by config, showing discreet notice instead of notes/link features');
+            document.getElementById('crm-connector-disabled-notice-info')?.classList.remove('hidden-field');
+            document.getElementById('crm-connector-disabled-notice-link')?.classList.remove('hidden-field');
+            document.getElementById('link-tab-content')?.classList.add('hidden-field');
+        }
+
+        if(crmConnectorEnabled && ownerAccountEmail && ownerMsgId){
             // Loaded eagerly (normally only fetched on-demand when the user opens the "Lier"
             // tab, see initLinkTab()) so the Info tab's own linked-documents section (see
             // updateInfoTabLinkedDocumentsSection()) and, when a trackid was detected, the
@@ -289,30 +309,32 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     }
 
     async function getExcludedDomains(){
-        try {
-            let domains = await fetch(browser.runtime.getURL("exclude-domains.json"))
-                .then(response => response.json())
-                .catch(error => console.error("Erreur de chargement du JSON :", error));
-
-            let apiDomain = await new Promise((resolve, reject) => {
-
-                // TODO add cache
-                dolLib.callDolibarrApi('crmclientconnector/excludeddomains', {
-                    sqlfilters: "(t.active:=:1)"
-                }, 'GET', {}, (resData)=>{
-                    resolve(resData);
-                }, (err) => {
-                    reject("fail call API crmclientconnector/excludeddomains or nothing into");
-                },true);
-            }).then((domainList) => {
-                domains = domains.concat(domainList);
+        let domains = await fetch(browser.runtime.getURL("exclude-domains.json"))
+            .then(response => response.json())
+            .catch(error => {
+                console.error("Erreur de chargement du JSON :", error);
+                return [];
             });
 
+        if(!crmConnectorEnabled){
+            // The extra domains list (crmclientconnector/excludeddomains) needs the
+            // crmClientConnector module - fall back to the local list only.
             return domains;
-        } catch (error) {
-            console.error("Erreur dans getExcludedDomains :", error);
-            return []; // Retourne un tableau vide en cas d’erreur
         }
+
+        let apiDomains = await new Promise((resolve) => {
+            // TODO add cache
+            dolLib.callDolibarrApi('crmclientconnector/excludeddomains', {
+                sqlfilters: "(t.active:=:1)"
+            }, 'GET', {}, (resData)=>{
+                resolve(Array.isArray(resData) ? resData : []);
+            }, (err) => {
+                LOG('getExcludedDomains: crmclientconnector/excludeddomains failed', err);
+                resolve([]);
+            }, true);
+        });
+
+        return domains.concat(apiDomains);
     }
 
 
@@ -446,8 +468,14 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             // no table will ever be able to confirm/deny a match.
             resolveDetectedRefTableCheck(false);
 
+            // Documents tab would otherwise just show an empty table with no explanation -
+            // this is the only spot that knows for sure the thirdparty search came up empty.
+            document.getElementById('documents-no-thirdparty-notice')?.classList.remove('hidden-field');
+
             return;
         }
+
+        document.getElementById('documents-no-thirdparty-notice')?.classList.add('hidden-field');
 
         LOG('thirdparty displayed', soc);
         displayTpl("soc-actions");
@@ -457,27 +485,27 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         let socCardUrl = new URL(confDolibarUrl + "societe/card.php");
         socCardUrl.searchParams.set('socid', soc.id);
 
-        // Créer un devis / une commande : accountEmail+msgId let the crmclientconnector
-        // PROPAL_CREATE/ORDER_CREATE trigger auto-link the newly created object back to this
-        // mail (see initNotesForMessage()'s comment above and new-quotation-link below for the
-        // same convention) - not carried on the ticket link, there's no TICKET_CREATE handling
-        // for it on the Dolibarr side.
+        // Créer un devis / une commande / un ticket : accountEmail+msgId let the
+        // crmclientconnector PROPAL_CREATE/ORDER_CREATE/TICKET_CREATE trigger auto-link the
+        // newly created object back to this mail (see initNotesForMessage()'s comment above and
+        // new-quotation-link below for the same convention).
         let newPropalUrl = new URL(confDolibarUrl + "comm/propal/card.php");
         newPropalUrl.searchParams.set('action', "create");
         newPropalUrl.searchParams.set('socid', soc.id);
         let newOrderUrl = new URL(confDolibarUrl + "commande/card.php");
         newOrderUrl.searchParams.set('action', "create");
         newOrderUrl.searchParams.set('socid', soc.id);
+        let newTicketUrl = new URL(confDolibarUrl + "ticket/card.php");
+        newTicketUrl.searchParams.set('action', "create");
+        newTicketUrl.searchParams.set('socid', soc.id);
         if(ownerAccountEmail && ownerMsgId){
             newPropalUrl.searchParams.set('accountEmail', ownerAccountEmail);
             newPropalUrl.searchParams.set('msgId', ownerMsgId);
             newOrderUrl.searchParams.set('accountEmail', ownerAccountEmail);
             newOrderUrl.searchParams.set('msgId', ownerMsgId);
+            newTicketUrl.searchParams.set('accountEmail', ownerAccountEmail);
+            newTicketUrl.searchParams.set('msgId', ownerMsgId);
         }
-
-        let newTicketUrl = new URL(confDolibarUrl + "ticket/card.php");
-        newTicketUrl.searchParams.set('action', "create");
-        newTicketUrl.searchParams.set('socid', soc.id);
 
         socActions.innerHTML = '';
         socActions.appendChild(dolLib.buildDropdownMenu({
@@ -503,6 +531,14 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             newQuotationLink.href = newQuotationURL;
         }
 
+        if(!crmConnectorEnabled){
+            // Without the crmClientConnector module, the Info tab has nothing useful left to
+            // show (no notes, no linked documents - see the discreet notice there) : default
+            // to the Documents tab instead. Skipped when the thirdparty itself is unknown (see
+            // the early return above), since Info is then the only tab offering something
+            // actionable (create company/contact).
+            switchPopupTab('documents');
+        }
     }
 
     /**
@@ -1307,7 +1343,7 @@ async function initNotesForMessage(){
     // NOTES
     // need Crm client connector module installed in Dolibarr
 
-    if (!config.dolibarrUseNotes || !message) {
+    if (!crmConnectorEnabled || !message) {
         return;
     }
 
@@ -1452,6 +1488,11 @@ function initInfoTabLinkCta(){
 }
 
 function initLinkTab(){
+    if(!crmConnectorEnabled){
+        LOG('link tab: crmClientConnector module disabled by config, showing discreet notice only');
+        return;
+    }
+
     if(!ownerAccountEmail || !ownerMsgId){
         LOG('link tab: no accountEmail/msgId available, cannot link/search');
         return;
@@ -1558,6 +1599,13 @@ function updateInfoTabLinkedDocumentsSection(){
     let listEl = document.getElementById('info-linked-list');
     let emptyEl = document.getElementById('info-linked-empty');
     if(!container || !listEl || !emptyEl){
+        return;
+    }
+
+    if(!crmConnectorEnabled){
+        // Whole section (and its CTA to the Link tab) needs the crmClientConnector module -
+        // see the discreet notice shown instead, near the top of this tab.
+        container.classList.add('hidden-field');
         return;
     }
 

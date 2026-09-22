@@ -83,6 +83,24 @@
   "CheckYourModuleConfig": {
     "message": "Configuration incomplete : Check your module configuration"
   },
+  "CheckYourCredentials": {
+    "message": "Invalid credentials : Check your API key (and your HTTP Basic Auth credentials if applicable) in the module configuration"
+  },
+  "CheckServerConnection": {
+    "message": "Connection failed : Unable to reach the Dolibarr server. Check the configured URL and your network connection"
+  },
+  "dolibarrHttpAuthEnabled": {
+    "message": "HTTP Basic Auth"
+  },
+  "dolibarrHttpAuthEnabledDesc": {
+    "message": "Enable if calls to the Dolibarr API are protected by HTTP Basic Auth (e.g. web server level access restriction)"
+  },
+  "dolibarrHttpAuthUser": {
+    "message": "HTTP username"
+  },
+  "dolibarrHttpAuthPassword": {
+    "message": "HTTP password"
+  },
   "refFourn": {
     "message": "Vendor Ref"
   },
@@ -128,11 +146,17 @@
   "ConfirmDelete" :{
     "message": "Delete permanently"
   },
-  "DolibarrUseNotes" :{
-    "message": "Allow viewing and adding shared notes on emails"
+  "DolibarrCrmConnectorEnabled" :{
+    "message": "CRM Client Connector module features"
   },
-  "DolibarrUseNotesDesc" :{
-    "message": "Requires the CRM client connector module installed on your Dolibarr"
+  "DolibarrCrmConnectorEnabledDesc" :{
+    "message": "Enables shared notes on emails, the \"Link\" tab (search/link quotations, orders, invoices...) and automatic reference detection in emails. Requires the CRM Client Connector module installed and enabled on your Dolibarr."
+  },
+  "CrmConnectorFeatureDisabled" :{
+    "message": "Feature disabled : enable the CRM Client Connector connection in the extension settings"
+  },
+  "NoThirdpartyNoDocuments" :{
+    "message": "No thirdparty identified : no document can be displayed"
   },
   "dolibarrQuotationTrustedSenders" :{
     "message": "Trusted senders for quotation headers"

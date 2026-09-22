@@ -86,6 +86,24 @@
   "CheckYourModuleConfig": {
     "message": "Ημιτελής διαμόρφωση : Ελέγξτε τη διαμόρφωση του Dolibarr connector"
   },
+  "CheckYourCredentials": {
+    "message": "Μη έγκυρα διαπιστευτήρια : Ελέγξτε το κλειδί API σας (και τα διαπιστευτήρια HTTP Basic Auth, εφόσον χρησιμοποιούνται) στη διαμόρφωση του module"
+  },
+  "CheckServerConnection": {
+    "message": "Αποτυχία σύνδεσης : Δεν είναι δυνατή η σύνδεση με τον διακομιστή Dolibarr. Ελέγξτε το διαμορφωμένο URL και τη σύνδεσή σας στο δίκτυο"
+  },
+  "dolibarrHttpAuthEnabled": {
+    "message": "HTTP Basic Auth"
+  },
+  "dolibarrHttpAuthEnabledDesc": {
+    "message": "Ενεργοποιήστε το αν οι κλήσεις προς το API του Dolibarr προστατεύονται με HTTP Basic Auth"
+  },
+  "dolibarrHttpAuthUser": {
+    "message": "Όνομα χρήστη HTTP"
+  },
+  "dolibarrHttpAuthPassword": {
+    "message": "Κωδικός πρόσβασης HTTP"
+  },
   "refFourn": {
     "message": "Αναφ. Προμηθευτή"
   },

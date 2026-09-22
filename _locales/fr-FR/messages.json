@@ -83,6 +83,24 @@
   "CheckYourModuleConfig": {
     "message": "Configuration incomplete : Vérifiez votre configuration module"
   },
+  "CheckYourCredentials": {
+    "message": "Identifiants invalides : Vérifiez votre clé API (et vos identifiants HTTP Basic Auth le cas échéant) dans la configuration du module"
+  },
+  "CheckServerConnection": {
+    "message": "Connexion impossible : Impossible de contacter le serveur Dolibarr. Vérifiez l'URL configurée et votre connexion réseau"
+  },
+  "dolibarrHttpAuthEnabled": {
+    "message": "Authentification HTTP Basic Auth"
+  },
+  "dolibarrHttpAuthEnabledDesc": {
+    "message": "À activer si les appels à l'API Dolibarr sont protégés par une authentification HTTP Basic Auth (ex. : restriction d'accès au niveau du serveur web)"
+  },
+  "dolibarrHttpAuthUser": {
+    "message": "Identifiant HTTP"
+  },
+  "dolibarrHttpAuthPassword": {
+    "message": "Mot de passe HTTP"
+  },
   "refFourn": {
     "message": "Ref Fournisseur"
   },
@@ -125,11 +143,17 @@
   "PleaseSelectAnEmailBefore" :{
     "message": "Veuillez selectionner un email"
   },
-  "DolibarrUseNotes" :{
-    "message": "Permettre de voir et saisir des notes partagées sur les emails"
+  "DolibarrCrmConnectorEnabled" :{
+    "message": "Fonctionnalités du module CRM Client Connector"
   },
-  "DolibarrUseNotesDesc" :{
-    "message": "Nécéssite le module CRM client connector d'installé sur votre Dolibarr"
+  "DolibarrCrmConnectorEnabledDesc" :{
+    "message": "Active les notes partagées sur les emails, l'onglet \"Lier\" (recherche/liaison de devis, commandes, factures...) et la détection automatique des références dans les emails. Nécessite le module CRM Client Connector installé et activé sur votre Dolibarr."
+  },
+  "CrmConnectorFeatureDisabled" :{
+    "message": "Fonctionnalité désactivée : activez la connexion au module CRM Client Connector dans les paramètres de l'extension"
+  },
+  "NoThirdpartyNoDocuments" :{
+    "message": "Aucun tiers identifié : aucun document ne peut être affiché"
   },
   "dolibarrQuotationTrustedSenders" :{
     "message": "Expéditeurs de confiance pour les en-têtes de devis"

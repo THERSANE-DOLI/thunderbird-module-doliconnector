@@ -13,6 +13,14 @@
 		__MSG_CheckYourModuleConfig__
 	</div>
 
+	<div id="check-module-auth" class="hidden-field alert alert-warning">
+		__MSG_CheckYourCredentials__
+	</div>
+
+	<div id="check-module-connection" class="hidden-field alert alert-warning">
+		__MSG_CheckServerConnection__
+	</div>
+
 	<div id="default-page" class="hidden-field">
 		<h4>__MSG_PleaseSelectAnEmailBefore__</h4>
 	</div>
@@ -45,6 +53,8 @@
 			<div class="popup-tab-panels">
 
 				<div id="tab-panel-info" class="popup-tab-panel">
+
+					<div id="crm-connector-disabled-notice-info" class="hidden-field discreet-notice">__MSG_CrmConnectorFeatureDisabled__</div>
 
 					<div id="info-linked-documents-container" class="hidden-field">
 						<div id="info-linked-list" class="hidden-field"></div>
@@ -83,30 +93,38 @@
 
 				<div id="tab-panel-documents" class="popup-tab-panel hidden-field">
 
+					<div id="documents-no-thirdparty-notice" class="hidden-field discreet-notice">__MSG_NoThirdpartyNoDocuments__</div>
+
 					<table id="data-from-dolibarr" class="dolibarr-table dolibarr-table-stripped"></table>
 
 				</div>
 
 				<div id="tab-panel-link" class="popup-tab-panel hidden-field">
 
-					<div id="link-detected-refs" class="hidden-field"></div>
+					<div id="crm-connector-disabled-notice-link" class="hidden-field discreet-notice">__MSG_CrmConnectorFeatureDisabled__</div>
 
-					<div id="link-linked-container">
-						<h5>__MSG_LinkedDocuments__</h5>
-						<div id="link-linked-empty" class="hidden-field opacitymedium">__MSG_NoLinkedDocument__</div>
-						<div id="link-linked-list" class="hidden-field"></div>
-					</div>
+					<div id="link-tab-content">
 
-					<hr/>
+						<div id="link-detected-refs" class="hidden-field"></div>
 
-					<div id="link-search-container">
-						<h5>__MSG_SearchDocumentToLink__</h5>
-						<div class="link-search-box">
-							<select id="link-search-type" class="dol-input"></select>
-							<input type="text" id="link-search-input" class="dol-input" list="link-detected-refs-datalist" placeholder="__MSG_SearchDocumentToLinkPlaceholder__">
-							<datalist id="link-detected-refs-datalist"></datalist>
+						<div id="link-linked-container">
+							<h5>__MSG_LinkedDocuments__</h5>
+							<div id="link-linked-empty" class="hidden-field opacitymedium">__MSG_NoLinkedDocument__</div>
+							<div id="link-linked-list" class="hidden-field"></div>
 						</div>
-						<div id="link-search-results"></div>
+
+						<hr/>
+
+						<div id="link-search-container">
+							<h5>__MSG_SearchDocumentToLink__</h5>
+							<div class="link-search-box">
+								<select id="link-search-type" class="dol-input"></select>
+								<input type="text" id="link-search-input" class="dol-input" list="link-detected-refs-datalist" placeholder="__MSG_SearchDocumentToLinkPlaceholder__">
+								<datalist id="link-detected-refs-datalist"></datalist>
+							</div>
+							<div id="link-search-results"></div>
+						</div>
+
 					</div>
 
 				</div>

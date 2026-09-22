@@ -28,6 +28,29 @@
 			</tr>
 
 			<tr>
+				<td>
+					<label id="label-for-dolibarr-http-auth-enabled" for="dolibarr-http-auth-enabled">__MSG_dolibarrHttpAuthEnabled__</label>
+					<br/><small id="label-for-dolibarr-http-auth-enabled_desc" ></small>
+				</td>
+				<td>
+					<label class="dol-input-swith" >
+						<input type="checkbox" class="dol-input" id="dolibarr-http-auth-enabled" name="dolibarr-http-auth-enabled" />
+						<span class="dol-input-slider"></span>
+					</label>
+				</td>
+			</tr>
+
+			<tr id="dolibarr-http-auth-user-row" class="hidden-field">
+				<td><label id="label-for-dolibarr-http-auth-user" for="dolibarr-http-auth-user">__MSG_dolibarrHttpAuthUser__</label></td>
+				<td><input class="dol-input" type="text" id="dolibarr-http-auth-user" name="dolibarr-http-auth-user" autocomplete="off" /></td>
+			</tr>
+
+			<tr id="dolibarr-http-auth-password-row" class="hidden-field">
+				<td><label id="label-for-dolibarr-http-auth-password" for="dolibarr-http-auth-password">__MSG_dolibarrHttpAuthPassword__</label></td>
+				<td><input class="dol-input" type="password" id="dolibarr-http-auth-password" name="dolibarr-http-auth-password" autocomplete="off" /></td>
+			</tr>
+
+			<tr>
 				<td><label id="label-for-dolibarr-search-domain" for="dolibarr-search-domain">__MSG_dolibarrOptSearchDomain__</label></td>
 				<td>
 					<label class="dol-input-swith" >
@@ -39,12 +62,12 @@
 
 			<tr>
 				<td>
-					<label id="label-for-dolibarr-use-notes" for="dolibarr-use-notes">__MSG_dolibarr-use-notes__</label>
-					<br/><small id="label-for-dolibarr-use-notes_desc" ></small>
+					<label id="label-for-dolibarr-crm-connector-enabled" for="dolibarr-crm-connector-enabled">__MSG_DolibarrCrmConnectorEnabled__</label>
+					<br/><small id="label-for-dolibarr-crm-connector-enabled_desc" ></small>
 				</td>
 				<td>
 					<label class="dol-input-swith" >
-						<input type="checkbox" class="dol-input" id="dolibarr-use-notes" name="dolibarr-use-notes" />
+						<input type="checkbox" class="dol-input" id="dolibarr-crm-connector-enabled" name="dolibarr-crm-connector-enabled" />
 						<span class="dol-input-slider"></span>
 					</label>
 				</td>

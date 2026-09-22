@@ -76,9 +76,9 @@ browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
     // Dolibarr trackid, show a banner linking to the record it's about.
     checkAndInjectTrackidBanner(tab, message);
 
-    let config = await browser.storage.local.get({dolibarrUseNotes: false});
+    let crmConnectorEnabled = await dolLib.isCrmConnectorEnabled();
 
-    if (!config.dolibarrUseNotes) {
+    if (!crmConnectorEnabled) {
         return;
     }
 

@@ -196,9 +196,31 @@ export function buildDropdownMenu({triggerLabel, triggerTitle, items}){
     return wrapper;
 }
 
+/**
+ * Whether the Dolibarr crmclientconnector module (custom/crmclientconnector on the Dolibarr
+ * side) is installed and enabled - every feature built on its REST endpoints
+ * (crmclientconnector/*: shared notes, the "Lier" tab and detected-ref card's Link button,
+ * linked documents on the Info tab, ref auto-detection via numbering patterns, the domain
+ * exclusion list) must check this before calling one of them, since those calls 404/500
+ * otherwise. Falls back to the old dolibarrUseNotes key (this setting used to only gate the
+ * notes feature) so users who already enabled it keep working after the rename.
+ * @returns {Promise<boolean>}
+ */
+export async function isCrmConnectorEnabled(){
+    let data = await browser.storage.local.get({dolibarrCrmConnectorEnabled: undefined, dolibarrUseNotes: false});
+    return data.dolibarrCrmConnectorEnabled !== undefined ? data.dolibarrCrmConnectorEnabled : data.dolibarrUseNotes;
+}
+
 export async function checkConfig(){
 
-    let configData = await browser.storage.local.get({dolibarrApiKey:'', dolibarrApiUrl:'', dolibarrApiEntity:1});
+    let configData = await browser.storage.local.get({
+        dolibarrApiKey:'',
+        dolibarrApiUrl:'',
+        dolibarrApiEntity:1,
+        dolibarrHttpAuthEnabled: false,
+        dolibarrHttpAuthUser: '',
+        dolibarrHttpAuthPassword: ''
+    });
 
 
     let apiKey = configData.dolibarrApiKey;
@@ -207,13 +229,43 @@ export async function checkConfig(){
 
     if(apiKey.length == 0 || dolUrl ==0 || apiEntity.length == 0){  return false; }
 
+    if(configData.dolibarrHttpAuthEnabled
+        && (configData.dolibarrHttpAuthUser.length == 0 || configData.dolibarrHttpAuthPassword.length == 0)){
+        return false;
+    }
+
     return true;
+}
+
+/**
+ * Calls users/info (Dolibarr's standard "who am I" REST endpoint) to verify that the
+ * configured API key (and HTTP Basic Auth credentials, if enabled) actually work and that
+ * the server can be reached, so the UI can tell an invalid-credentials problem apart from
+ * a connection problem - both look like "config incomplete" otherwise.
+ * @returns {Promise<{status: 'ok'|'auth'|'connection', message: (string|null)}>}
+ */
+export async function checkDolibarrConnection(){
+    return new Promise((resolve) => {
+        callDolibarrApi('users/info', {}, 'GET', {}, () => {
+            resolve({status: 'ok', message: null});
+        }, (errorMsg, errorInfo) => {
+            let status = (errorInfo && errorInfo.type === 'auth') ? 'auth' : 'connection';
+            resolve({status, message: errorMsg});
+        });
+    });
 }
 
 
 export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', postData, successCallBackFunction = ()=>{}, errorCallBackFunction = ()=>{}, cache = false){
 
-    let configData = await browser.storage.local.get({dolibarrApiKey:'', dolibarrApiUrl:'', dolibarrApiEntity:1});
+    let configData = await browser.storage.local.get({
+        dolibarrApiKey:'',
+        dolibarrApiUrl:'',
+        dolibarrApiEntity:1,
+        dolibarrHttpAuthEnabled: false,
+        dolibarrHttpAuthUser: '',
+        dolibarrHttpAuthPassword: ''
+    });
 
 
     let apiKey = configData.dolibarrApiKey;
@@ -244,13 +296,18 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
 
 
 
+    let headers = {
+        'DOLAPIKEY': apiKey,
+        'DOLAPIENTITY': apiEntity,
+        "Content-Type": "application/json"
+    };
+    if(configData.dolibarrHttpAuthEnabled && configData.dolibarrHttpAuthUser.length > 0){
+        headers['Authorization'] = 'Basic ' + btoa(configData.dolibarrHttpAuthUser + ':' + configData.dolibarrHttpAuthPassword);
+    }
+
     fetch(finalUrl, {
         method: type,
-        headers: {
-            'DOLAPIKEY': apiKey,
-            'DOLAPIENTITY': apiEntity,
-            "Content-Type": "application/json"
-        },
+        headers: headers,
         body: (type.toUpperCase() !== 'GET' && postData) ? postData : undefined,
         cache: cache && type == 'GET' ? "force-cache" : "default"
     })
@@ -265,7 +322,9 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
                 503: "Service unavailable."
             };
             let errorMsg = statusErrorMap[response.status] || "Unknown Error \n.";
-            throw new Error(errorMsg);
+            let error = new Error(errorMsg);
+            error.status = response.status;
+            throw error;
         }
         return response.json();
     })
@@ -277,8 +336,14 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
         }
     })
     .catch(error => {
+        // No `status` means fetch() itself rejected (network failure, DNS error, CORS,
+        // unreachable host, etc.) rather than the server answering with an HTTP error.
+        let errorInfo = {
+            type: (error.status === 401 || error.status === 403) ? 'auth' : (error.status ? 'http' : 'network'),
+            status: error.status || null
+        };
         if (typeof errorCallBackFunction === 'function') {
-            errorCallBackFunction(error.message);
+            errorCallBackFunction(error.message, errorInfo);
         } else {
             console.error('Error Callback function invalid');
         }

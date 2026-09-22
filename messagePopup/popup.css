@@ -430,3 +430,13 @@
 	color: #212529 !important;
 	border-color: #993013 !important;
 }
+
+/* Discreet notice shown instead of the notes / "Lier" tab content when the crmClientConnector
+   module is disabled in the extension settings - muted text rather than a colored alert box,
+   since this isn't an error, just an inactive optional feature. */
+.discreet-notice {
+	font-size: 12px;
+	color: #999999;
+	font-style: italic;
+	padding: 6px 0;
+}
