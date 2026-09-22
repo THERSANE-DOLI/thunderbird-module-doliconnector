@@ -94,6 +94,36 @@
     margin-bottom: 2px;
 }
 
+/* Grouped linked-documents row (background.js's renderDolibarrRefGroupRow()) : one compact chip
+   per document instead of a full row each, so several linked documents on the same mail stay
+   readable without repeating the icon/padding of renderDolibarrRefRow() once per document. Plain
+   caption (no border/background, unlike .doli-last-note) so its flush-left text isn't compared
+   against the chips' own left padding below it - two bordered boxes with different padding would
+   visually "misalign" even though both start at the same x. */
+.doli-ref-group-heading {
+    font-style: normal;
+    color: #444;
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+.doli-ref-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.doli-ref-chip {
+    background-color: rgba(255, 253, 231, 0.8);
+    border: 1px solid #FFF9C4;
+    border-radius: 10px;
+    color: #444;
+    font-size: 11px;
+    padding: 2px 8px;
+    white-space: nowrap;
+}
+
 /* "Nothing found for this mail" state (see background.js's renderEmptyDolibarrBox()) :
    deliberately grey rather than the yellow/orange used above, so it can never be mistaken for
    (or easily imitated as) the "content found" state - this box is injected on every mail once

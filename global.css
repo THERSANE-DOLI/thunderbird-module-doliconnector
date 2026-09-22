@@ -568,12 +568,16 @@ details.dolibarr-connector-detail > :where(div,p) {
 }
 
 .confirm-dropdown__item {
-	display: block;
+	display: flex;
+	align-items: center;
+	gap: 8px;
 	width: 100%;
+	margin: 0;
 	padding: 7px 10px;
 	background: none;
 	border: none;
 	text-align: left;
+	font-family: inherit;
 	font-size: 12px;
 	cursor: pointer;
 	color: #3c4043;
@@ -583,6 +587,28 @@ details.dolibarr-connector-detail > :where(div,p) {
 
 .confirm-dropdown__item:hover {
 	background-color: #f3f4f6;
+}
+
+.confirm-dropdown__item-icon {
+	flex-shrink: 0;
+	width: 1em;
+	text-align: center;
+	color: #94a0ab;
+	font-style: normal;
+}
+
+.confirm-dropdown__item-icon--char {
+	font-size: 13px;
+	line-height: 1;
+}
+
+/* Marks an item (e.g. "Rafraîchir") as a different kind of action than the ones around it,
+   rather than just another entry in the same list - see buildDropdownMenu()'s separatorBefore. */
+.confirm-dropdown__separator {
+	height: 0;
+	margin: 4px 0;
+	border: none;
+	border-top: 1px solid #e5e7eb;
 }
 
 .confirm-dropdown__item--danger {

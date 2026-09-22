@@ -219,6 +219,20 @@
 	flex: 1 1 auto;
 }
 
+/* :not(.hidden-field), not plain ".link-search-filter-soc" - same cascade-order pitfall as
+   .soc-meta-line/.discreet-notice--info elsewhere in this file : this label starts with
+   hidden-field in the markup (see popup.html), and a later same-specificity "display:flex" would
+   otherwise beat its "display:none". */
+.link-search-filter-soc:not(.hidden-field) {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 10px;
+	font-size: 12px;
+	color: #5a5b62;
+	cursor: pointer;
+}
+
 #link-detected-refs .alert {
 	margin-bottom: 8px;
 }
@@ -352,6 +366,35 @@
 	position: absolute;
 	top: 6px;
 	right: 8px;
+}
+
+/* Document's own tags footer (see appendDocCardTags() in popup.js) - same .soc-tag-pill look as
+   the thirdparty's tags in the header, reused here for a consistent "tag" visual language. */
+.linked-doc-card__tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 8px;
+}
+
+/* This document's own thirdparty name (see appendDocCardThirdparty()), shown only when it isn't
+   the one already prominent in the popup header - prepended as the card's own first line, bold,
+   since which company a result belongs to matters as much as its ref (especially for an
+   unfiltered "Lier" tab search, which can span every thirdparty at once). */
+.linked-doc-card__thirdparty {
+	margin-bottom: 4px;
+	font-size: 13px;
+	font-weight: bold;
+	color: #3c4043;
+}
+
+/* "No thirdparty at all" variant (see appendDocCardThirdparty()) : still the first line, but
+   italic/muted rather than solid-dark, since it's flagging an absence rather than naming a
+   specific (possibly unexpected) company. */
+.linked-doc-card__thirdparty--none {
+	font-weight: normal;
+	font-style: italic;
+	color: #94a0ab;
 }
 
 .text-center {

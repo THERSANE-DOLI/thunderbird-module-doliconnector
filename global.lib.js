@@ -40,6 +40,15 @@ export function showToast(message, type = 'success', durationMs = 4000){
     return toast;
 }
 
+// Shared by buildConfirmDropdown() and buildDropdownMenu(): the closer of whichever one of their
+// instances is currently open on the page, so opening a new one can explicitly close it. Outside-
+// click alone can't do this: each trigger's own click handler calls stopPropagation() (so its
+// click doesn't also register as the "outside click" that would close it right back), which as a
+// side effect stops that same click from ever bubbling to document, where every OTHER dropdown's
+// outside-click listener lives - so without this, clicking one open dropdown's trigger while
+// another is open never reaches the first one's close logic and both stay open.
+let openDropdownCloser = null;
+
 /**
  * Build a small dropdown with a single confirm action, used in place of a double-click or a
  * blocking confirm() dialog for actions that need a deliberate second step (e.g. unlinking or
@@ -90,10 +99,14 @@ export function buildConfirmDropdown({triggerLabel, triggerIcon, triggerTitle, c
         wrapper.classList.toggle('confirm-dropdown--open', open);
         if(onToggle){ onToggle(open); }
     };
+    let closeThisDropdown = () => {
+        setOpen(false);
+        document.removeEventListener('click', onOutsideClick);
+        if(openDropdownCloser === closeThisDropdown){ openDropdownCloser = null; }
+    };
     let onOutsideClick = (event) => {
         if(!wrapper.contains(event.target)){
-            setOpen(false);
-            document.removeEventListener('click', onOutsideClick);
+            closeThisDropdown();
         }
     };
 
@@ -101,9 +114,10 @@ export function buildConfirmDropdown({triggerLabel, triggerIcon, triggerTitle, c
         event.preventDefault();
         event.stopPropagation();
         let willOpen = menu.classList.contains('hidden-field');
-        setOpen(false);
+        if(openDropdownCloser){ openDropdownCloser(); }
         if(willOpen){
             setOpen(true);
+            openDropdownCloser = closeThisDropdown;
             // Deferred, so the click that opened the menu isn't also the outside click that closes it.
             setTimeout(() => document.addEventListener('click', onOutsideClick), 0);
         }
@@ -111,8 +125,7 @@ export function buildConfirmDropdown({triggerLabel, triggerIcon, triggerTitle, c
 
     confirmBtn.addEventListener('click', (event) => {
         event.preventDefault();
-        setOpen(false);
-        document.removeEventListener('click', onOutsideClick);
+        closeThisDropdown();
         onConfirm();
     });
 
@@ -120,30 +133,47 @@ export function buildConfirmDropdown({triggerLabel, triggerIcon, triggerTitle, c
 }
 
 /**
- * Build an action button that opens a dropdown menu of plain navigation links (e.g. "View card"
- * plus a few "create X for this thirdparty" shortcuts) - same trigger/menu/outside-click
- * interaction as buildConfirmDropdown(), but for a list of links instead of a single confirm
- * action, and with a full-size .btn.btn-primary trigger rather than a small icon-only one.
- * @param {{triggerLabel: string, triggerTitle?: string, items: Array<{label: string, href: string, target？: string}>}} options
+ * Build an action button that opens a dropdown menu of items - either plain navigation links
+ * (e.g. "View card" plus a few "create X for this thirdparty" shortcuts) or, when an item gives
+ * onClick instead of href, a plain button running that handler (e.g. a row-level "Lier" action
+ * that must call linkDocument() and show a toast, not navigate anywhere). Same trigger/menu/
+ * outside-click interaction as buildConfirmDropdown(), generalized to a list of items instead of
+ * a single confirm action. discreet:true renders the same small "⋯" trigger
+ * buildConfirmDropdown() uses (for e.g. a table row's own actions menu) instead of the default
+ * full-size .btn.btn-primary trigger.
+ * @param {{triggerLabel: string, triggerTitle?: string, discreet?: boolean, items: Array<{label: string, href?: string, target?: string, onClick?: () => void, icon?: string, iconChar?: string, separatorBefore?: boolean}>}} options
+ *   icon: a dolicon CSS class (e.g. "icon-plus"), rendered as an <i>. iconChar: a plain
+ *   character/glyph instead, for when no matching dolicon glyph exists (e.g. a refresh symbol) -
+ *   at most one of the two is used, icon wins if both are given. separatorBefore: renders a
+ *   divider line above this item, for a single item (or run of items) that isn't the same kind
+ *   of action as the rest (e.g. "Refresh" among a list of "create X" shortcuts).
  * @returns {HTMLElement} the dropdown wrapper element (trigger + menu)
  */
-export function buildDropdownMenu({triggerLabel, triggerTitle, items}){
+export function buildDropdownMenu({triggerLabel, triggerTitle, discreet = false, items}){
     let wrapper = document.createElement('div');
     wrapper.classList.add('confirm-dropdown', 'action-menu-dropdown');
 
     let trigger = document.createElement('button');
     trigger.type = 'button';
-    trigger.classList.add('action-menu-dropdown__trigger');
     if(triggerTitle){ trigger.title = triggerTitle; }
 
-    let triggerText = document.createElement('span');
-    triggerText.textContent = triggerLabel;
-    trigger.appendChild(triggerText);
+    if(discreet){
+        // Same small trigger as buildConfirmDropdown()'s "⋯", for a menu that shouldn't draw as
+        // much attention as the popup header's main "Actions" button (e.g. one per table row).
+        trigger.classList.add('btn-tiny-action', 'confirm-dropdown__trigger');
+        trigger.textContent = triggerLabel;
+    }else{
+        trigger.classList.add('action-menu-dropdown__trigger');
 
-    let caret = document.createElement('span');
-    caret.classList.add('action-menu-dropdown__caret');
-    caret.textContent = '▾';
-    trigger.appendChild(caret);
+        let triggerText = document.createElement('span');
+        triggerText.textContent = triggerLabel;
+        trigger.appendChild(triggerText);
+
+        let caret = document.createElement('span');
+        caret.classList.add('action-menu-dropdown__caret');
+        caret.textContent = '▾';
+        trigger.appendChild(caret);
+    }
 
     wrapper.appendChild(trigger);
 
@@ -151,11 +181,41 @@ export function buildDropdownMenu({triggerLabel, triggerTitle, items}){
     menu.classList.add('confirm-dropdown__menu', 'hidden-field');
 
     items.forEach((item) => {
-        let link = document.createElement('a');
+        if(item.separatorBefore){
+            let separator = document.createElement('hr');
+            separator.classList.add('confirm-dropdown__separator');
+            menu.appendChild(separator);
+        }
+
+        let link = document.createElement(item.onClick ? 'button' : 'a');
         link.classList.add('confirm-dropdown__item');
-        link.textContent = item.label;
-        link.href = item.href;
-        if(item.target){ link.target = item.target; }
+        if(item.onClick){
+            link.type = 'button';
+        }
+
+        if(item.icon){
+            let icon = document.createElement('i');
+            icon.classList.add(item.icon, 'confirm-dropdown__item-icon');
+            link.appendChild(icon);
+        }else if(item.iconChar){
+            let icon = document.createElement('span');
+            icon.classList.add('confirm-dropdown__item-icon', 'confirm-dropdown__item-icon--char');
+            icon.textContent = item.iconChar;
+            link.appendChild(icon);
+        }
+
+        link.append(item.label);
+
+        if(item.onClick){
+            link.addEventListener('click', (event) => {
+                event.preventDefault();
+                item.onClick(event);
+            });
+        }else{
+            link.href = item.href;
+            if(item.target){ link.target = item.target; }
+        }
+
         menu.appendChild(link);
     });
 
@@ -165,10 +225,14 @@ export function buildDropdownMenu({triggerLabel, triggerTitle, items}){
         menu.classList.toggle('hidden-field', !open);
         wrapper.classList.toggle('action-menu-dropdown--open', open);
     };
+    let closeThisDropdown = () => {
+        setOpen(false);
+        document.removeEventListener('click', onOutsideClick);
+        if(openDropdownCloser === closeThisDropdown){ openDropdownCloser = null; }
+    };
     let onOutsideClick = (event) => {
         if(!wrapper.contains(event.target)){
-            setOpen(false);
-            document.removeEventListener('click', onOutsideClick);
+            closeThisDropdown();
         }
     };
 
@@ -176,20 +240,21 @@ export function buildDropdownMenu({triggerLabel, triggerTitle, items}){
         event.preventDefault();
         event.stopPropagation();
         let willOpen = menu.classList.contains('hidden-field');
-        setOpen(false);
+        if(openDropdownCloser){ openDropdownCloser(); }
         if(willOpen){
             setOpen(true);
+            openDropdownCloser = closeThisDropdown;
             // Deferred, so the click that opened the menu isn't also the outside click that closes it.
             setTimeout(() => document.addEventListener('click', onOutsideClick), 0);
         }
     });
 
-    // Menu items are plain links (so ctrl/middle-click "open in new tab" works as expected) -
-    // just close the menu once one is clicked instead of intercepting the navigation.
+    // Link items are left as plain links (so ctrl/middle-click "open in new tab" works as
+    // expected) rather than intercepted - either way (link or onClick button), just close the
+    // menu once an item is clicked.
     menu.addEventListener('click', (event) => {
         if(event.target.closest('.confirm-dropdown__item')){
-            setOpen(false);
-            document.removeEventListener('click', onOutsideClick);
+            closeThisDropdown();
         }
     });
 
@@ -256,6 +321,22 @@ export async function checkDolibarrConnection(){
 }
 
 
+// Set for the rest of the page's lifetime by setForceFreshLoad(), see its own doc comment.
+let forceFreshLoad = false;
+
+/**
+ * Makes every subsequent callDolibarrApi() GET request on this page bypass the browser's HTTP
+ * cache (still updates it with the fresh response, just doesn't read a possibly-stale one) -
+ * used by the popup's "Rafraîchir" action, so it actually guarantees fresh data instead of
+ * silently serving whatever a cache:true call (see callDolibarrApi() below) happened to cache
+ * earlier. A plain page reload alone wouldn't do this : fetch()'s "force-cache" mode is
+ * unaffected by navigation/reload, only by the cache entry's own freshness.
+ * @param {boolean} enabled
+ */
+export function setForceFreshLoad(enabled){
+    forceFreshLoad = !!enabled;
+}
+
 export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', postData, successCallBackFunction = ()=>{}, errorCallBackFunction = ()=>{}, cache = false){
 
     let configData = await browser.storage.local.get({
@@ -305,11 +386,18 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
         headers['Authorization'] = 'Basic ' + btoa(configData.dolibarrHttpAuthUser + ':' + configData.dolibarrHttpAuthPassword);
     }
 
+    let cacheMode = "default";
+    if(type == 'GET'){
+        // forceFreshLoad wins over a call's own cache:true : "reload" always revalidates against
+        // the network (updating the cache for next time) instead of reading a cached response.
+        cacheMode = forceFreshLoad ? "reload" : (cache ? "force-cache" : "default");
+    }
+
     fetch(finalUrl, {
         method: type,
         headers: headers,
         body: (type.toUpperCase() !== 'GET' && postData) ? postData : undefined,
-        cache: cache && type == 'GET' ? "force-cache" : "default"
+        cache: cacheMode
     })
     .then(response => {
         if (!response.ok) {
@@ -1046,7 +1134,10 @@ export function isValidHttpUrl(string) {
 /**
  * Function to convert JSON data to HTML table
  * @param {} JsonTitle
- * @param {} jsonData
+ * @param {} jsonData each value is either a plain string/number, {html, class?, hightLight?} for
+ *   a static HTML string cell, or {node, class?} for a real DOM node cell (e.g. a
+ *   buildDropdownMenu() widget - unlike an html string, its own click handlers survive since it's
+ *   inserted as-is instead of being re-parsed).
  * @param {HTMLElement} container
  */
 export function jsonToTable(JsonTitle, jsonData, container, tableClass = 'dolibarr-table dolibarr-table-stripped', searchInText = ''){
@@ -1084,7 +1175,16 @@ export function jsonToTable(JsonTitle, jsonData, container, tableClass = 'doliba
         Object.entries(item).forEach(([colKey, elem]) => {
             let td = document.createElement('td');
 
-            if(typeof elem === 'object' && elem !== null){
+            if(typeof elem === 'object' && elem !== null && elem.node instanceof Node){
+                // A real DOM node (e.g. a buildDropdownMenu() widget, whose click handlers a
+                // parseHTML()'d string would lose) rather than a static HTML string.
+                td.appendChild(elem.node);
+
+                if(elem.hasOwnProperty('class') ){
+                    td.classList.add(...elem.class.split(' '));
+                }
+            }
+            else if(typeof elem === 'object' && elem !== null){
                 td.appendChild(parseHTML(elem.html));
 
                 if(elem.hasOwnProperty('class') ){

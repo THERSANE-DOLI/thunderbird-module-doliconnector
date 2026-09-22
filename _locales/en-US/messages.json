@@ -158,6 +158,9 @@
   "NoThirdpartyNoDocuments" :{
     "message": "No thirdparty identified : no document can be displayed"
   },
+  "NoThirdpartyOnDocument" :{
+    "message": "No thirdparty attached"
+  },
   "dolibarrQuotationTrustedSenders" :{
     "message": "Trusted senders for quotation headers"
   },
@@ -341,6 +344,9 @@
   "ThirdpartyTypeSupplier": {
     "message": "Supplier"
   },
+  "UnrecognizedSender": {
+    "message": "No thirdparty identified"
+  },
   "TabInfo": {
     "message": "Info"
   },
@@ -380,8 +386,14 @@
   "SearchDocumentToLinkPlaceholder": {
     "message": "Search a reference..."
   },
+  "LinkSearchFilterSoc": {
+    "message": "Filter by thirdparty \"$1\""
+  },
   "SearchDocumentToLinkNoResults": {
     "message": "No results"
+  },
+  "SearchDocumentToLinkAlreadyLinked": {
+    "message": "This search matches a document already linked to this email"
   },
   "SearchDocumentToLinkError": {
     "message": "Search failed"
@@ -397,6 +409,9 @@
   },
   "Actions": {
     "message": "Actions"
+  },
+  "Refresh": {
+    "message": "Refresh"
   },
   "LinkSuccess": {
     "message": "Document linked"

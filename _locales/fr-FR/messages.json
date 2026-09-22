@@ -155,6 +155,9 @@
   "NoThirdpartyNoDocuments" :{
     "message": "Aucun tiers identifié : aucun document ne peut être affiché"
   },
+  "NoThirdpartyOnDocument" :{
+    "message": "Aucun tiers associé"
+  },
   "dolibarrQuotationTrustedSenders" :{
     "message": "Expéditeurs de confiance pour les en-têtes de devis"
   },
@@ -344,6 +347,9 @@
   "ThirdpartyTypeSupplier": {
     "message": "Fournisseur"
   },
+  "UnrecognizedSender": {
+    "message": "Aucun tiers identifié"
+  },
   "TabInfo": {
     "message": "Infos"
   },
@@ -383,8 +389,14 @@
   "SearchDocumentToLinkPlaceholder": {
     "message": "Rechercher une référence..."
   },
+  "LinkSearchFilterSoc": {
+    "message": "Filtrer sur le tiers « $1 »"
+  },
   "SearchDocumentToLinkNoResults": {
     "message": "Aucun résultat"
+  },
+  "SearchDocumentToLinkAlreadyLinked": {
+    "message": "La recherche correspond à un document déjà lié à cet email"
   },
   "SearchDocumentToLinkError": {
     "message": "Erreur lors de la recherche"
@@ -400,6 +412,9 @@
   },
   "Actions": {
     "message": "Actions"
+  },
+  "Refresh": {
+    "message": "Rafraîchir"
   },
   "LinkSuccess": {
     "message": "Document lié"

@@ -195,6 +195,9 @@ async function resolveTrackidInfo(message){
     }
 
     return new Promise((resolve) => {
+        // cache:true - this same endpoint may also be fetched moments later by the popup's own
+        // trackid resolution (see resolveSocFromId()'s caller in messagePopup/popup.js), so
+        // either request can potentially be served from the browser's HTTP cache.
         dolLib.callDolibarrApi(meta.api + '/' + ref.id, {}, 'GET', {}, (objData) => {
             resolve({
                 type: ref.type,
@@ -210,7 +213,7 @@ async function resolveTrackidInfo(message){
                 typeLabel: browser.i18n.getMessage(meta.labelKey),
                 refLabel: '#' + ref.id
             });
-        });
+        }, true);
     });
 }
 
@@ -288,20 +291,54 @@ async function resolveLinkedDocsInfo(message){
     });
 }
 
+const DOLI_LINK_ICON_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FBC02D" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
+
 /**
- * One "record reference" row (link icon + type label + ref) - shared by the trackid-detected
- * record and each linked document in renderDolibarrBanner(), which only differ in where their
- * typeLabel/refLabel come from.
+ * One "record reference" row (link icon + type label + ref) - used for the trackid-detected
+ * record in renderDolibarrBanner(), the only case left rendering as its own full row (it's the
+ * record the mail is directly about, so it stays visually prominent) - see
+ * renderDolibarrRefGroupRow() for the other linked documents, grouped instead of repeating this.
  * @param {string} typeLabel
  * @param {string} refLabel
  */
 function renderDolibarrRefRow(typeLabel, refLabel){
-    let linkIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FBC02D" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
     return `
        <div class="doli-content-wrapper">
-          <div class="doli-icon-circle">${linkIcon}</div>
+          <div class="doli-icon-circle">${DOLI_LINK_ICON_SVG}</div>
           <div style="flex:1">
              <div class="doli-last-note" style="font-style:normal">${typeLabel} ${refLabel}</div>
+          </div>
+       </div>
+    `;
+}
+
+/**
+ * Compact grouped row for every "other" linked document (see renderDolibarrBanner()) : a single
+ * icon + heading, with one small chip per document instead of a full renderDolibarrRefRow() each -
+ * keeps the banner readable and compact when several documents are linked to the same mail (e.g.
+ * a quotation auto-linked by its trigger plus a couple more linked manually from the "Lier" tab),
+ * instead of repeating the icon and row padding once per document. Documents sharing the same
+ * type share a single chip too (typeLabel stated once, followed by their refs comma-separated) -
+ * e.g. two linked supplier orders show as one "Commande fournisseur CF001, CF002" chip rather
+ * than repeating "Commande fournisseur" on two separate chips.
+ * @param {Array<{typeLabel:string, refLabel:string}>} refs
+ */
+function renderDolibarrRefGroupRow(refs){
+    let refLabelsByType = new Map();
+    refs.forEach((ref) => {
+        if(!refLabelsByType.has(ref.typeLabel)){ refLabelsByType.set(ref.typeLabel, []); }
+        refLabelsByType.get(ref.typeLabel).push(ref.refLabel);
+    });
+
+    let chips = Array.from(refLabelsByType, ([typeLabel, refLabels]) => {
+        return `<span class="doli-ref-chip">${typeLabel} ${refLabels.join(', ')}</span>`;
+    }).join('');
+    return `
+       <div class="doli-content-wrapper">
+          <div class="doli-icon-circle">${DOLI_LINK_ICON_SVG}</div>
+          <div style="flex:1">
+             <div class="doli-ref-group-heading">${browser.i18n.getMessage("LinkedDocuments")}</div>
+             <div class="doli-ref-chips">${chips}</div>
           </div>
        </div>
     `;
@@ -335,10 +372,16 @@ function renderDolibarrBanner(trackidInfo, notesInfo, linkedDocsInfo){
         rows += renderDolibarrRefRow(trackidInfo.typeLabel, trackidInfo.refLabel);
     }
 
-    otherLinkedDocs.forEach((doc) => {
-        let meta = dolLib.getDolibarrObjectTypeMeta(doc.type);
-        rows += renderDolibarrRefRow(meta ? browser.i18n.getMessage(meta.labelKey) : doc.type, doc.ref || ('#' + doc.id));
-    });
+    if(otherLinkedDocs.length > 0){
+        let refs = otherLinkedDocs.map((doc) => {
+            let meta = dolLib.getDolibarrObjectTypeMeta(doc.type);
+            return {
+                typeLabel: meta ? browser.i18n.getMessage(meta.labelKey) : doc.type,
+                refLabel: doc.ref || ('#' + doc.id)
+            };
+        });
+        rows += renderDolibarrRefGroupRow(refs);
+    }
 
     if(lastNote){
         let noteIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`;
