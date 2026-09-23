@@ -484,5 +484,14 @@
   },
   "DolibarrPermissionStep4": {
     "message": "Turn on the \"Access your data for all websites\" toggle."
+  },
+  "DolibarrMissingRightsIconLabel": {
+    "message": "Missing Dolibarr rights"
+  },
+  "DolibarrMissingRightsIntro": {
+    "message": "The user behind the API key is missing the rights needed for some features:"
+  },
+  "DolibarrMissingRightsRequiredRight": {
+    "message": "required Dolibarr right"
   }
 }

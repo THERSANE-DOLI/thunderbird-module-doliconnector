@@ -487,5 +487,14 @@
   },
   "DolibarrPermissionStep4": {
     "message": "Activez le bouton « Accéder à vos données pour tous les sites web »."
+  },
+  "DolibarrMissingRightsIconLabel": {
+    "message": "Droits Dolibarr manquants"
+  },
+  "DolibarrMissingRightsIntro": {
+    "message": "L'utilisateur associé à la clé API n'a pas les droits nécessaires pour certaines fonctionnalités :"
+  },
+  "DolibarrMissingRightsRequiredRight": {
+    "message": "droit requis dans Dolibarr"
   }
 }

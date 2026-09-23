@@ -412,16 +412,138 @@ export async function checkConfig(accountId){
 }
 
 /**
- * Calls users/info (Dolibarr's standard "who am I" REST endpoint) to verify that the
- * configured API key (and HTTP Basic Auth credentials, if enabled) actually work and that
- * the server can be reached, so the UI can tell an invalid-credentials problem apart from
- * a connection problem - both look like "config incomplete" otherwise.
+ * Right(s) required for each Dolibarr REST endpoint this extension calls, keyed by the endpoint's
+ * "family" (its path with any trailing numeric id stripped, see getEndpointFamily()) - labels are
+ * copied verbatim from Dolibarr's own French permissions screen (Permission{id} in
+ * htdocs/langs/fr_FR/*.lang on the Dolibarr side), so a French-speaking Dolibarr admin can find and
+ * grant the exact same right with no translation ambiguity. An entry can list several {id, label}
+ * alternatives when Dolibarr accepts any one of several rights (OR semantics) - see users/info's
+ * own getInfo() check.
+ * @type {Object<string, Array<{id:number,label:string}>>}
+ */
+const DOLIBARR_ENDPOINT_RIGHTS = {
+    'users/info': [
+        {id: 342, label: "Créer/modifier ses propres informations utilisateur"},
+        {id: 251, label: "Consulter les autres utilisateurs, les groupes et leurs permissions"}
+    ],
+    'thirdparties': [{id: 121, label: "Consulter les tiers (sociétés) liés à l'utilisateur"}],
+    'orders': [{id: 81, label: "Consulter les commandes clients"}],
+    'proposals': [{id: 21, label: "Consulter les propositions commerciales"}],
+    'invoices': [{id: 11, label: "Lire les factures (et paiements) clients"}],
+    'supplierorders': [{id: 1182, label: "Consulter les commandes fournisseur"}],
+    'supplierinvoices': [{id: 1231, label: "Consulter les factures fournisseur"}],
+    'shipments': [{id: 101, label: "Lire les expéditions"}],
+    'contracts': [{id: 161, label: "Lire les contrats"}],
+    'tickets': [{id: 56001, label: "Voir tickets"}],
+    'projects': [{id: 41, label: "Lire les projets et les tâches (projets partagés et projets dont je suis un contact)."}],
+    'interventions': [{id: 61, label: "Lire les fiches d'intervention"}],
+    'members': [{id: 71, label: "Consulter les fiches adhérents"}],
+    'agendaevents': [{id: 2401, label: "Lire les actions (événements ou tâches) liées à son compte utilisateur (si propriétaire de l'événement ou simplement assigné à l'événement)"}],
+    // crmclientconnector/objectcategories/{type}/{id} requires the same read right as that type's
+    // own core endpoint above (see CATEGORY_TYPE_RIGHTS in api_crmclientconnector.class.php on the
+    // Dolibarr side), except 'act' which requires agenda->allactions->read (not myactions), since
+    // listing an agenda event's categories isn't restricted to the current user's own events.
+    'crmclientconnector/objectcategories/ord':  [{id: 81, label: "Consulter les commandes clients"}],
+    'crmclientconnector/objectcategories/pro':  [{id: 21, label: "Consulter les propositions commerciales"}],
+    'crmclientconnector/objectcategories/inv':  [{id: 11, label: "Lire les factures (et paiements) clients"}],
+    'crmclientconnector/objectcategories/sord': [{id: 1182, label: "Consulter les commandes fournisseur"}],
+    'crmclientconnector/objectcategories/sinv': [{id: 1231, label: "Consulter les factures fournisseur"}],
+    'crmclientconnector/objectcategories/tic':  [{id: 56001, label: "Voir tickets"}],
+    'crmclientconnector/objectcategories/proj': [{id: 41, label: "Lire les projets et les tâches (projets partagés et projets dont je suis un contact)."}],
+    'crmclientconnector/objectcategories/int':  [{id: 61, label: "Lire les fiches d'intervention"}],
+    'crmclientconnector/objectcategories/mem':  [{id: 71, label: "Consulter les fiches adhérents"}],
+    'crmclientconnector/objectcategories/act':  [{id: 2411, label: "Lire les actions (événements ou tâches) des autres"}]
+};
+
+/**
+ * Strips a trailing numeric id segment (e.g. 'thirdparties/123' -> 'thirdparties',
+ * 'crmclientconnector/objectcategories/ord/456' -> 'crmclientconnector/objectcategories/ord') so a
+ * call for a specific object matches its endpoint family's static DOLIBARR_ENDPOINT_RIGHTS entry.
+ * @param {string} endPoint
+ * @returns {string}
+ */
+function getEndpointFamily(endPoint){
+    return endPoint.replace(/\/\d+$/, '');
+}
+
+/**
+ * In-memory (not persisted - reset on every extension/popup reload) record of Dolibarr endpoints
+ * that answered 403 for the current API key, per connection id and endpoint family (see
+ * getEndpointFamily()), so the UI can show a discreet "missing rights" warning instead of either
+ * staying silent (most callers just log and move on) or, as checkDolibarrConnection() used to,
+ * wrongly telling the user their credentials are invalid.
+ * @type {Object<string, Object<string, {endpoint:string, dolibarrMessage:?string, requiredRights:?Array<{id:number,label:string}>, timestamp:number}>>}
+ */
+let forbiddenEndpointsByConnection = {};
+let forbiddenEndpointsListeners = [];
+
+function recordForbiddenEndpoint(connectionId, endPoint, dolibarrMessage){
+    if(!connectionId){ return; }
+    let family = getEndpointFamily(endPoint);
+    let byConnection = forbiddenEndpointsByConnection[connectionId] || (forbiddenEndpointsByConnection[connectionId] = {});
+    byConnection[family] = {
+        endpoint: endPoint,
+        dolibarrMessage: dolibarrMessage || null,
+        requiredRights: DOLIBARR_ENDPOINT_RIGHTS[family] || null,
+        timestamp: Date.now()
+    };
+    forbiddenEndpointsListeners.forEach((callback) => {
+        try {
+            callback(connectionId);
+        } catch (e) {
+            console.error('forbiddenEndpoints listener failed', e);
+        }
+    });
+}
+
+/**
+ * The Dolibarr endpoints that have answered 403 (missing right, not invalid credentials - see
+ * checkDolibarrConnection()) for accountId's connection so far this session.
+ * @param {string} [accountId] defaults to the shared setActiveAccountContext() value
+ * @returns {Promise<Array<{endpoint:string, dolibarrMessage:?string, requiredRights:?Array<{id:number,label:string}>, timestamp:number}>>}
+ */
+export async function getForbiddenEndpoints(accountId){
+    let connection = await resolveDolibarrConnection(accountId);
+    if(!connection){ return []; }
+    let byConnection = forbiddenEndpointsByConnection[connection.id] || {};
+    return Object.values(byConnection).sort((a, b) => a.endpoint.localeCompare(b.endpoint));
+}
+
+/**
+ * Subscribes to be notified (with the affected connection's id) whenever a new 403 is recorded, so
+ * the popup can refresh its warning icon reactively instead of polling.
+ * @param {(connectionId:string)=>void} callback
+ * @returns {()=>void} unsubscribe
+ */
+export function onForbiddenEndpointRecorded(callback){
+    forbiddenEndpointsListeners.push(callback);
+    return () => {
+        forbiddenEndpointsListeners = forbiddenEndpointsListeners.filter((cb) => cb !== callback);
+    };
+}
+
+/**
+ * Calls status (Dolibarr's own REST API status endpoint - api_status.class.php on the Dolibarr
+ * side) to verify that the configured API key (and HTTP Basic Auth credentials, if enabled)
+ * actually work and that the server can be reached, so the UI can tell an invalid-credentials
+ * problem apart from a connection problem - both look like "config incomplete" otherwise.
+ *
+ * status, not users/info : status checks no business right at all beyond a valid API key (it just
+ * returns the Dolibarr version), so it can never 403 for an authenticated user, unlike users/info
+ * (which requires user->self->creer, user->user->lire, or being admin - rights most ordinary
+ * Dolibarr users don't have - see DOLIBARR_ENDPOINT_RIGHTS['users/info']). That makes it the right
+ * endpoint for a pure "is the API reachable with these credentials" check, with no special-casing
+ * needed for a 403 that would mean nothing about the credentials themselves. Whether the current
+ * user specifically lacks rights on users/info (relevant only as getCurrentDolibarrUser()'s
+ * fallback when crmclientconnector's own whoami isn't available) is still surfaced separately, as
+ * a discreet non-blocking warning - see getForbiddenEndpoints() - whenever that fallback actually
+ * runs and hits it.
  * @param {string} [accountId]
  * @returns {Promise<{status: 'ok'|'auth'|'connection', message: (string|null)}>}
  */
 export async function checkDolibarrConnection(accountId){
     return new Promise((resolve) => {
-        callDolibarrApi('users/info', {}, 'GET', {}, () => {
+        callDolibarrApi('status', {}, 'GET', {}, () => {
             resolve({status: 'ok', message: null});
         }, (errorMsg, errorInfo) => {
             let status = (errorInfo && errorInfo.type === 'auth') ? 'auth' : 'connection';
@@ -506,18 +628,26 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
     })
     .then(response => {
         if (!response.ok) {
-            const statusErrorMap = {
-                404: "Not found",
-                400: "Server understood the request, but request content was invalid.",
-                401: "Unauthorized access.",
-                403: "Forbidden resource can't be accessed.",
-                500: "Internal server error.",
-                503: "Service unavailable."
-            };
-            let errorMsg = statusErrorMap[response.status] || "Unknown Error \n.";
-            let error = new Error(errorMsg);
-            error.status = response.status;
-            throw error;
+            // Dolibarr's REST API always answers an error with a JSON body of the form
+            // {code, message} (e.g. {code: 403, message: "Forbidden: Not allowed"}) - read it so
+            // the real Dolibarr message (and not just a generic "Forbidden resource can't be
+            // accessed.") can be shown/stored. Falls back to the generic map below if the body
+            // isn't there or isn't JSON (e.g. a reverse proxy's own error page).
+            return response.json().catch(() => null).then((body) => {
+                const statusErrorMap = {
+                    404: "Not found",
+                    400: "Server understood the request, but request content was invalid.",
+                    401: "Unauthorized access.",
+                    403: "Forbidden resource can't be accessed.",
+                    500: "Internal server error.",
+                    503: "Service unavailable."
+                };
+                let dolibarrMessage = (body && typeof body.message === 'string') ? body.message : null;
+                let error = new Error(dolibarrMessage || statusErrorMap[response.status] || "Unknown Error \n.");
+                error.status = response.status;
+                error.dolibarrMessage = dolibarrMessage;
+                throw error;
+            });
         }
         return response.json();
     })
@@ -531,10 +661,19 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
     .catch(error => {
         // No `status` means fetch() itself rejected (network failure, DNS error, CORS,
         // unreachable host, etc.) rather than the server answering with an HTTP error.
+        // 401 and 403 are NOT the same thing : Dolibarr's auth layer (API key / HTTP Basic Auth
+        // check) always runs first and answers 401 on its own for bad credentials, before any
+        // endpoint-specific permission check ever runs - so 403 always means "valid credentials,
+        // missing right on this endpoint", never "invalid credentials" (see checkDolibarrConnection
+        // ()'s own comment).
         let errorInfo = {
-            type: (error.status === 401 || error.status === 403) ? 'auth' : (error.status ? 'http' : 'network'),
-            status: error.status || null
+            type: error.status === 401 ? 'auth' : (error.status === 403 ? 'forbidden' : (error.status ? 'http' : 'network')),
+            status: error.status || null,
+            dolibarrMessage: error.dolibarrMessage || null
         };
+        if(error.status === 403){
+            recordForbiddenEndpoint(connection.id, endPoint, error.dolibarrMessage);
+        }
         if (typeof errorCallBackFunction === 'function') {
             errorCallBackFunction(error.message, errorInfo);
         } else {
@@ -589,21 +728,52 @@ export async function callDolibarrApi(endPoint, getDataParam, type = 'GET', post
 }
 
 /**
- * The Dolibarr user identified by the configured API key (GET /users/info, Dolibarr's standard
- * "who am I" REST endpoint) - used to tell whether the current user authored a given comment, see
- * getMsgTpl()'s edit button. Cached for the page's lifetime since the configured API key doesn't
- * change mid-session.
+ * The Dolibarr user identified by the configured API key - used to tell whether the current user
+ * authored a given comment, see getMsgTpl()'s edit button. Cached for the page's lifetime since
+ * the configured API key doesn't change mid-session.
+ *
+ * Tries crmclientconnector's own GET whoami first when that module is enabled : unlike Dolibarr
+ * core's GET users/info (which requires user->self->creer, user->user->lire, or being admin - see
+ * DOLIBARR_ENDPOINT_RIGHTS - rights most users don't have, making it 403 in the common case),
+ * whoami has no permission requirement beyond a valid API key. Falls back to users/info when the
+ * crmClientConnector module is disabled, or when whoami 404s (an older crmclientconnector version,
+ * installed before this endpoint existed) - and degrades to null, same as before, if that fails too.
+ * @param {string} [accountId] defaults to the shared setActiveAccountContext() value
  * @returns {Promise<Object|null>} the user object (has .id), or null on error
  */
 let currentDolibarrUserPromise = null;
-export function getCurrentDolibarrUser(){
+export function getCurrentDolibarrUser(accountId){
     if(!currentDolibarrUserPromise){
         currentDolibarrUserPromise = new Promise((resolve) => {
-            callDolibarrApi('users/info', {}, 'GET', {}, (userData)=>{
-                resolve(userData || null);
-            }, (errorMsg)=>{
-                console.error('getCurrentDolibarrUser failed', errorMsg);
-                resolve(null);
+            let fallbackToUsersInfo = () => {
+                callDolibarrApi('users/info', {}, 'GET', {}, (userData)=>{
+                    resolve(userData || null);
+                }, (errorMsg, errorInfo)=>{
+                    if(!errorInfo || errorInfo.status !== 403){
+                        // A 403 here just means the configured user lacks the right (already
+                        // surfaced separately, see getForbiddenEndpoints()) - anything else is
+                        // unexpected and worth a console.error.
+                        console.error('getCurrentDolibarrUser failed (users/info)', errorMsg);
+                    }
+                    resolve(null);
+                }, false, accountId);
+            };
+
+            isCrmConnectorEnabled(accountId).then((crmEnabled) => {
+                if(!crmEnabled){
+                    fallbackToUsersInfo();
+                    return;
+                }
+                callDolibarrApi('crmclientconnector/whoami', {}, 'GET', {}, (userData)=>{
+                    resolve(userData || null);
+                }, (errorMsg, errorInfo)=>{
+                    if(errorInfo && errorInfo.status === 404){
+                        fallbackToUsersInfo();
+                        return;
+                    }
+                    console.error('getCurrentDolibarrUser failed (whoami)', errorMsg);
+                    resolve(null);
+                }, false, accountId);
             });
         });
     }

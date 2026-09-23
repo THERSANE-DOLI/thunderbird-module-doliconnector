@@ -191,6 +191,11 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     }else{
         displayTpl("main-popup");
 
+        // Discreet "missing Dolibarr rights" warning icon (see updateRightsWarningIcon()'s own
+        // doc comment) - checked once now (covers users/info, already called above by
+        // checkDolibarrConnection()), then kept live for the rest of this popup's calls.
+        updateRightsWarningIcon();
+        dolLib.onForbiddenEndpointRecorded(() => updateRightsWarningIcon());
 
         initNotesForMessage();
         document.querySelectorAll('textarea.autosize').forEach(textarea => dolLib.textareaAutosize(textarea))
@@ -1573,6 +1578,56 @@ function displayTpl(id){
         return;
     }
     tpl.classList.remove('hidden-field');
+}
+
+/**
+ * Builds the #dolibarr-rights-warning icon's tooltip text (its data-title attribute, read by the
+ * .dol-tooltip CSS in popup.css) from the endpoints dolLib.getForbiddenEndpoints() returned : one
+ * line per endpoint, with Dolibarr's own error message and the Dolibarr right(s) (in Dolibarr's
+ * own French wording) that would fix it, when known.
+ * @param {Array<{endpoint:string, dolibarrMessage:?string, requiredRights:?Array<{id:number,label:string}>}>} entries
+ * @returns {string}
+ */
+function buildRightsWarningTooltip(entries){
+    let lines = [chrome.i18n.getMessage('DolibarrMissingRightsIntro')];
+    entries.forEach((entry) => {
+        let line = '• ' + entry.endpoint;
+        if(entry.dolibarrMessage){
+            line += ' (' + entry.dolibarrMessage + ')';
+        }
+        if(entry.requiredRights && entry.requiredRights.length > 0){
+            let rightsText = entry.requiredRights.map((r) => '« ' + r.label + ' »').join(' / ');
+            line += ' — ' + chrome.i18n.getMessage('DolibarrMissingRightsRequiredRight') + ' : ' + rightsText;
+        }
+        lines.push(line);
+    });
+    return lines.join('\n');
+}
+
+/**
+ * Shows/hides the discreet #dolibarr-rights-warning icon and (re)builds its tooltip from the
+ * Dolibarr endpoints that have 403'd so far this session (see dolLib.getForbiddenEndpoints()) -
+ * called once after the popup's main content is shown, then again every time dolLib records a new
+ * one (see the dolLib.onForbiddenEndpointRecorded() subscription below), so the icon reflects
+ * endpoints that only get called later during this same popup's lifetime (e.g. opening the "Lier"
+ * tab, or a document card's tags/thirdparty line resolving after its card is already on screen).
+ */
+async function updateRightsWarningIcon(){
+    let icon = document.getElementById('dolibarr-rights-warning');
+    if(!icon){
+        return;
+    }
+    let entries = await dolLib.getForbiddenEndpoints();
+    if(entries.length === 0){
+        icon.classList.add('hidden-field');
+        icon.dataset.title = '';
+        return;
+    }
+    // data-title, not the native `title` attribute - see .dol-tooltip in popup.css (a CSS-only
+    // tooltip inspired by Dolibarr V24's own, styleable and theme-aware unlike the browser's
+    // built-in title tooltip).
+    icon.dataset.title = buildRightsWarningTooltip(entries);
+    icon.classList.remove('hidden-field');
 }
 
 
