@@ -818,7 +818,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         ref.target = '_blank';
         header.appendChild(ref);
 
-        let statusInfo = getDetectedRefStatusInfo(detectedRef.type, data.status);
+        let statusInfo = dolLib.getDocumentStatusBadgeInfo(detectedRef.type, data.status);
         if(statusInfo){
             let status = document.createElement('span');
             status.classList.add('badge', 'badge-status' + statusInfo.code);
@@ -910,65 +910,6 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         appendDocCardThirdparty(card, {socid: parseInt(data.socid || data.fk_soc) || null});
 
         return card;
-    }
-
-    /**
-     * Status badge {code, label} for the document types whose status table is
-     * already known here (see setQuotationsInfos/setOrdersInfos/
-     * setInvoicesInfos/setSupplierordersInfos below, which this mirrors so
-     * the badge matches what the matching list/table would have shown), or
-     * null for a type with no status table / an unrecognized status value.
-     * @param {string} type
-     * @param {number|string} status
-     */
-    function getDetectedRefStatusInfo(type, status){
-        if(status === undefined || status === null || status === ''){
-            return null;
-        }
-        status = parseInt(status);
-
-        const TABLES = {
-            pro: {
-                '-1': {code: 9, key: 'StatusCanceledShort'},
-                '0': {code: 0, key: 'StatusDraftShort'},
-                '1': {code: 1, key: 'StatusValidatedShort'},
-                '2': {code: 4, key: 'StatusSignedShort'},
-                '3': {code: 6, key: 'StatusNotSignedShort'},
-                '4': {code: 6, key: 'StatusBilledShort'}
-            },
-            ord: {
-                '-1': {code: 9, key: 'StatusCanceledShort'},
-                '0': {code: 0, key: 'StatusDraftShort'},
-                '1': {code: 1, key: 'StatusValidatedShort'},
-                '2': {code: 4, key: 'StatusOrderSentShort'},
-                '3': {code: 6, key: 'StatusDelivered'}
-            },
-            inv: {
-                '-1': {code: 9, key: 'StatusCanceledShort'},
-                '0': {code: 0, key: 'StatusDraftShort'},
-                '1': {code: 1, key: 'StatusValidatedShort'},
-                '2': {code: 4, key: 'StatusClosed'},
-                '3': {code: 6, key: 'StatusAbandoned'}
-            },
-            sord: {
-                '0': {code: 0, key: 'StatusDraftShort'},
-                '1': {code: 1, key: 'StatusValidatedShort'},
-                '2': {code: 1, key: 'StatusSupplierOrderDraftShort'},
-                '3': {code: 4, key: 'StatusSupplierOrderOnProcessShort'},
-                '4': {code: 4, key: 'StatusSupplierOrderReceivedPartiallyShort'},
-                '5': {code: 6, key: 'StatusSupplierOrderReceivedAllShort'},
-                '6': {code: 9, key: 'StatusCanceledShort'},
-                '7': {code: 9, key: 'StatusCanceledShort'},
-                '9': {code: 9, key: 'StatusSupplierOrderRefusedShort'}
-            }
-        };
-
-        let table = TABLES[type];
-        let entry = table ? table[String(status)] : null;
-        if(!entry){
-            return null;
-        }
-        return {code: entry.code, label: chrome.i18n.getMessage(entry.key)};
     }
 
     /**
@@ -2138,7 +2079,7 @@ function updateInfoTabLinkedDocumentsSection(){
  * label is deliberately styled discreet/secondary (small, uppercase, muted grey - see
  * .linked-doc-card__type in popup.css) since the ref is what a user actually recognizes a
  * document by, not its type. The status badge is built from statusCode via
- * getDetectedRefStatusInfo() rather than from the backend's own status label - see
+ * dolLib.getDocumentStatusBadgeInfo() rather than from the backend's own status label - see
  * buildLinkedDocCard()'s callers for why (long, sometimes HTML-entity encoded, e.g. a supplier
  * order's raw label is "Tous les produits reçus - Factur&eacute;e").
  * @param {{type:string, id:number, ref:?string, refClient:?string, refSupplier:?string, statusCode:?number, date:?number, totalTtc:?number}} item
@@ -2172,7 +2113,7 @@ function buildDocCardBase(item){
     }
     header.appendChild(ref);
 
-    let statusInfo = getDetectedRefStatusInfo(item.type, item.statusCode);
+    let statusInfo = dolLib.getDocumentStatusBadgeInfo(item.type, item.statusCode);
     if(statusInfo){
         let status = document.createElement('span');
         status.classList.add('badge', 'badge-status'+statusInfo.code);

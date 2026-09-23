@@ -124,6 +124,50 @@
     white-space: nowrap;
 }
 
+/* Per-document status badge, next to its ref inside a .doli-ref-chip (see background.js's
+   renderDolibarrRefGroupRow()) - same statusCode -> color mapping as the popup's own
+   .badge-statusX (messagePopup/popup.css), built via dolLib.getDocumentStatusBadgeInfo(), but
+   under its own doli- prefixed class : this stylesheet is injected into the mail's own DOM
+   (content/doli-injector.css), where a generic ".badge" class name would risk colliding with the
+   mail's own CSS (either direction - ours leaking onto the mail's elements, or vice versa). */
+.doli-status-badge {
+    display: inline-block;
+    margin-left: 3px;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.4;
+    border-radius: 3px;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.doli-status-badge--0 {
+    color: #999999;
+    background-color: #eef1f1;
+    border: 1px solid #cbd3d3;
+}
+
+.doli-status-badge--1 {
+    color: #ffffff;
+    background-color: #bc9526;
+}
+
+.doli-status-badge--4 {
+    color: #ffffff;
+    background-color: #25a580;
+}
+
+.doli-status-badge--6 {
+    color: #777777;
+    background-color: #cad2d2;
+}
+
+.doli-status-badge--9 {
+    color: #999999;
+    background-color: #e7f0f0;
+}
+
 /* "Nothing found for this mail" state (see background.js's renderEmptyDolibarrBox()) :
    deliberately grey rather than the yellow/orange used above, so it can never be mistaken for
    (or easily imitated as) the "content found" state - this box is injected on every mail once

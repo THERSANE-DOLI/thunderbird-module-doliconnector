@@ -1051,6 +1051,76 @@ export function getDolibarrCardUrl(dolUrl, type, id){
 }
 
 /**
+ * Per-type status-code -> {badge color code, i18n key} tables, for the document types whose
+ * status table is known here - mirrors what each type's own list/table in the popup's Info/
+ * Documents tabs would show (setQuotationsInfos/setOrdersInfos/setInvoicesInfos/
+ * setSupplierordersInfos in messagePopup/popup.js), so a badge built from this always matches.
+ * Shared between messagePopup/popup.js (document cards, detected-ref block) and background.js
+ * (the linked-documents row of the mail-body banner) via getDocumentStatusBadgeInfo() below,
+ * rather than duplicated in each - see that function's own doc comment for why statusCode (not
+ * the backend's own status label) is what badges are built from.
+ * @type {Object<string, Object<string, {code:number, key:string}>>}
+ */
+const DOCUMENT_STATUS_TABLES = {
+    pro: {
+        '-1': {code: 9, key: 'StatusCanceledShort'},
+        '0': {code: 0, key: 'StatusDraftShort'},
+        '1': {code: 1, key: 'StatusValidatedShort'},
+        '2': {code: 4, key: 'StatusSignedShort'},
+        '3': {code: 6, key: 'StatusNotSignedShort'},
+        '4': {code: 6, key: 'StatusBilledShort'}
+    },
+    ord: {
+        '-1': {code: 9, key: 'StatusCanceledShort'},
+        '0': {code: 0, key: 'StatusDraftShort'},
+        '1': {code: 1, key: 'StatusValidatedShort'},
+        '2': {code: 4, key: 'StatusOrderSentShort'},
+        '3': {code: 6, key: 'StatusDelivered'}
+    },
+    inv: {
+        '-1': {code: 9, key: 'StatusCanceledShort'},
+        '0': {code: 0, key: 'StatusDraftShort'},
+        '1': {code: 1, key: 'StatusValidatedShort'},
+        '2': {code: 4, key: 'StatusClosed'},
+        '3': {code: 6, key: 'StatusAbandoned'}
+    },
+    sord: {
+        '0': {code: 0, key: 'StatusDraftShort'},
+        '1': {code: 1, key: 'StatusValidatedShort'},
+        '2': {code: 1, key: 'StatusSupplierOrderDraftShort'},
+        '3': {code: 4, key: 'StatusSupplierOrderOnProcessShort'},
+        '4': {code: 4, key: 'StatusSupplierOrderReceivedPartiallyShort'},
+        '5': {code: 6, key: 'StatusSupplierOrderReceivedAllShort'},
+        '6': {code: 9, key: 'StatusCanceledShort'},
+        '7': {code: 9, key: 'StatusCanceledShort'},
+        '9': {code: 9, key: 'StatusSupplierOrderRefusedShort'}
+    }
+};
+
+/**
+ * Status badge {code, label} for a document, built from its own type + statusCode (see
+ * DOCUMENT_STATUS_TABLES above) rather than from the backend's own status label : Dolibarr's own
+ * getLibStatut() label is sometimes long and/or HTML-entity encoded (e.g. a supplier order's raw
+ * label can be "Tous les produits reçus - Factur&eacute;e"), not fit for a compact badge. null for
+ * a type with no status table, or an unrecognized/missing status value - callers should just omit
+ * the badge in that case rather than show nothing useful.
+ * @param {string} type short type code (see DOLIBARR_OBJECT_TYPES)
+ * @param {number|string|null|undefined} status
+ * @returns {{code:number, label:string}|null}
+ */
+export function getDocumentStatusBadgeInfo(type, status){
+    if(status === undefined || status === null || status === ''){
+        return null;
+    }
+    let table = DOCUMENT_STATUS_TABLES[type];
+    let entry = table ? table[String(parseInt(status))] : null;
+    if(!entry){
+        return null;
+    }
+    return {code: entry.code, label: browser.i18n.getMessage(entry.key)};
+}
+
+/**
  * Turn the { type: {addon, example} } map returned by the crmclientconnector
  * `numberingpatterns/` endpoint into { type: RegExp } detection patterns, by escaping the
  * example's literal characters and replacing each run of digits with a \d{n} of the same

@@ -331,18 +331,27 @@ function renderDolibarrRefRow(typeLabel, refLabel){
  * instead of repeating the icon and row padding once per document. Documents sharing the same
  * type share a single chip too (typeLabel stated once, followed by their refs comma-separated) -
  * e.g. two linked supplier orders show as one "Commande fournisseur CF001, CF002" chip rather
- * than repeating "Commande fournisseur" on two separate chips.
- * @param {Array<{typeLabel:string, refLabel:string}>} refs
+ * than repeating "Commande fournisseur" on two separate chips. Each ref gets its own status badge
+ * next to it when available (same statusCode -> color/label mapping as the popup's own document
+ * cards, see dolLib.getDocumentStatusBadgeInfo()), so e.g. a signed quotation and a still-draft one
+ * of the same type are told apart at a glance without opening the popup.
+ * @param {Array<{typeLabel:string, refLabel:string, statusBadge:?{code:number,label:string}}>} refs
  */
 function renderDolibarrRefGroupRow(refs){
-    let refLabelsByType = new Map();
+    let itemsByType = new Map();
     refs.forEach((ref) => {
-        if(!refLabelsByType.has(ref.typeLabel)){ refLabelsByType.set(ref.typeLabel, []); }
-        refLabelsByType.get(ref.typeLabel).push(ref.refLabel);
+        if(!itemsByType.has(ref.typeLabel)){ itemsByType.set(ref.typeLabel, []); }
+        itemsByType.get(ref.typeLabel).push(ref);
     });
 
-    let chips = Array.from(refLabelsByType, ([typeLabel, refLabels]) => {
-        return `<span class="doli-ref-chip">${typeLabel} ${refLabels.join(', ')}</span>`;
+    let chips = Array.from(itemsByType, ([typeLabel, items]) => {
+        let refsHtml = items.map((item) => {
+            let badgeHtml = item.statusBadge
+                ? ` <span class="doli-status-badge doli-status-badge--${item.statusBadge.code}">${item.statusBadge.label}</span>`
+                : '';
+            return item.refLabel + badgeHtml;
+        }).join(', ');
+        return `<span class="doli-ref-chip">${typeLabel} ${refsHtml}</span>`;
     }).join('');
     return `
        <div class="doli-content-wrapper">
@@ -388,7 +397,8 @@ function renderDolibarrBanner(trackidInfo, notesInfo, linkedDocsInfo){
             let meta = dolLib.getDolibarrObjectTypeMeta(doc.type);
             return {
                 typeLabel: meta ? browser.i18n.getMessage(meta.labelKey) : doc.type,
-                refLabel: doc.ref || ('#' + doc.id)
+                refLabel: doc.ref || ('#' + doc.id),
+                statusBadge: dolLib.getDocumentStatusBadgeInfo(doc.type, doc.statusCode)
             };
         });
         rows += renderDolibarrRefGroupRow(refs);

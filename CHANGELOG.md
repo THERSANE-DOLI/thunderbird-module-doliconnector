@@ -1,5 +1,9 @@
 # CHANGELOG DOLICONNECTOR
 
+## 2.4.0
+
+- Add a status badge (draft/validated/signed/cancelled...) next to each document in the linked-documents list of the banner injected in the mail body, when available for that document type - same colors/labels as the popup's own document cards.
+
 ## 2.3.0
 
 - Fix: a missing Dolibarr right (403) no longer shows the "Invalid credentials" message - only a real bad API key / HTTP Basic Auth (401) does now. The connection check now uses Dolibarr's `status` endpoint, which needs no business right at all, instead of `users/info` (which most users don't have rights on) for this purpose.
