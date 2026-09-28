@@ -187,7 +187,7 @@ const DOLI_BOX_STYLE = 'display:flex!important;visibility:visible!important;opac
  * @returns {Promise<{type:string, id:number, typeLabel:string, refLabel:string}|null>}
  */
 async function resolveTrackidInfo(message, accountId){
-    let ref = await dolLib.getDolibarrTrackIdFromMessage(message.id);
+    let ref = await dolLib.getDolibarrTrackIdFromMessage(message.id, accountId);
     if(!ref){
         return null;
     }
@@ -203,11 +203,19 @@ async function resolveTrackidInfo(message, accountId){
         return null;
     }
 
+    let senderEmails = dolLib.extractEmailAddressFromString(message.author || '');
+    let senderEmail = senderEmails ? senderEmails[0] : '';
+
     return new Promise((resolve) => {
         // cache:true - this same endpoint may also be fetched moments later by the popup's own
         // trackid resolution (see resolveSocFromId()'s caller in messagePopup/popup.js), so
         // either request can potentially be served from the browser's HTTP cache.
-        dolLib.callDolibarrApi(meta.api + '/' + ref.id, {}, 'GET', {}, (objData) => {
+        dolLib.callDolibarrApi(meta.api + '/' + ref.id, {}, 'GET', {}, async (objData) => {
+            if(ref.origin === 'unknown' && !(await dolLib.isUnknownDolibarrRefConsistent(objData, senderEmail, accountId))){
+                console.log("[DoliConnector background] trackid of unknown instance does not match the sender thirdparty, ignoring", ref);
+                resolve(null);
+                return;
+            }
             resolve({
                 type: ref.type,
                 id: ref.id,
@@ -215,6 +223,11 @@ async function resolveTrackidInfo(message, accountId){
                 refLabel: (objData && objData.ref) ? objData.ref : ('#' + ref.id)
             });
         }, (errorMsg) => {
+            if(ref.origin === 'unknown'){
+                console.log("[DoliConnector background] trackid of unknown instance not found in our Dolibarr, ignoring", ref, errorMsg);
+                resolve(null);
+                return;
+            }
             console.log("[DoliConnector background] failed to fetch referenced object, showing a generic link", errorMsg);
             resolve({
                 type: ref.type,

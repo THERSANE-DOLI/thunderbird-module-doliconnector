@@ -297,6 +297,16 @@
 	padding-right: 10px;
 }
 
+/* "Is it your Dolibarr ?" prompt, shown when the detected trackid comes from an instance not yet
+   known for this connection (see getDolibarrRefOrigin()) */
+.instance-prompt__actions {
+	white-space: nowrap;
+}
+
+.instance-prompt__actions .link-cta-btn + .link-cta-btn {
+	margin-left: 8px;
+}
+
 .detected-ref-block .linked-doc-card__actions {
 	position: static;
 	margin-top: 6px;

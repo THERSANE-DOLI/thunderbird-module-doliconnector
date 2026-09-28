@@ -14,6 +14,13 @@ let connections = [];
 let accountConnections = {};
 let thunderbirdAccounts = [];
 
+// Per-connection trackid instance lists ({[connectionId]: {own: [], foreign: []}}, see
+// dolLib.getDolibarrInstanceIds()), and which connections' lists were edited on this page : only
+// those are written back on save, so an instance learned meanwhile by the popup (for this or any
+// other connection) isn't wiped by this page's older copy.
+let instanceIds = {};
+let dirtyInstanceIds = new Set();
+
 // Which connection's <details> should be expanded on the next renderConnectionsList() - null
 // means "use the default connection" (the initial state). Kept in sync with the user's own
 // clicks (see renderConnectionsList()'s toggle listener) so a re-render triggered by something
@@ -94,6 +101,7 @@ async function restoreOptions() {
 	connections = connectionData.connections;
 	accountConnections = connectionData.accountConnections;
 	thunderbirdAccounts = await browser.accounts.list();
+	instanceIds = (await browser.storage.local.get({dolibarrInstanceIds: {}})).dolibarrInstanceIds;
 
 	renderConnectionsList();
 	renderAccountMappingTable();
@@ -240,6 +248,23 @@ function renderConnectionCard(connection){
 	crmSlider.className = 'dol-input-slider';
 	crmSwitch.appendChild(crmSlider);
 	addRow(browser.i18n.getMessage("DolibarrCrmConnectorEnabled"), crmSwitch, browser.i18n.getMessage("DolibarrCrmConnectorEnabledDesc"));
+
+	// Trackid instance lists : one id per line, bound live like every other field of the card
+	function addInstanceIdsRow(listName, labelKey, descKey){
+		let textarea = document.createElement('textarea');
+		textarea.className = 'dol-input';
+		textarea.rows = 2;
+		textarea.value = ((instanceIds[connection.id] || {})[listName] || []).join("\n");
+		textarea.addEventListener('input', () => {
+			let ids = instanceIds[connection.id] || {own: [], foreign: []};
+			ids[listName] = textarea.value.split(/\s+/).map((v) => v.trim().toLowerCase()).filter((v) => v.length > 0);
+			instanceIds[connection.id] = ids;
+			dirtyInstanceIds.add(connection.id);
+		});
+		addRow(browser.i18n.getMessage(labelKey), textarea, descKey ? browser.i18n.getMessage(descKey) : '');
+	}
+	addInstanceIdsRow('own', "dolibarrOwnInstanceIds", "dolibarrOwnInstanceIdsDesc");
+	addInstanceIdsRow('foreign', "dolibarrForeignInstanceIds");
 
 	let defaultRow = document.createElement('tr');
 	let defaultLabelCell = document.createElement('td');
@@ -419,7 +444,27 @@ function renderAccountMappingTable(){
 }
 
 
-function saveOptions(e) {
+/**
+ * Writes back the instance lists edited on this page (see dirtyInstanceIds) over a fresh read of
+ * storage, drops the lists of removed connections, and reloads the result.
+ */
+async function saveInstanceIds(){
+	let stored = (await browser.storage.local.get({dolibarrInstanceIds: {}})).dolibarrInstanceIds;
+	dirtyInstanceIds.forEach((connectionId) => {
+		stored[connectionId] = instanceIds[connectionId];
+	});
+	Object.keys(stored).forEach((connectionId) => {
+		if(!connections.some((c) => c.id === connectionId)){
+			delete stored[connectionId];
+		}
+	});
+	await browser.storage.local.set({dolibarrInstanceIds: stored});
+	instanceIds = stored;
+	dirtyInstanceIds.clear();
+}
+
+
+async function saveOptions(e) {
     e.preventDefault();
 
     let objToStore = {
@@ -448,6 +493,7 @@ function saveOptions(e) {
 	});
 
     browser.storage.local.set(objToStore);
+    await saveInstanceIds();
 
 
     const event = new Date();

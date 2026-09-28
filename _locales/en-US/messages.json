@@ -317,6 +317,9 @@
   "DolibarrTypeSupplierInvoice": {
     "message": "Supplier invoice"
   },
+  "DolibarrTypeSupplierProposal": {
+    "message": "Supplier proposal"
+  },
   "DolibarrTypeShipment": {
     "message": "Shipment"
   },
@@ -493,5 +496,23 @@
   },
   "DolibarrMissingRightsRequiredRight": {
     "message": "required Dolibarr right"
+  },
+  "DolibarrInstanceUnknown": {
+    "message": "This message refers to a document from an unrecognized Dolibarr instance. Is it your Dolibarr?"
+  },
+  "DolibarrInstanceIsMine": {
+    "message": "Yes"
+  },
+  "DolibarrInstanceIsNotMine": {
+    "message": "No, a correspondent's Dolibarr"
+  },
+  "dolibarrOwnInstanceIds": {
+    "message": "Ids of my Dolibarr instances"
+  },
+  "dolibarrOwnInstanceIdsDesc": {
+    "message": "One per line: the part after the @ of the X-Dolibarr-TRACKID header of emails sent by this Dolibarr. Only detected documents coming from these instances are linked; filled in automatically when possible."
+  },
+  "dolibarrForeignInstanceIds": {
+    "message": "Correspondents' Dolibarr instances to ignore"
   }
 }

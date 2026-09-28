@@ -432,6 +432,7 @@ const DOLIBARR_ENDPOINT_RIGHTS = {
     'invoices': [{id: 11, label: "Lire les factures (et paiements) clients"}],
     'supplierorders': [{id: 1182, label: "Consulter les commandes fournisseur"}],
     'supplierinvoices': [{id: 1231, label: "Consulter les factures fournisseur"}],
+    'supplierproposals': [{id: 1121, label: "Lire les propositions fournisseurs"}],
     'shipments': [{id: 101, label: "Lire les expéditions"}],
     'contracts': [{id: 161, label: "Lire les contrats"}],
     'tickets': [{id: 56001, label: "Voir tickets"}],
@@ -448,6 +449,7 @@ const DOLIBARR_ENDPOINT_RIGHTS = {
     'crmclientconnector/objectcategories/inv':  [{id: 11, label: "Lire les factures (et paiements) clients"}],
     'crmclientconnector/objectcategories/sord': [{id: 1182, label: "Consulter les commandes fournisseur"}],
     'crmclientconnector/objectcategories/sinv': [{id: 1231, label: "Consulter les factures fournisseur"}],
+    'crmclientconnector/objectcategories/spro': [{id: 1121, label: "Lire les propositions fournisseurs"}],
     'crmclientconnector/objectcategories/tic':  [{id: 56001, label: "Voir tickets"}],
     'crmclientconnector/objectcategories/proj': [{id: 41, label: "Lire les projets et les tâches (projets partagés et projets dont je suis un contact)."}],
     'crmclientconnector/objectcategories/int':  [{id: 61, label: "Lire les fiches d'intervention"}],
@@ -1024,6 +1026,7 @@ export const DOLIBARR_OBJECT_TYPES = {
     inv:  { api: 'invoices',         card: 'compta/facture/card.php', labelKey: 'DolibarrTypeInvoice' },
     sord: { api: 'supplierorders',   card: 'fourn/commande/card.php', labelKey: 'DolibarrTypeSupplierOrder' },
     sinv: { api: 'supplierinvoices', card: 'fourn/facture/card.php',  labelKey: 'DolibarrTypeSupplierInvoice' },
+    spro: { api: 'supplierproposals', card: 'supplier_proposal/card.php', labelKey: 'DolibarrTypeSupplierProposal' },
     shi:  { api: 'shipments',        card: 'expedition/card.php',     labelKey: 'DolibarrTypeShipment' },
     con:  { api: 'contracts',        card: 'contrat/card.php',        labelKey: 'DolibarrTypeContract' },
     tic:  { api: 'tickets',          card: 'ticket/card.php',         labelKey: 'DolibarrTypeTicket' },
@@ -1094,6 +1097,18 @@ const DOCUMENT_STATUS_TABLES = {
         '6': {code: 9, key: 'StatusCanceledShort'},
         '7': {code: 9, key: 'StatusCanceledShort'},
         '9': {code: 9, key: 'StatusSupplierOrderRefusedShort'}
+    },
+    // Same status set as pro (customer proposal : draft/validated/signed/not signed), except
+    // status 4 (SupplierProposal::STATUS_CLOSE) which - unlike a customer proposal's own status 4
+    // (STATUS_BILLED, "invoiced") - has no invoicing meaning here, a supplier proposal is just
+    // marked closed once acted on ; StatusClosed (already used by inv's own status 2) fits that
+    // better than StatusBilledShort.
+    spro: {
+        '0': {code: 0, key: 'StatusDraftShort'},
+        '1': {code: 1, key: 'StatusValidatedShort'},
+        '2': {code: 4, key: 'StatusSignedShort'},
+        '3': {code: 6, key: 'StatusNotSignedShort'},
+        '4': {code: 6, key: 'StatusClosed'}
     }
 };
 
@@ -1182,47 +1197,58 @@ export function detectDolibarrRefsInText(text, patterns){
 }
 
 /**
- * Dolibarr embeds a trackid ("<prefix><id>@<sha1>") in outgoing emails as
+ * Dolibarr embeds a trackid ("<prefix><id>@<host>") in outgoing emails as
  * X-Dolibarr-TRACKID and Feedback-ID, and swiftmailer reuses it inside the
  * Message-ID it generates. That Message-ID then shows up in References/
  * In-Reply-To on any reply, which is how we can link a reply back to the
  * Dolibarr record that originated the thread.
+ *
+ * <host> is dol_getprefix('email') on the sending Dolibarr : sha1('dolibarr'.instance_unique_id),
+ * or MAIL_PREFIX_FOR_EMAIL_ID when set (same in Dolibarr 18 to 24). It identifies the instance
+ * that sent the email, which is what tells our own documents apart from those of a correspondent
+ * who also uses Dolibarr (whose ids mean nothing - or something else - in ours), see
+ * getDolibarrRefOrigin().
+ *
+ * source is 'direct' when the trackid was generated for this very message (X-Dolibarr-TRACKID,
+ * Feedback-ID, Message-ID : <host> is then the sender's instance), 'thread' when it comes from an
+ * earlier message of the thread (References / In-Reply-To).
  * @param {Object} headers headers map as returned by messenger.messages.getFull() (lower-case header names, array of raw values)
- * @returns {{type: string, id: string}|null}
+ * @returns {{type: string, id: string, host: string, source: string}|null}
  */
 export function extractDolibarrRef(headers){
     if(!headers){
         return null;
     }
 
-    const trackIdPattern = /([a-z]{2,6})(\d+)@[0-9a-f]{20,64}/i;
+    const buildRef = (match, source) => ({ type: match[1].toLowerCase(), id: match[2], host: match[3].toLowerCase(), source: source });
 
     let trackIdHeader = headers['x-dolibarr-trackid'];
     if(Array.isArray(trackIdHeader) && trackIdHeader.length > 0){
-        let match = trackIdHeader[0].match(trackIdPattern);
+        let match = trackIdHeader[0].trim().match(/^([a-z]{2,6})(\d+)@([^\s<>]+)/i);
         if(match){
-            return { type: match[1].toLowerCase(), id: match[2] };
+            return buildRef(match, 'direct');
         }
     }
 
     let feedbackIdHeader = headers['feedback-id'];
     if(Array.isArray(feedbackIdHeader) && feedbackIdHeader.length > 0){
-        let match = feedbackIdHeader[0].match(/^([a-z]{2,6})(\d+):[0-9a-f]{20,64}:/i);
+        let match = feedbackIdHeader[0].trim().match(/^([a-z]{2,6})(\d+):([^:\s]+):dolib/i);
         if(match){
-            return { type: match[1].toLowerCase(), id: match[2] };
+            return buildRef(match, 'direct');
         }
     }
 
-    let headersToScan = ['references', 'in-reply-to', 'message-id'];
-    for (const headerName of headersToScan) {
+    const msgIdPattern = /dolibarr-([a-z]{2,6})(\d+)@([^\s<>]+)/i;
+    let headersToScan = { 'message-id': 'direct', 'references': 'thread', 'in-reply-to': 'thread' };
+    for (const headerName of Object.keys(headersToScan)) {
         let values = headers[headerName];
         if(!Array.isArray(values)){
             continue;
         }
         for (const value of values) {
-            let match = value.match(/dolibarr-([a-z]{2,6})(\d+)@[0-9a-f]{20,64}/i);
+            let match = value.match(msgIdPattern);
             if(match){
-                return { type: match[1].toLowerCase(), id: match[2] };
+                return buildRef(match, headersToScan[headerName]);
             }
         }
     }
@@ -1231,19 +1257,164 @@ export function extractDolibarrRef(headers){
 }
 
 /**
- * Read the trackid off a message's headers (X-Dolibarr-TRACKID, Feedback-ID,
- * or embedded in References/In-Reply-To on a reply) and resolve it against
- * DOLIBARR_OBJECT_TYPES. Mirrors getQuotationHeaders()'s style: fetches the
- * full message itself so callers don't need to.
- * @param {number} id message id
- * @returns {Promise<{type: string, id: string}|null>}
+ * Trackid hosts (see extractDolibarrRef()) known to be the given connection's own Dolibarr
+ * instance, or known to be someone else's. Kept per connection (a trackid from connection B's
+ * instance means nothing in connection A) under its own storage key rather than inside
+ * dolibarrConnections, since options.js writes its whole in-memory connections array back on
+ * save and would otherwise wipe an instance learned by the popup meanwhile.
+ * @param {string} [accountId]
+ * @returns {Promise<{own: string[], foreign: string[]}>}
  */
-export async function getDolibarrTrackIdFromMessage(id){
+export async function getDolibarrInstanceIds(accountId){
+    let connection = await resolveDolibarrConnection(accountId);
+    let {dolibarrInstanceIds} = await browser.storage.local.get({dolibarrInstanceIds: {}});
+    let ids = (connection && dolibarrInstanceIds[connection.id]) || {};
+    return {
+        own: (ids.own || []).map((h) => h.toLowerCase()),
+        foreign: (ids.foreign || []).map((h) => h.toLowerCase())
+    };
+}
+
+/**
+ * @param {string} host
+ * @param {boolean} isOwn
+ * @param {string} [accountId]
+ */
+export async function rememberDolibarrInstanceId(host, isOwn, accountId){
+    let connection = await resolveDolibarrConnection(accountId);
+    if(!connection){
+        return;
+    }
+
+    host = host.toLowerCase();
+    let {dolibarrInstanceIds} = await browser.storage.local.get({dolibarrInstanceIds: {}});
+    let ids = dolibarrInstanceIds[connection.id] || {};
+    let own = (ids.own || []).filter((h) => h.toLowerCase() !== host);
+    let foreign = (ids.foreign || []).filter((h) => h.toLowerCase() !== host);
+    (isOwn ? own : foreign).push(host);
+    dolibarrInstanceIds[connection.id] = {own, foreign};
+    await browser.storage.local.set({dolibarrInstanceIds});
+}
+
+/**
+ * Whether the trackid was generated by the connection's own Dolibarr ('own'), by someone else's
+ * ('foreign'), or if we can't tell yet ('unknown'). Once the own instance is known, any other one
+ * is someone else's.
+ * @param ref as returned by extractDolibarrRef()
+ * @param {string} [accountId]
+ * @returns {Promise<string>}
+ */
+export async function getDolibarrRefOrigin(ref, accountId){
+    let ids = await getDolibarrInstanceIds(accountId);
+    if(ids.own.includes(ref.host)){
+        return 'own';
+    }
+    if(ids.foreign.includes(ref.host) || ids.own.length > 0){
+        return 'foreign';
+    }
+    return 'unknown';
+}
+
+/**
+ * Whether a trackid generated for this very message (source 'direct') was sent with one of the
+ * identities of the Thunderbird account that received it : then it can only come from that
+ * account's own Dolibarr connection.
+ * @param ref as returned by extractDolibarrRef()
+ * @param {Object} headers
+ * @param {string} [accountId]
+ * @returns {Promise<boolean>}
+ */
+async function isSentByOwnIdentity(ref, headers, accountId){
+    let resolvedAccountId = accountId !== undefined ? accountId : activeAccountId;
+    if(ref.source !== 'direct' || !resolvedAccountId || !Array.isArray(headers.from)){
+        return false;
+    }
+
+    let authorEmails = extractEmailAddressFromString(headers.from[0] || '');
+    if(!authorEmails || authorEmails.length === 0){
+        return false;
+    }
+
+    try {
+        let account = await messenger.accounts.get(resolvedAccountId, true);
+        let identityEmails = ((account && account.identities) || []).map((identity) => (identity.email || '').toLowerCase());
+        return identityEmails.includes(authorEmails[0].toLowerCase());
+    } catch (error) {
+        console.error('[DoliConnector] cannot read account identities', error);
+        return false;
+    }
+}
+
+/**
+ * Safety net for a trackid whose instance is still unknown (see getDolibarrRefOrigin()) : its
+ * document must exist in our Dolibarr, and belong to the sender's thirdparty when the sender is
+ * known there (exact email on a contact or a thirdparty - not the domain search, too fuzzy to
+ * reject anything on). Otherwise it most likely comes from a correspondent's own Dolibarr.
+ * @param {Object|null} objData the trackid's object as fetched from our Dolibarr (null if not found)
+ * @param {string} senderEmail
+ * @param {string} [accountId]
+ * @returns {Promise<boolean>}
+ */
+export async function isUnknownDolibarrRefConsistent(objData, senderEmail, accountId){
+    if(!objData){
+        return false;
+    }
+
+    let objSocId = parseInt(objData.socid || objData.fk_soc || 0);
+    if(!objSocId || !senderEmail){
+        return true;
+    }
+
+    const apiGet = (endPoint, params) => new Promise((resolve) => {
+        callDolibarrApi(endPoint, params, 'GET', {}, (data) => resolve(Array.isArray(data) ? data : []), () => resolve([]), true, accountId);
+    });
+    let sqlfilters = "(t.email:like:'" + senderEmail + "')";
+    let [contacts, thirdparties] = await Promise.all([
+        apiGet('contacts', {limit: 5, sqlfilters: sqlfilters}),
+        apiGet('thirdparties', {limit: 5, sqlfilters: sqlfilters})
+    ]);
+
+    let senderSocIds = contacts.map((c) => parseInt(c.socid || 0))
+        .concat(thirdparties.map((t) => parseInt(t.id || 0)))
+        .filter((id) => id > 0);
+
+    return senderSocIds.length === 0 || senderSocIds.includes(objSocId);
+}
+
+/**
+ * Read the trackid off a message's headers (X-Dolibarr-TRACKID, Feedback-ID,
+ * or embedded in References/In-Reply-To on a reply), with its origin (see
+ * getDolibarrRefOrigin()). A trackid from another Dolibarr instance is dropped
+ * (null), its ids don't point to our documents. Mirrors getQuotationHeaders()'s
+ * style: fetches the full message itself so callers don't need to.
+ * @param {number} id message id
+ * @param {string} [accountId]
+ * @returns {Promise<{type: string, id: string, host: string, source: string, origin: string}|null>}
+ */
+export async function getDolibarrTrackIdFromMessage(id, accountId){
     let full = await messenger.messages.getFull(id);
     if(!full || !full.headers){
         return null;
     }
-    return extractDolibarrRef(full.headers);
+
+    let ref = extractDolibarrRef(full.headers);
+    if(!ref){
+        return null;
+    }
+
+    ref.origin = await getDolibarrRefOrigin(ref, accountId);
+    if(ref.origin === 'unknown' && await isSentByOwnIdentity(ref, full.headers, accountId)){
+        // Only our own Dolibarr sends emails with our address (e.g. its auto copy to the sender)
+        console.log('[DoliConnector] trackid sent by one of our identities, learning its instance', ref);
+        await rememberDolibarrInstanceId(ref.host, true, accountId);
+        ref.origin = 'own';
+    }
+    if(ref.origin === 'foreign'){
+        console.log('[DoliConnector] trackid from another Dolibarr instance, ignoring', ref);
+        return null;
+    }
+
+    return ref;
 }
 
 

@@ -133,7 +133,46 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         detectedRef = null;
     }
     LOG('detected trackid', detectedRef, detectedRefMeta);
-    const DETECTED_REF_TABLE_BACKED_TYPES = ['ord', 'pro', 'inv', 'sord'];
+    if(checkConfig && detectedRef && detectedRef.origin === 'unknown'){
+        showDolibarrInstancePrompt(detectedRef.host);
+    }
+
+    /**
+     * Forget a detected trackid that turned out not to point to one of our documents (see
+     * dolLib.isUnknownDolibarrRefConsistent()), and find the thirdparty from the email instead.
+     * The instance prompt stays : answering "Yes" there reloads and keeps the trackid.
+     */
+    function dropDetectedRef(){
+        detectedRef = null;
+        detectedRefMeta = null;
+        detectedRefObjectData = null;
+        maybeRenderDetectedRefBlock();
+        searchCompanyByEmail();
+    }
+
+    /**
+     * Ask whether the unknown Dolibarr instance of the detected trackid is the one of this
+     * account's connection, so the next emails can be sorted out without asking (see
+     * getDolibarrRefOrigin()). The answer changes whether this very trackid is kept, hence the
+     * reload.
+     * @param {string} host
+     */
+    function showDolibarrInstancePrompt(host){
+        let block = document.getElementById('dolibarr-instance-prompt');
+        if(!block){
+            return;
+        }
+        block.title = host;
+
+        const remember = (isOwn) => {
+            dolLib.rememberDolibarrInstanceId(host, isOwn).then(() => location.reload());
+        };
+        document.getElementById('dolibarr-instance-is-mine').addEventListener('click', () => remember(true));
+        document.getElementById('dolibarr-instance-is-not-mine').addEventListener('click', () => remember(false));
+
+        block.classList.remove('hidden-field');
+    }
+    const DETECTED_REF_TABLE_BACKED_TYPES = ['ord', 'pro', 'inv', 'sord', 'spro'];
     let detectedRefTableResolved = false;
     let detectedRefShouldShowBlock = false;
     let detectedRefObjectData = null;
@@ -227,8 +266,13 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             // cache:true - this same endpoint may also have just been fetched by background.js's
             // own trackid resolution for the mail-body banner (checkAndInjectDolibarrBanner()),
             // so this can potentially be served from the browser's HTTP cache.
-            dolLib.callDolibarrApi(detectedRefMeta.api + '/' + detectedRef.id, {}, 'GET', {}, (objData)=>{
+            dolLib.callDolibarrApi(detectedRefMeta.api + '/' + detectedRef.id, {}, 'GET', {}, async (objData)=>{
                 LOG('referenced object fetched OK', objData);
+                if(detectedRef.origin === 'unknown' && !(await dolLib.isUnknownDolibarrRefConsistent(objData, authorEmail))){
+                    LOG('trackid of unknown instance does not match the sender thirdparty, ignoring it');
+                    dropDetectedRef();
+                    return;
+                }
                 detectedRefObjectData = objData;
                 detectedRefObjectFetchDone = true;
                 if(objData && objData.ref){
@@ -246,6 +290,11 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                 }
             },(errorMsg)=>{
                 LOG('failed to fetch referenced object, falling back to email-based search', errorMsg);
+                if(detectedRef.origin === 'unknown'){
+                    LOG('trackid of unknown instance not found in our Dolibarr, ignoring it');
+                    dropDetectedRef();
+                    return;
+                }
                 detectedRefObjectFetchDone = true;
                 maybeRenderDetectedRefBlock();
                 searchCompanyByEmail();
@@ -776,7 +825,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
      * only turns on for the "not matched in table" case.
      */
     function maybeRenderDetectedRefBlock(){
-        if(detectedRefShouldShowBlock && detectedRefObjectFetchDone){
+        if(detectedRef && detectedRefShouldShowBlock && detectedRefObjectFetchDone){
             LOG('rendering detected ref block', detectedRef, detectedRefObjectData);
             let block = document.getElementById("dolibarr-detected-ref");
             let cardContainer = document.getElementById("dolibarr-detected-ref-card");
@@ -791,87 +840,40 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
     }
 
     /**
-     * Builds the detected-ref card, styled like the linked-document cards in
-     * the "Lier" tab (see buildLinkedDocCard()) so a document found via the
-     * mail headers reads the same way - reference/status up top, then
-     * whichever fields are known, instead of a raw "type : #id" line.
+     * Builds the detected-ref card via the same buildDocCardBase() every other document card in
+     * this popup uses (buildLinkedDocCard(), buildSearchResultCard()) - it used to hand-roll an
+     * equivalent card by itself (header/fields markup duplicated from buildDocCardBase, plus its
+     * own bespoke "Voir la fiche" + "Lier" button pair, styled and behaving like neither the
+     * linked-document card's ⋯→Unlink menu nor the search-result card's single Link button). A
+     * detected-but-not-yet-linked document is functionally the same case as a search result -
+     * possibly linkable, not yet linked - so its action now matches buildSearchResultCard()'s :
+     * one plain "Lier" button, no separate "Voir la fiche" (the ref itself is already a link, same
+     * as those other two cards). Only its onConfirm differs : unlike a search result, this card
+     * doesn't remove itself on success - linkDocument() triggers loadLinkedDocuments(), which
+     * rebuilds it via maybeRenderDetectedRefBlock()'s own reactivity.
      */
     function buildDetectedRefCard(){
         let data = detectedRefObjectData || {};
-        let locale = navigator.language || navigator.browserLanguage || (navigator.languages || ['en'])[0];
 
-        let card = document.createElement('div');
-        card.classList.add('linked-doc-card');
-
-        let header = document.createElement('div');
-        header.classList.add('linked-doc-card__header');
-
-        let type = document.createElement('span');
-        type.classList.add('linked-doc-card__type');
-        type.textContent = chrome.i18n.getMessage(detectedRefMeta.labelKey);
-        header.appendChild(type);
-
-        let ref = document.createElement('a');
-        ref.classList.add('linked-doc-card__ref');
-        ref.textContent = data.ref || ('#' + detectedRef.id);
-        ref.href = dolLib.getDolibarrCardUrl(confDolibarUrl, detectedRef.type, detectedRef.id);
-        ref.target = '_blank';
-        header.appendChild(ref);
-
-        let statusInfo = dolLib.getDocumentStatusBadgeInfo(detectedRef.type, data.status);
-        if(statusInfo){
-            let status = document.createElement('span');
-            status.classList.add('badge', 'badge-status' + statusInfo.code);
-            status.textContent = statusInfo.label;
-            header.appendChild(status);
-        }
-
-        card.appendChild(header);
-
-        let fields = document.createElement('div');
-        fields.classList.add('linked-doc-card__fields');
-
-        let addField = (label, value) => {
-            if(value === null || value === undefined || value === ''){
-                return;
-            }
-            let field = document.createElement('span');
-            field.classList.add('linked-doc-card__field');
-            let fieldLabel = document.createElement('span');
-            fieldLabel.classList.add('linked-doc-card__field-label');
-            fieldLabel.textContent = label + ' : ';
-            field.appendChild(fieldLabel);
-            field.append(value);
-            fields.appendChild(field);
+        let item = {
+            type: detectedRef.type,
+            id: detectedRef.id,
+            ref: data.ref,
+            refClient: data.ref_client || null,
+            refSupplier: data.ref_supplier || null,
+            statusCode: data.status,
+            date: data.date || data.date_creation || data.datec || null,
+            totalTtc: (data.total_ttc !== undefined && data.total_ttc !== null && data.total_ttc !== '') ? parseFloat(data.total_ttc) : null,
+            socid: parseInt(data.socid || data.fk_soc) || null
         };
 
-        if(['sord', 'sinv'].includes(detectedRef.type) && data.ref_supplier){
-            addField(chrome.i18n.getMessage('RefSupplier'), data.ref_supplier);
-        }else if(data.ref_client){
-            addField(chrome.i18n.getMessage('RefClient'), data.ref_client);
-        }
-
-        let dateValue = data.date || data.date_creation || data.datec;
-        if(dateValue){
-            addField(chrome.i18n.getMessage('Date'), new Date(dateValue * 1000).toLocaleDateString(locale));
-        }
-
-        if(data.total_ttc !== undefined && data.total_ttc !== null && data.total_ttc !== ''){
-            addField(chrome.i18n.getMessage('Total'), new Intl.NumberFormat(locale, {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(parseFloat(data.total_ttc)));
-        }
-
+        let {card, fields} = buildDocCardBase(item);
         if(fields.childNodes.length > 0){
             card.appendChild(fields);
         }
 
         let actions = document.createElement('div');
         actions.classList.add('linked-doc-card__actions');
-        let openLink = document.createElement('a');
-        openLink.href = dolLib.getDolibarrCardUrl(confDolibarUrl, detectedRef.type, detectedRef.id);
-        openLink.target = '_blank';
-        openLink.classList.add('btn', 'btn-primary');
-        openLink.textContent = chrome.i18n.getMessage('OpenDocument');
-        actions.appendChild(openLink);
 
         // Offer to link this document to the mail when we know for sure it isn't linked yet
         // (linkedDocumentsFetched : see the eager loadLinkedDocuments() call above and
@@ -902,12 +904,17 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             actions.appendChild(linkBtn);
         }
 
-        card.appendChild(actions);
+        // Unlike the other two document cards, this one's only action (Link) is conditional - skip
+        // the row entirely rather than leave an empty (but still margined/positioned) div when the
+        // detected document is already linked.
+        if(actions.childNodes.length > 0){
+            card.appendChild(actions);
+        }
 
         // Bold first line naming this document's own thirdparty, but only when it isn't already
         // the one shown in the popup header - same rule as every other document card in this
         // popup, see appendDocCardThirdparty()'s own doc comment.
-        appendDocCardThirdparty(card, {socid: parseInt(data.socid || data.fk_soc) || null});
+        appendDocCardThirdparty(card, item);
 
         return card;
     }
@@ -1400,7 +1407,7 @@ function setSupplierordersInfos(confData){
 
             let item = {
                 'ref': '',
-                'refFourn': '',//todo translate
+                'refFourn': '',
                 'date': '',
                 'total_ht': '',
                 'status': '',
@@ -1494,7 +1501,7 @@ function setSupplierordersInfos(confData){
         dolLib.jsonToTable(
             {
                 'ref': chrome.i18n.getMessage('Ref'),
-                'refClient': chrome.i18n.getMessage('RefClient'),
+                'refFourn': chrome.i18n.getMessage('RefSupplier'),
                 'date': chrome.i18n.getMessage('Date'),
                 'total_ht': chrome.i18n.getMessage('Total'),
                 'status': chrome.i18n.getMessage('Status'),
@@ -1509,6 +1516,132 @@ function setSupplierordersInfos(confData){
     },(errorMsg)=>{
         console.error("setQuotationsInfos : " + errorMsg);
         checkDetectedRefAgainstList('sord', []);
+    });
+
+}
+
+/**
+ * Same pattern as setQuotationsInfos()/setSupplierordersInfos() above, for supplier proposals
+ * (devis fournisseur, Dolibarr's supplier_proposal module - type 'spro'). Its refFourn column is
+ * usually empty (SupplierProposal has no document-level ref_supplier : it's a per-line field,
+ * entered product by product - see DOLIBARR_OBJECT_TYPES's own doc comment in global.lib.js) but
+ * is kept anyway so its cells line up with the other document types sharing the same table.
+ */
+function setSupplierProposalsInfos(confData){
+    let conf = Object.assign({
+        socId: 0
+    }, confData);
+
+    return dolLib.callDolibarrApi('supplierproposals', {
+        sortfield: 't.rowid',
+        sortorder: 'DESC',
+        limit:5,
+        thirdparty_ids: conf.socId
+    }, 'GET', {}, (dataLastSupplierProposals)=>{
+        LOG('setSupplierProposalsInfos received', dataLastSupplierProposals);
+
+        if(!Array.isArray(dataLastSupplierProposals) || dataLastSupplierProposals.length == 0){
+            checkDetectedRefAgainstList('spro', []);
+            return;
+        }
+
+        let tableItems = [];
+        dataLastSupplierProposals.forEach((supplierProposal) => {
+
+            let item = {
+                'ref': '',
+                'refFourn': '',
+                'date': '',
+                'total_ht': '',
+                'status': '',
+                'actions': buildDocumentRowActions('spro', supplierProposal.id)
+            }
+
+            item.ref = {
+                html: '<a href="'+ confDolibarUrl + 'supplier_proposal/card.php?id=' + supplierProposal.id+'" >' + supplierProposal.ref + '</a>',
+                hightLight : supplierProposal.ref,
+                class : 'text-center'
+            };
+
+            if(parseInt(supplierProposal.status) === 0) {
+                item.status = {
+                    html: `<span class="badge badge-status0">${chrome.i18n.getMessage('StatusDraftShort')}</span>`,
+                    class : 'text-center'
+                };
+            } else if(parseInt(supplierProposal.status) === 1) {
+                item.status = {
+                    html: `<span class="badge badge-status1">${chrome.i18n.getMessage('StatusValidatedShort')}</span>`,
+                    class : 'text-center'
+                };
+            }
+            else if(parseInt(supplierProposal.status) === 2) {
+                item.status = {
+                    html: `<span class="badge badge-status4">${chrome.i18n.getMessage('StatusSignedShort')}</span>`,
+                    class : 'text-center'
+                };
+            }
+            else if(parseInt(supplierProposal.status) === 3) {
+                item.status = {
+                    html: `<span class="badge badge-status6">${chrome.i18n.getMessage('StatusNotSignedShort')}</span>`,
+                    class : 'text-center'
+                };
+            }
+            else if(parseInt(supplierProposal.status) === 4) {
+                item.status = {
+                    html: `<span class="badge badge-status6">${chrome.i18n.getMessage('StatusClosed')}</span>`,
+                    class : 'text-center'
+                };
+            }
+
+            if(typeof supplierProposal.ref_supplier == 'string' && supplierProposal.ref_supplier.length > 0){
+                item.refFourn = {
+                    html: supplierProposal.ref_supplier
+                };
+            }
+
+            let dateP = new Date(parseInt(supplierProposal.date) * 1000);
+            item.date = {
+                html: dateP.toLocaleDateString(),
+                class : 'text-center'
+            };
+
+            let formatedNumber = '';
+            try {
+                formatedNumber = new Intl.NumberFormat([], {
+                    style: 'currency',
+                    currency: supplierProposal.multicurrency_code
+                }).format(parseFloat(supplierProposal.total_ht))
+            } catch (error) {
+                formatedNumber = parseFloat(supplierProposal.total_ht);
+            }
+
+            item.total_ht = {
+                html: formatedNumber,
+                class: 'text-right'
+            };
+            tableItems.push(item);
+        });
+
+        dolLib.jsonToTable(
+            {
+                'ref': chrome.i18n.getMessage('Ref'),
+                'refFourn': chrome.i18n.getMessage('RefSupplier'),
+                'date': chrome.i18n.getMessage('Date'),
+                'total_ht': chrome.i18n.getMessage('Total'),
+                'status': chrome.i18n.getMessage('Status'),
+                'actions': ''
+            },
+            tableItems,
+            document.getElementById("data-from-dolibarr"),
+            'dolibarr-table dolibarr-table-stripped',
+            message.subject + ' ' + messageBody.html + detectedRefSearchText
+        );
+
+        checkDetectedRefAgainstList('spro', dataLastSupplierProposals);
+
+    },(errorMsg)=>{
+        console.error("setSupplierProposalsInfos : " + errorMsg);
+        checkDetectedRefAgainstList('spro', []);
     });
 
 }
@@ -1577,6 +1710,7 @@ function loadDocumentsInfos(data){
     setOrdersInfos(data);
     setInvoicesInfos(data);
     setSupplierordersInfos(data);
+    setSupplierProposalsInfos(data);
 }
 
 /**
@@ -2217,7 +2351,7 @@ function appendDocCardThirdparty(card, item){
  * supports categories for them too - see api_crmclientconnector.class.php's
  * getObjectCategories() doc comment on the Dolibarr side.
  */
-const DOCUMENT_CATEGORY_TYPES = new Set(['ord', 'pro', 'inv', 'sord', 'sinv', 'tic', 'proj', 'int', 'mem', 'act']);
+const DOCUMENT_CATEGORY_TYPES = new Set(['ord', 'pro', 'inv', 'sord', 'sinv', 'spro', 'tic', 'proj', 'int', 'mem', 'act']);
 
 /**
  * Appends a footer row of colored tag pills (same look as the thirdparty's own tags, see
