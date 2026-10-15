@@ -514,5 +514,19 @@
   },
   "dolibarrForeignInstanceIds": {
     "message": "Correspondents' Dolibarr instances to ignore"
+  },
+  "SpoofTagLabel": {
+      "message": "⚠ Possible spoofing"
+  },
+  "SpoofAlertTitle": {
+      "message": "⚠ Warning: possible address spoofing"
+  },
+  "SpoofAlertText": {
+      "message": "This address is the one of $WHO$ in Dolibarr, but the server could not check that the email really comes from this domain (DMARC, DKIM or SPF failed). Beware of payment requests, bank details changes or unexpected attachments.",
+      "placeholders": {
+          "who": {
+              "content": "$1"
+          }
+      }
   }
 }

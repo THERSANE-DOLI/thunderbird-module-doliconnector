@@ -76,6 +76,41 @@ browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
 
 
 /**
+ * IMAP keyword set by the anti-spam of the Dolibarr module CRM Client Connector on an email whose
+ * sender uses the address of a known customer, supplier or contact but fails the authentication
+ * (DMARC / DKIM / SPF) of the receiving server. Thunderbird only exposes (and shows in the message
+ * list) the keywords matching a known tag, hence ensureSpoofTag() below.
+ */
+const SPOOF_TAG_KEY = 'doliconnector_spoof';
+const SPOOF_TAG_COLOR = '#D32F2F';
+
+/**
+ * Creates the red "possible spoofing" tag of the anti-spam keyword when it doesn't exist yet : the
+ * flagged emails then show in red in the message list, before being opened. An existing tag (maybe
+ * renamed or recolored by the user) is left as is.
+ */
+async function ensureSpoofTag(){
+    try {
+        const tagsApi = browser.messages.tags;
+        const tags = (tagsApi && tagsApi.list) ? await tagsApi.list() : await browser.messages.listTags();
+        if (tags.some(tag => String(tag.key).toLowerCase() === SPOOF_TAG_KEY)) {
+            return;
+        }
+        const label = browser.i18n.getMessage("SpoofTagLabel");
+        if (tagsApi && tagsApi.create) {
+            await tagsApi.create(SPOOF_TAG_KEY, label, SPOOF_TAG_COLOR);
+        } else {
+            await browser.messages.createTag(SPOOF_TAG_KEY, label, SPOOF_TAG_COLOR);
+        }
+    } catch (e) {
+        console.warn("[DoliConnector background] could not create the anti-spam tag", e);
+    }
+}
+
+ensureSpoofTag();
+
+
+/**
  * Injects content/doli-injector.css into the message tab, once. Both the
  * "last comment" banner and the trackid banner rely on it.
  * @param tabId
@@ -133,15 +168,16 @@ async function checkAndInjectDolibarrBanner(tab, message){
 
     let crmConnectorEnabled = await dolLib.isCrmConnectorEnabled(accountId);
 
-    let [trackidInfo, notesInfo, linkedDocsInfo] = await Promise.all([
+    let [trackidInfo, notesInfo, linkedDocsInfo, spoofInfo] = await Promise.all([
         resolveTrackidInfo(message, accountId),
         crmConnectorEnabled ? resolveNotesInfo(tab, message, accountId) : Promise.resolve(null),
-        crmConnectorEnabled ? resolveLinkedDocsInfo(message, accountId) : Promise.resolve([])
+        crmConnectorEnabled ? resolveLinkedDocsInfo(message, accountId) : Promise.resolve([]),
+        crmConnectorEnabled ? resolveSpoofInfo(message, accountId) : Promise.resolve(null)
     ]);
 
     injectDoliCss(tab.id);
 
-    let html = renderDolibarrBanner(trackidInfo, notesInfo, linkedDocsInfo);
+    let html = renderDolibarrBanner(trackidInfo, notesInfo, linkedDocsInfo, spoofInfo);
 
     browser.tabs.executeScript(tab.id, {
         code: `
@@ -315,6 +351,115 @@ async function resolveLinkedDocsInfo(message, accountId){
     });
 }
 
+/**
+ * Resolves the spoofing alert of the merged banner (anti-spam of the CRM Client Connector module) :
+ * - email flagged by the scheduled scan of the anti-spam (tag SPOOF_TAG_KEY) : details read from
+ *   crmclientconnector/antispam/alerts ;
+ * - else immediate check of its sender with crmclientconnector/antispam/check, so the alert shows
+ *   even before the next scan. Only the headers the check needs are sent (From, Authentication-
+ *   Results, Received-SPF), in their order ; the rule itself lives on the Dolibarr side only.
+ * Null when there is nothing to show, or when the anti-spam is not available on this Dolibarr
+ * (feature disabled, older module or mailbox not in its list : 404, silently ignored).
+ * @param message
+ * @param {string} accountId
+ * @returns {Promise<{thirdparty:string, contact:string, from:string, detail:string}|null>}
+ */
+async function resolveSpoofInfo(message, accountId){
+    const accountEmail = await resolveAccountEmailForMessage(message);
+    if(!accountEmail){
+        return null;
+    }
+
+    const flagged = Array.isArray(message.tags) && message.tags.some(tag => String(tag).toLowerCase() === SPOOF_TAG_KEY);
+    if(flagged){
+        let alerts = await new Promise((resolve) => {
+            dolLib.callDolibarrApi('crmclientconnector/antispam/alerts', {accountEmail: accountEmail, msgId: message.headerMessageId}, 'GET', {}, (resData)=>{
+                resolve(Array.isArray(resData) ? resData : []);
+            }, () => resolve([]), false, accountId);
+        });
+        let alert = alerts.length > 0 ? alerts[0] : {};
+        return {
+            thirdparty: alert.thirdparty ? alert.thirdparty.name : '',
+            contact: alert.contact ? alert.contact.name : '',
+            from: alert.from || message.author || '',
+            detail: alert.detail || ''
+        };
+    }
+
+    let headers = '';
+    try {
+        const full = await browser.messages.getFull(message.id);
+        for (const name of ['from', 'authentication-results', 'received-spf']) {
+            for (const value of ((full.headers || {})[name] || [])) {
+                headers += name + ': ' + String(value).replace(/[\r\n]+/g, ' ') + '\n';
+            }
+        }
+    } catch (e) {
+        console.warn("[DoliConnector background] could not read the headers for the anti-spam check", e);
+        return null;
+    }
+    if(headers === ''){
+        return null;
+    }
+
+    return new Promise((resolve) => {
+        dolLib.callDolibarrApi('crmclientconnector/antispam/check', {}, 'POST', JSON.stringify({accountEmail: accountEmail, headers: headers}), (resData)=>{
+            if(!resData || !resData.spoof){
+                resolve(null);
+                return;
+            }
+            resolve({
+                thirdparty: resData.thirdparty ? resData.thirdparty.name : '',
+                contact: resData.contact ? resData.contact.name : '',
+                from: resData.from || '',
+                detail: resData.detail || ''
+            });
+        }, () => resolve(null), false, accountId);
+    });
+}
+
+/**
+ * HTML-escapes a value coming from Dolibarr or from the email before putting it in the banner.
+ * @param {*} value
+ * @returns {string}
+ */
+function escapeHtml(value){
+    return String(value === null || value === undefined ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/**
+ * Red spoofing alert, shown on top of the merged banner (see resolveSpoofInfo()).
+ * @param {{thirdparty:string, contact:string, from:string, detail:string}} spoofInfo
+ * @returns {string}
+ */
+function renderSpoofAlert(spoofInfo){
+    let warningIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D32F2F" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+    let who = spoofInfo.thirdparty || spoofInfo.contact || spoofInfo.from;
+    if(spoofInfo.thirdparty && spoofInfo.contact){
+        who = spoofInfo.contact + ' (' + spoofInfo.thirdparty + ')';
+    }
+
+    return `
+      <div class="doli-box doli-box--spoof" style="${DOLI_BOX_STYLE}">
+        <div class="flex-1">
+           <div class="doli-content-wrapper">
+              <div class="doli-icon-circle">${warningIcon}</div>
+              <div style="flex:1">
+                 <div class="doli-spoof-title">${escapeHtml(browser.i18n.getMessage("SpoofAlertTitle"))}</div>
+                 <div class="doli-last-note">${escapeHtml(browser.i18n.getMessage("SpoofAlertText", [who]))}</div>
+                 ${spoofInfo.detail ? `<div class="doli-meta">${escapeHtml(spoofInfo.from)} : ${escapeHtml(spoofInfo.detail)}</div>` : ''}
+              </div>
+           </div>
+        </div>
+      </div>
+    `;
+}
+
 const DOLI_LINK_ICON_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FBC02D" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
 
 /**
@@ -388,8 +533,21 @@ function renderDolibarrRefGroupRow(refs){
  * @param {{type:string, id:number, typeLabel:string, refLabel:string}|null} trackidInfo
  * @param {Array|null} notesInfo
  * @param {Array} linkedDocsInfo
+ * @param {{thirdparty:string, contact:string, from:string, detail:string}|null} spoofInfo  anti-spam alert, see resolveSpoofInfo()
  */
-function renderDolibarrBanner(trackidInfo, notesInfo, linkedDocsInfo){
+function renderDolibarrBanner(trackidInfo, notesInfo, linkedDocsInfo, spoofInfo){
+    // The spoofing alert always comes first, whatever else is (or isn't) found for this mail
+    let spoofHtml = spoofInfo ? renderSpoofAlert(spoofInfo) : '';
+    return spoofHtml + renderDolibarrContentBanner(trackidInfo, notesInfo, linkedDocsInfo);
+}
+
+/**
+ * Content part of the merged banner (see renderDolibarrBanner()).
+ * @param {{type:string, id:number, typeLabel:string, refLabel:string}|null} trackidInfo
+ * @param {Array|null} notesInfo
+ * @param {Array} linkedDocsInfo
+ */
+function renderDolibarrContentBanner(trackidInfo, notesInfo, linkedDocsInfo){
     let lastNote = (notesInfo && notesInfo.length > 0) ? notesInfo[notesInfo.length - 1] : null;
     let otherLinkedDocs = (linkedDocsInfo || []).filter((doc) => {
         return !(trackidInfo && String(doc.type) === String(trackidInfo.type) && String(doc.id) === String(trackidInfo.id));

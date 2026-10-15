@@ -210,3 +210,17 @@
     color: #777;
 }
 
+
+/* Anti-spam alert (spoofing of a known sender), always on top of the banner - see renderSpoofAlert() */
+.doli-box--spoof {
+    background-color: #FFEBEE;
+    border: 1px solid #EF9A9A;
+    border-left: 4px solid #D32F2F;
+    margin-bottom: 6px;
+}
+
+.doli-spoof-title {
+    color: #B71C1C;
+    font-weight: bold;
+    margin-bottom: 2px;
+}

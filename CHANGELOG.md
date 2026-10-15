@@ -1,5 +1,13 @@
 # CHANGELOG DOLICONNECTOR
 
+## 2.6.0
+
+- Add the spoofing alert of the anti-spam of the CRM Client Connector Dolibarr module (1.5.0 or later, anti-spam enabled) : when an email uses the address of a known customer, supplier or contact but its authentication by the receiving server (DMARC, DKIM or SPF) fails, a red block is shown on top of the banner injected in the mail body, with the thirdparty or contact concerned and the authentication result.
+- The email is checked when it is opened (`crmclientconnector/antispam/check`, only the From, Authentication-Results and Received-SPF headers are sent), and the emails already flagged by the scheduled scan of the anti-spam (IMAP keyword `doliconnector_spoof`) show their alert details (`crmclientconnector/antispam/alerts`).
+- A red « ⚠ Usurpation possible » tag is created for the keyword, so the flagged emails show in red in the message list before being opened. New permission `messagesTags` (asked by Thunderbird on update) to create it.
+- Nothing is shown when the anti-spam is not available on the Dolibarr side (feature disabled, older module, mailbox not in its list of email accounts).
+- Fix: `buildXpi.sh` no longer puts the previous `.xpi` (or a `.zip`) of the repository folder inside the new package (it excluded `${var}.xpi`, with `var` never set).
+
 ## 2.5.1
 
 - Fix: supplier proposals rows in the popup's Documents tab now have a "Ref Fournisseur" column like supplier orders, so their cells no longer shift out of line with the other document types' columns. The supplier orders column header now also reads "Ref Fournisseur" instead of "Ref Client".

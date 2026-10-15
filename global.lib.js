@@ -454,7 +454,10 @@ const DOLIBARR_ENDPOINT_RIGHTS = {
     'crmclientconnector/objectcategories/proj': [{id: 41, label: "Lire les projets et les tâches (projets partagés et projets dont je suis un contact)."}],
     'crmclientconnector/objectcategories/int':  [{id: 61, label: "Lire les fiches d'intervention"}],
     'crmclientconnector/objectcategories/mem':  [{id: 71, label: "Consulter les fiches adhérents"}],
-    'crmclientconnector/objectcategories/act':  [{id: 2411, label: "Lire les actions (événements ou tâches) des autres"}]
+    'crmclientconnector/objectcategories/act':  [{id: 2411, label: "Lire les actions (événements ou tâches) des autres"}],
+    // Anti-spam of the CRM Client Connector module : sender check and spoofing alerts of a mail
+    'crmclientconnector/antispam/check':  [{id: 121, label: "Consulter les tiers (sociétés) liés à l'utilisateur"}],
+    'crmclientconnector/antispam/alerts': [{id: 121, label: "Consulter les tiers (sociétés) liés à l'utilisateur"}]
 };
 
 /**

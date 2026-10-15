@@ -517,5 +517,19 @@
   },
   "dolibarrForeignInstanceIds": {
     "message": "Instances Dolibarr de correspondants à ignorer"
+  },
+  "SpoofTagLabel": {
+      "message": "⚠ Usurpation possible"
+  },
+  "SpoofAlertTitle": {
+      "message": "⚠ Attention : usurpation d'adresse possible"
+  },
+  "SpoofAlertText": {
+      "message": "Cette adresse est celle de $WHO$ dans Dolibarr, mais le serveur n'a pas pu vérifier que le mail vient vraiment de ce domaine (DMARC, DKIM ou SPF en échec). Méfiez-vous des demandes de paiement, de changement de RIB ou des pièces jointes inattendues.",
+      "placeholders": {
+          "who": {
+              "content": "$1"
+          }
+      }
   }
 }
