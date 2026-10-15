@@ -419,7 +419,9 @@ async function resolveSpoofInfo(message, accountId){
 }
 
 /**
- * HTML-escapes a value coming from Dolibarr or from the email before putting it in the banner.
+ * HTML-escapes a value coming from Dolibarr or from the email before putting it in the banner (the
+ * banner is injected in the mail body : unescaped, a note or a reference could inject HTML there,
+ * for example a fake banner).
  * @param {*} value
  * @returns {string}
  */
@@ -475,7 +477,7 @@ function renderDolibarrRefRow(typeLabel, refLabel){
        <div class="doli-content-wrapper">
           <div class="doli-icon-circle">${DOLI_LINK_ICON_SVG}</div>
           <div style="flex:1">
-             <div class="doli-last-note" style="font-style:normal">${typeLabel} ${refLabel}</div>
+             <div class="doli-last-note" style="font-style:normal">${escapeHtml(typeLabel)} ${escapeHtml(refLabel)}</div>
           </div>
        </div>
     `;
@@ -505,11 +507,11 @@ function renderDolibarrRefGroupRow(refs){
     let chips = Array.from(itemsByType, ([typeLabel, items]) => {
         let refsHtml = items.map((item) => {
             let badgeHtml = item.statusBadge
-                ? ` <span class="doli-status-badge doli-status-badge--${item.statusBadge.code}">${item.statusBadge.label}</span>`
+                ? ` <span class="doli-status-badge doli-status-badge--${escapeHtml(item.statusBadge.code)}">${escapeHtml(item.statusBadge.label)}</span>`
                 : '';
-            return item.refLabel + badgeHtml;
+            return escapeHtml(item.refLabel) + badgeHtml;
         }).join(', ');
-        return `<span class="doli-ref-chip">${typeLabel} ${refsHtml}</span>`;
+        return `<span class="doli-ref-chip">${escapeHtml(typeLabel)} ${refsHtml}</span>`;
     }).join('');
     return `
        <div class="doli-content-wrapper">
@@ -582,9 +584,9 @@ function renderDolibarrContentBanner(trackidInfo, notesInfo, linkedDocsInfo){
             noteIcon = `
               <div class="mail-msg-box__img">
                 <img
-                  src="https://www.gravatar.com/avatar/${lastNote.user_mail_hash}?d=identicon"
+                  src="https://www.gravatar.com/avatar/${encodeURIComponent(lastNote.user_mail_hash)}?d=identicon"
                   class="mail-msg-box__img_user"
-                  title="${lastNote.user_full_name}"
+                  title="${escapeHtml(lastNote.user_full_name)}"
                 >
               </div>
             `;
@@ -603,8 +605,8 @@ function renderDolibarrContentBanner(trackidInfo, notesInfo, linkedDocsInfo){
            <div class="doli-content-wrapper">
               <div class="doli-icon-circle">${noteIcon}</div>
               <div style="flex:1">
-                 <div class="doli-last-note">"${lastNote.message}"</div>
-                 <div class="doli-meta">${lastNote.user_full_name} - ${dateLocal}</div>
+                 <div class="doli-last-note">"${escapeHtml(lastNote.message).replace(/\r?\n/g, '<br>')}"</div>
+                 <div class="doli-meta">${escapeHtml(lastNote.user_full_name)} - ${escapeHtml(dateLocal)}</div>
               </div>
            </div>
         `;
