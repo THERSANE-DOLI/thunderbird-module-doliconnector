@@ -1,0 +1,51 @@
+name: Release
+
+# Push a tag "vX.Y.Z" (same version as manifest.json) to build the xpi
+# and publish a GitHub release with it, notes taken from CHANGELOG.md.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check tag against manifest version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          manifest_version=$(jq -r .version manifest.json)
+          if [ "$version" != "$manifest_version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match manifest.json version $manifest_version"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Extract release notes from CHANGELOG.md
+        run: |
+          awk -v v="## $VERSION" '$0 == v {f=1; next} /^## /{f=0} f' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          if [ ! -s "$RUNNER_TEMP/notes.md" ]; then
+            echo "::error::No \"## $VERSION\" section in CHANGELOG.md"
+            exit 1
+          fi
+
+      - name: Build xpi
+        run: |
+          # buildXpi.sh writes the xpi in the current directory, named after the repository folder
+          cd "$RUNNER_TEMP"
+          bash "$GITHUB_WORKSPACE/buildXpi.sh"
+          mv "$(basename "$GITHUB_WORKSPACE").xpi" "doliconnector-$VERSION.xpi"
+          unzip -l "doliconnector-$VERSION.xpi"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP/doliconnector-$VERSION.xpi" \
+            --title "DoliConnector $VERSION" \
+            --notes-file "$RUNNER_TEMP/notes.md"

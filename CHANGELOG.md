@@ -7,7 +7,8 @@
 - A red « ⚠ Usurpation possible » tag is created for the keyword, so the flagged emails show in red in the message list before being opened. New permission `messagesTags` (asked by Thunderbird on update) to create it.
 - Nothing is shown when the anti-spam is not available on the Dolibarr side (feature disabled, older module, mailbox not in its list of email accounts).
 - Fix: the last note, its author and the references of the linked documents are now HTML-escaped in the banner injected in the mail body (a note or a reference containing HTML was inserted as is, it could for example show a fake banner). Line breaks of the note are kept.
-- Fix: `buildXpi.sh` no longer puts the previous `.xpi` (or a `.zip`) of the repository folder inside the new package (it excluded `${var}.xpi`, with `var` never set).
+- Add a GitHub workflow that builds the xpi and publishes a GitHub release when a `vX.Y.Z` tag is pushed (see README).
+- Fix: `buildXpi.sh` no longer puts the previous `.xpi` (or a `.zip`) of the repository folder inside the new package (it excluded `${var}.xpi`, with `var` never set), nor the `.git` and `.github` folders.
 
 ## 2.5.1
 

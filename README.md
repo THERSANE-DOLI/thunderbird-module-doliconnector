@@ -24,6 +24,14 @@ zip -r my-addon.zip *
 mv my-addon.zip my-addon.xpi
 ```
 
+# Release
+Update `version` in `manifest.json` and add the matching `## X.Y.Z` section to `CHANGELOG.md`, then push a tag `vX.Y.Z` :
+```bash
+git tag -a v2.6.0 -m "DoliConnector 2.6.0"
+git push origin v2.6.0
+```
+The `Release` GitHub workflow checks that the tag matches the manifest version, builds the xpi with `buildXpi.sh` and publishes a GitHub release with `doliconnector-X.Y.Z.xpi` attached, its notes taken from the changelog section.
+
 # install
 - Open Thunderbird.
 - Go to Add-ons & Themes (Ctrl+Shift+A).
