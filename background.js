@@ -431,20 +431,11 @@ async function resolveSpoofInfo(message, accountId){
 }
 
 /**
- * HTML-escapes a value coming from Dolibarr or from the email before putting it in the banner (the
- * banner is injected in the mail body : unescaped, a note or a reference could inject HTML there,
- * for example a fake banner).
- * @param {*} value
- * @returns {string}
+ * The banner is injected in the mail body : every value coming from Dolibarr or from the email is
+ * HTML-escaped first (unescaped, a note or a reference could inject HTML there, for example a fake
+ * banner).
  */
-function escapeHtml(value){
-    return String(value === null || value === undefined ? '' : value)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
+const escapeHtml = dolLib.escapeHtml;
 
 /**
  * Red spoofing alert, shown on top of the merged banner (see resolveSpoofInfo()).

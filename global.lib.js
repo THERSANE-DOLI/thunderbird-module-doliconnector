@@ -785,6 +785,41 @@ export function getCurrentDolibarrUser(accountId){
     return currentDolibarrUserPromise;
 }
 
+/**
+ * HTML-escapes a value coming from Dolibarr or from the email before putting it in HTML markup
+ * (the banner injected in the mail body, popup cells built as HTML strings).
+ * @param {*} value
+ * @returns {string}
+ */
+export function escapeHtml(value){
+    return String(value === null || value === undefined ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/**
+ * Project statuses shown by default in the popup's Documents tab : open projects only
+ * (Project::STATUS_VALIDATED).
+ * @type {number[]}
+ */
+export const DEFAULT_PROJECT_STATUSES = [1];
+
+/**
+ * Project statuses to show in the popup's Documents tab (0 draft, 1 open, 2 closed), chosen in the
+ * options page. Empty array = no filter, every status shown (same convention as
+ * filterPropalStatus()).
+ * @returns {Promise<number[]>}
+ */
+export async function getProjectDisplayStatuses(){
+    let config = await browser.storage.local.get({dolibarrProjectStatuses: DEFAULT_PROJECT_STATUSES});
+    return Array.isArray(config.dolibarrProjectStatuses)
+        ? config.dolibarrProjectStatuses.map((status) => parseInt(status)).filter((status) => [0, 1, 2].includes(status))
+        : DEFAULT_PROJECT_STATUSES;
+}
+
 //wip
 export async function filterPropalStatus() {
   let configData = await browser.storage.local.get(
@@ -1124,6 +1159,11 @@ const DOCUMENT_STATUS_TABLES = {
         '2': {code: 4, key: 'StatusSignedShort'},
         '3': {code: 6, key: 'StatusNotSignedShort'},
         '4': {code: 6, key: 'StatusClosed'}
+    },
+    proj: {
+        '0': {code: 0, key: 'StatusDraftShort'},
+        '1': {code: 4, key: 'StatusOpenShort'},
+        '2': {code: 6, key: 'StatusClosed'}
     }
 };
 

@@ -65,6 +65,27 @@
   "CreateNewTicket": {
     "message": "Create a ticket"
   },
+  "MoreProjectOptions": {
+    "message": "More options for projects"
+  },
+  "dolibarrProjectStatuses": {
+    "message": "Project statuses shown in the Documents tab (no choice = show all)"
+  },
+  "StatusOpenShort": {
+    "message": "Open"
+  },
+  "ProjectTitle": {
+    "message": "Title"
+  },
+  "DateStart": {
+    "message": "Start date"
+  },
+  "OpportunityAmount": {
+    "message": "Opp. amount"
+  },
+  "CreateNewProject": {
+    "message": "Create a project"
+  },
   "FicheDolibarr": {
     "message": "Show thirdparty"
   },

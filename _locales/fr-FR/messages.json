@@ -65,6 +65,27 @@
   "CreateNewTicket": {
     "message": "Créer un ticket"
   },
+  "MoreProjectOptions": {
+    "message": "Plus d'options pour les projets"
+  },
+  "dolibarrProjectStatuses": {
+    "message": "Statuts des projets affichés dans l'onglet Documents (aucune sélection = tout afficher)"
+  },
+  "StatusOpenShort": {
+    "message": "Ouvert"
+  },
+  "ProjectTitle": {
+    "message": "Libellé"
+  },
+  "DateStart": {
+    "message": "Date début"
+  },
+  "OpportunityAmount": {
+    "message": "Montant opp."
+  },
+  "CreateNewProject": {
+    "message": "Créer un projet"
+  },
   "FicheDolibarr": {
     "message": "Voir Fiche"
   },

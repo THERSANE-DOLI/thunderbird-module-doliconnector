@@ -1,5 +1,11 @@
 # CHANGELOG DOLICONNECTOR
 
+## 2.8.0
+
+- Add the projects of the thirdparty to the popup's Documents tab (issue #31) : reference, title, start date, opportunity amount and status, with the same row actions (Dolibarr card, link to the email) as the other documents. Only open projects by default, the statuses shown are chosen in the new « More options for projects » block of the options page (no choice = all statuses). Needs the Dolibarr right « Read projects and tasks ».
+- Add « Create a project » to the thirdparty's Actions menu. The project is linked to the email it was created from with CRM Client Connector 1.8.0 or later.
+- Linked projects now show their status badge (draft / open / closed) in the banner injected in the mail body and in the document cards.
+
 ## 2.7.0
 
 - Add the « Banner in the email body » option (issue #45) : always (default, unchanged), only when Dolibarr content is found (no more grey « nothing found » banner), or never. The option describes the anti-phishing protection given up when the grey banner is hidden. The spoofing alert of the anti-spam is still shown in every mode, and the badge of the Dolibarr button still counts the notes. In « never » mode, the trackid record and the linked documents are no longer fetched when an email is opened.

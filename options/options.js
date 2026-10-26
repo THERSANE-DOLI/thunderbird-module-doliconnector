@@ -62,6 +62,9 @@ async function restoreOptions() {
 		document.getElementById("dolibarr-search-domain").checked = data.dolibarrSearchDomain;
 		document.getElementById("dolibarr-quotation-trusted-senders").value = data.dolibarrQuotationTrustedSenders;
 		document.getElementById("dolibarr-banner-display-mode").value = data.dolibarrBannerDisplayMode;
+		document.getElementById("dolibarr-project-draft").checked = data.dolibarrProjectStatuses.includes(0);
+		document.getElementById("dolibarr-project-open").checked = data.dolibarrProjectStatuses.includes(1);
+		document.getElementById("dolibarr-project-closed").checked = data.dolibarrProjectStatuses.includes(2);
 	}
 
 
@@ -84,6 +87,11 @@ async function restoreOptions() {
 	document.getElementById("dolibarr-usage-options-title").textContent = browser.i18n.getMessage("DolibarrUsageOptionsTitle");
 	document.getElementById("more-propal-option-title").textContent = browser.i18n.getMessage("MorePropalOptions");
 	document.getElementById("dolibarr-propal").textContent = browser.i18n.getMessage("dolibarrPropal");
+	document.getElementById("more-project-option-title").textContent = browser.i18n.getMessage("MoreProjectOptions");
+	document.getElementById("dolibarr-project-statuses").textContent = browser.i18n.getMessage("dolibarrProjectStatuses");
+	document.getElementById("label-for-dolibarr-project-draft").textContent = browser.i18n.getMessage("StatusDraftShort");
+	document.getElementById("label-for-dolibarr-project-open").textContent = browser.i18n.getMessage("StatusOpenShort");
+	document.getElementById("label-for-dolibarr-project-closed").textContent = browser.i18n.getMessage("StatusClosed");
 	document.getElementById("label-for-dolibarr-propal-canceled").textContent = browser.i18n.getMessage("dolibarrCanceled");
 	document.getElementById("label-for-dolibarr-propal-draft").textContent = browser.i18n.getMessage("dolibarrDraft");
 	document.getElementById("label-for-dolibarr-propal-validated").textContent = browser.i18n.getMessage("dolibarrValidated");
@@ -121,7 +129,8 @@ async function restoreOptions() {
 		dolibarrPropalBilled:  false,
 		dolibarrSearchDomain:  false,
 		dolibarrQuotationTrustedSenders: '',
-		dolibarrBannerDisplayMode: 'always'
+		dolibarrBannerDisplayMode: 'always',
+		dolibarrProjectStatuses: dolLib.DEFAULT_PROJECT_STATUSES
     }).then(setCurrentChoice, onError);
 }
 
@@ -485,7 +494,11 @@ async function saveOptions(e) {
         dolibarrPropalBilled: document.getElementById("dolibarr-propal-billed").checked,
         dolibarrSearchDomain: document.getElementById("dolibarr-search-domain").checked,
         dolibarrQuotationTrustedSenders: document.getElementById("dolibarr-quotation-trusted-senders").value,
-        dolibarrBannerDisplayMode: document.getElementById("dolibarr-banner-display-mode").value
+        dolibarrBannerDisplayMode: document.getElementById("dolibarr-banner-display-mode").value,
+        dolibarrProjectStatuses: ['dolibarr-project-draft', 'dolibarr-project-open', 'dolibarr-project-closed']
+            .map((id) => document.getElementById(id))
+            .filter((input) => input.checked)
+            .map((input) => parseInt(input.value))
     }
     // console.log(objToStore);
 

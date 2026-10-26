@@ -184,6 +184,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
     //Filter on propal objects status
     let propalDisplayStatus = await dolLib.filterPropalStatus();
+    // Filter on project statuses (open only by default, see dolLib.getProjectDisplayStatuses())
+    let projectDisplayStatuses = await dolLib.getProjectDisplayStatuses();
 
     let confDolibarUrl = await dolLib.getDolibarrUrl();
 
@@ -625,8 +627,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         let socCardUrl = new URL(confDolibarUrl + "societe/card.php");
         socCardUrl.searchParams.set('socid', soc.id);
 
-        // Créer un devis / une commande / un ticket : accountEmail+msgId let the
-        // crmclientconnector PROPAL_CREATE/ORDER_CREATE/TICKET_CREATE trigger auto-link the
+        // Créer un devis / une commande / un ticket / un projet : accountEmail+msgId let the
+        // crmclientconnector PROPAL_CREATE/ORDER_CREATE/TICKET_CREATE/PROJECT_CREATE trigger auto-link the
         // newly created object back to this mail (see initNotesForMessage()'s comment above for
         // the same convention).
         let newPropalUrl = new URL(confDolibarUrl + "comm/propal/card.php");
@@ -638,6 +640,9 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         let newTicketUrl = new URL(confDolibarUrl + "ticket/card.php");
         newTicketUrl.searchParams.set('action', "create");
         newTicketUrl.searchParams.set('socid', soc.id);
+        let newProjectUrl = new URL(confDolibarUrl + "projet/card.php");
+        newProjectUrl.searchParams.set('action', "create");
+        newProjectUrl.searchParams.set('socid', soc.id);
         if(ownerAccountEmail && ownerMsgId){
             newPropalUrl.searchParams.set('accountEmail', ownerAccountEmail);
             newPropalUrl.searchParams.set('msgId', ownerMsgId);
@@ -645,6 +650,9 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             newOrderUrl.searchParams.set('msgId', ownerMsgId);
             newTicketUrl.searchParams.set('accountEmail', ownerAccountEmail);
             newTicketUrl.searchParams.set('msgId', ownerMsgId);
+            // Needs crmclientconnector 1.8.0 or later (PROJECT_CREATE), ignored by older ones
+            newProjectUrl.searchParams.set('accountEmail', ownerAccountEmail);
+            newProjectUrl.searchParams.set('msgId', ownerMsgId);
         }
 
         socActions.innerHTML = '';
@@ -655,6 +663,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                 {label: chrome.i18n.getMessage('CreateNewQuotation'), href: newPropalUrl, target: '_blank', icon: 'icon-plus'},
                 {label: chrome.i18n.getMessage('CreateNewOrder'), href: newOrderUrl, target: '_blank', icon: 'icon-plus'},
                 {label: chrome.i18n.getMessage('CreateNewTicket'), href: newTicketUrl, target: '_blank', icon: 'icon-plus'},
+                {label: chrome.i18n.getMessage('CreateNewProject'), href: newProjectUrl, target: '_blank', icon: 'icon-plus'},
                 {label: chrome.i18n.getMessage('Refresh'), href: buildRefreshUrl(), iconChar: '⟳', separatorBefore: true}
             ]
         }));
@@ -1646,6 +1655,102 @@ function setSupplierProposalsInfos(confData){
 
 }
 
+/**
+ * Same pattern as setQuotationsInfos() above, for the thirdparty's projects (type 'proj'),
+ * filtered on the statuses chosen in the options page (open ones only by default, see
+ * dolLib.getProjectDisplayStatuses()). The refClient column holds the project's title and the
+ * total column its opportunity amount, so its cells line up with the other document types
+ * sharing the same table.
+ */
+function setProjectsInfos(confData){
+    let conf = Object.assign({
+        socId: 0
+    }, confData);
+
+    let sqlfilters = '';
+    if(projectDisplayStatuses.length > 0){
+        sqlfilters = '(t.fk_statut:in:' + projectDisplayStatuses.join(',') + ')';
+    }
+
+    return dolLib.callDolibarrApi('projects', {
+        sortfield: 't.rowid',
+        sortorder: 'DESC',
+        limit:5,
+        thirdparty_ids: conf.socId,
+        sqlfilters: sqlfilters
+    }, 'GET', {}, (dataLastProjects)=>{
+        LOG('setProjectsInfos received', dataLastProjects);
+
+        if(!Array.isArray(dataLastProjects) || dataLastProjects.length == 0){
+            checkDetectedRefAgainstList('proj', []);
+            return;
+        }
+
+        let tableItems = [];
+        dataLastProjects.forEach((project) => {
+
+            let item = {
+                'ref': {
+                    html: '<a href="'+ dolLib.getDolibarrCardUrl(confDolibarUrl, 'proj', project.id) + '" >' + dolLib.escapeHtml(project.ref) + '</a>',
+                    hightLight : project.ref,
+                    class : 'text-center'
+                },
+                'title': {
+                    html: dolLib.escapeHtml(project.title || '')
+                },
+                'date': '',
+                'opp_amount': '',
+                'status': '',
+                'actions': buildDocumentRowActions('proj', project.id)
+            };
+
+            if(project.date_start){
+                item.date = {
+                    html: new Date(parseInt(project.date_start) * 1000).toLocaleDateString(),
+                    class : 'text-center'
+                };
+            }
+
+            if(project.opp_amount !== null && project.opp_amount !== undefined && project.opp_amount !== '' && parseFloat(project.opp_amount) !== 0){
+                item.opp_amount = {
+                    html: new Intl.NumberFormat([], {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(parseFloat(project.opp_amount)),
+                    class: 'text-right'
+                };
+            }
+
+            let badge = dolLib.getDocumentStatusBadgeInfo('proj', project.status !== undefined ? project.status : project.statut);
+            if(badge){
+                item.status = {
+                    html: `<span class="badge badge-status${badge.code}">${dolLib.escapeHtml(badge.label)}</span>`,
+                    class : 'text-center'
+                };
+            }
+
+            tableItems.push(item);
+        });
+
+        dolLib.jsonToTable(
+            {
+                'ref': chrome.i18n.getMessage('Ref'),
+                'title': chrome.i18n.getMessage('ProjectTitle'),
+                'date': chrome.i18n.getMessage('DateStart'),
+                'opp_amount': chrome.i18n.getMessage('OpportunityAmount'),
+                'status': chrome.i18n.getMessage('Status'),
+                'actions': ''
+            },
+            tableItems,
+            document.getElementById("data-from-dolibarr")
+        );
+
+        checkDetectedRefAgainstList('proj', dataLastProjects);
+
+    },(errorMsg)=>{
+        console.error("setProjectsInfos : " + errorMsg);
+        checkDetectedRefAgainstList('proj', []);
+    });
+
+}
+
 function displayTpl(id){
     let tpl = document.getElementById(id);
     if(!tpl){
@@ -1711,6 +1816,7 @@ function loadDocumentsInfos(data){
     setInvoicesInfos(data);
     setSupplierordersInfos(data);
     setSupplierProposalsInfos(data);
+    setProjectsInfos(data);
 }
 
 /**
