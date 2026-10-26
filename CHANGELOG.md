@@ -1,5 +1,12 @@
 # CHANGELOG DOLICONNECTOR
 
+## 2.13.0
+
+- Add German (de-DE), Italian (it-IT) and Spanish (es-ES) translations, complete (issue #37).
+- Add `tools/check-locales.py` : lists per language the keys missing or unknown compared to en-US and the messages whose `$NAME$` tokens differ, run before each release so the translators are told in time. New « Translate » section in the README explaining how to contribute a translation.
+- Remove the unused `NoCommentHistory` key (French only).
+- `buildXpi.sh` no longer puts the `tools/` and `analyses/` folders in the package.
+
 ## 2.12.0
 
 - Add a « Get it with my login » button next to the API key of each Dolibarr connection (issue #21) : a dialog asks for the Dolibarr login and password and fills in the user's API key, from Dolibarr's `POST /login` endpoint (never the GET variant, which puts the password in the URL). The password is only sent to Dolibarr and never stored, the existing key is never reset (other clients using it keep working), and a warning shows when the Dolibarr URL isn't https. The HTTP authentication of the connection is used when enabled.

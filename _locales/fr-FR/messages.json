@@ -283,9 +283,6 @@
   "Comments" :{
     "message": "Commentaires"
   },
-  "NoCommentHistory" :{
-    "message": "Aucun historique récent"
-  },
   "NoDolibarrContentDetected" :{
     "message": "Aucun contenu Dolibarr détecté pour cet email"
   },
