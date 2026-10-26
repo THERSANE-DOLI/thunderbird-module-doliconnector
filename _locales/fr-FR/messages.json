@@ -86,6 +86,9 @@
   "CreateNewProject": {
     "message": "Créer un projet"
   },
+  "UpcomingEvents": {
+    "message": "Prochains événements"
+  },
   "FicheDolibarr": {
     "message": "Voir Fiche"
   },

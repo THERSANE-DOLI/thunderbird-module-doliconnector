@@ -1,5 +1,9 @@
 # CHANGELOG DOLICONNECTOR
 
+## 2.9.0
+
+- Add the next agenda events of the thirdparty on top of the popup's Info tab (issue #13) : 5 events at most, today's ones and the ones not over yet included, each with a link to its Dolibarr card and a relative date (« tomorrow », « in 6 days », « in 4 months », exact date on hover). Hidden when there is no upcoming event. With only the Dolibarr right to read their own events, users see their own events only.
+
 ## 2.8.0
 
 - Add the projects of the thirdparty to the popup's Documents tab (issue #31) : reference, title, start date, opportunity amount and status, with the same row actions (Dolibarr card, link to the email) as the other documents. Only open projects by default, the statuses shown are chosen in the new « More options for projects » block of the options page (no choice = all statuses). Needs the Dolibarr right « Read projects and tasks ».

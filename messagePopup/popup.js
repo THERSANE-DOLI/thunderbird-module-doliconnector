@@ -1810,6 +1810,76 @@ async function updateRightsWarningIcon(){
 }
 
 
+/**
+ * Next agenda events of the thirdparty (5 at most), shown on top of the Info tab with a relative
+ * date (« tomorrow », « in 6 days », exact date in the title). Events of today are kept, as well
+ * as the ones that started earlier but are not over yet (datep2 = end date). The block stays hidden
+ * when there is no upcoming event or on any error (a 403 still shows in the missing rights icon).
+ * With only the « read own events » right, the API returns the events of the current user only.
+ */
+function setUpcomingEventsInfos(confData){
+    let conf = Object.assign({
+        socId: 0
+    }, confData);
+
+    let container = document.getElementById('info-upcoming-events-container');
+    let list = document.getElementById('info-upcoming-events-list');
+    if(!container || !list || !conf.socId){
+        return;
+    }
+
+    let today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let pad = (n) => String(n).padStart(2, '0');
+    // Date only : Dolibarr 18's sqlfilters parser cuts the value on ':' (a time would break the
+    // filter), and the database compares a datetime with '2026-10-26' as midnight anyway.
+    let todaySql = today.getFullYear() + '-' + pad(today.getMonth() + 1) + '-' + pad(today.getDate());
+
+    return dolLib.callDolibarrApi('agendaevents', {
+        sortfield: 't.datep',
+        sortorder: 'ASC',
+        limit: 5,
+        sqlfilters: "(t.fk_soc:=:" + parseInt(conf.socId) + ") and ((t.datep:>=:'" + todaySql + "') or (t.datep2:>=:'" + todaySql + "'))"
+    }, 'GET', {}, (events)=>{
+        LOG('setUpcomingEventsInfos received', events);
+
+        list.innerHTML = '';
+        if(!Array.isArray(events) || events.length == 0){
+            container.classList.add('hidden-field');
+            return;
+        }
+
+        events.forEach((event) => {
+            let item = document.createElement('li');
+            item.className = 'upcoming-events__item';
+
+            let label = document.createElement('a');
+            label.className = 'upcoming-events__label';
+            label.href = dolLib.getDolibarrCardUrl(confDolibarUrl, 'act', event.id);
+            label.target = '_blank';
+            label.textContent = event.label || ('#' + event.id);
+            label.title = label.textContent;
+            item.appendChild(label);
+
+            if(event.datep){
+                let start = new Date(parseInt(event.datep) * 1000);
+                let date = document.createElement('span');
+                date.className = 'upcoming-events__date';
+                date.textContent = dolLib.formatRelativeDay(start);
+                date.title = start.toLocaleString();
+                item.appendChild(date);
+            }
+
+            list.appendChild(item);
+        });
+
+        container.classList.remove('hidden-field');
+    },(errorMsg)=>{
+        console.error("setUpcomingEventsInfos : " + errorMsg);
+        container.classList.add('hidden-field');
+    });
+}
+
 function loadDocumentsInfos(data){
     setQuotationsInfos(data);
     setOrdersInfos(data);
@@ -1817,6 +1887,7 @@ function loadDocumentsInfos(data){
     setSupplierordersInfos(data);
     setSupplierProposalsInfos(data);
     setProjectsInfos(data);
+    setUpcomingEventsInfos(data);
 }
 
 /**

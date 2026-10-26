@@ -801,6 +801,33 @@ export function escapeHtml(value){
 }
 
 /**
+ * Relative day of a date, in the Thunderbird UI language : « today », « tomorrow », « in 6 days »,
+ * then weeks / months / years further away (« in 4 months »). Past dates read the same way
+ * (« yesterday »), for an event that started before today and isn't over yet.
+ * @param {Date} date
+ * @returns {string}
+ */
+export function formatRelativeDay(date){
+    let today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let day = new Date(date.getTime());
+    day.setHours(0, 0, 0, 0);
+    let days = Math.round((day.getTime() - today.getTime()) / 86400000);
+
+    let formatter = new Intl.RelativeTimeFormat(browser.i18n.getUILanguage(), {numeric: 'auto'});
+    if(Math.abs(days) < 14){
+        return formatter.format(days, 'day');
+    }
+    if(Math.abs(days) < 60){
+        return formatter.format(Math.round(days / 7), 'week');
+    }
+    if(Math.abs(days) < 365){
+        return formatter.format(Math.round(days / 30), 'month');
+    }
+    return formatter.format(Math.round(days / 365), 'year');
+}
+
+/**
  * Project statuses shown by default in the popup's Documents tab : open projects only
  * (Project::STATUS_VALIDATED).
  * @type {number[]}

@@ -86,6 +86,9 @@
   "CreateNewProject": {
     "message": "Create a project"
   },
+  "UpcomingEvents": {
+    "message": "Upcoming events"
+  },
   "FicheDolibarr": {
     "message": "Show thirdparty"
   },
