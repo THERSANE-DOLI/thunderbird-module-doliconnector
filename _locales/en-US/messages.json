@@ -65,6 +65,30 @@
   "CreateNewTicket": {
     "message": "Create a ticket"
   },
+  "MoreProjectOptions": {
+    "message": "More options for projects"
+  },
+  "dolibarrProjectStatuses": {
+    "message": "Project statuses shown in the Documents tab (no choice = show all)"
+  },
+  "StatusOpenShort": {
+    "message": "Open"
+  },
+  "ProjectTitle": {
+    "message": "Title"
+  },
+  "DateStart": {
+    "message": "Start date"
+  },
+  "OpportunityAmount": {
+    "message": "Opp. amount"
+  },
+  "CreateNewProject": {
+    "message": "Create a project"
+  },
+  "UpcomingEvents": {
+    "message": "Upcoming events"
+  },
   "FicheDolibarr": {
     "message": "Show thirdparty"
   },
@@ -169,6 +193,79 @@
   },
   "dolibarrQuotationTrustedSendersPlaceholder" :{
     "message": "One address or domain per line, e.g.:\nshop@example.com\n@myshop.com"
+  },
+  "dolibarrBannerDisplayMode" :{
+    "message": "Banner in the email body"
+  },
+  "dolibarrBannerDisplayModeDesc" :{
+    "message": "The grey « nothing found » banner protects against phishing: an email imitating the Dolibarr banner then shows two banners. Hiding it removes this protection. The spoofing alert of the anti-spam is always shown."
+  },
+  "dolibarrBannerDisplayModeAlways" :{
+    "message": "Always (recommended)"
+  },
+  "dolibarrBannerDisplayModeContent" :{
+    "message": "Only when Dolibarr content is found"
+  },
+  "dolibarrBannerDisplayModeNever" :{
+    "message": "Never"
+  },
+  "dolibarrApiKeyFromLogin": {
+    "message": "Get it with my login"
+  },
+  "dolibarrApiKeyLoginIntro": {
+    "message": "Your Dolibarr login and password are only sent to $URL$ to get your API key, they are not stored.",
+    "placeholders": {
+      "url": {
+        "content": "$1"
+      }
+    }
+  },
+  "dolibarrApiKeyLoginHttpWarning": {
+    "message": "This Dolibarr address is not secured (http) : the password is sent unencrypted."
+  },
+  "dolibarrLogin": {
+    "message": "Login"
+  },
+  "dolibarrPassword": {
+    "message": "Password"
+  },
+  "dolibarrApiKeyLoginSubmit": {
+    "message": "Get the API key"
+  },
+  "dolibarrApiKeyLoginSuccess": {
+    "message": "API key filled in. Save the options to keep it."
+  },
+  "dolibarrApiKeyLoginNoUrl": {
+    "message": "Enter the Dolibarr URL first."
+  },
+  "dolibarrApiKeyLoginNetworkError": {
+    "message": "Dolibarr could not be reached. Check the URL and allow the access asked by Thunderbird."
+  },
+  "dolibarrApiKeyLoginHttpAuthError": {
+    "message": "Access refused by the HTTP authentication of the server : fill in its user and password below first."
+  },
+  "dolibarrApiKeyLoginDisabled": {
+    "message": "Getting the key with a login is disabled on this Dolibarr. Generate the API key from your user card in Dolibarr (« API key » field) and paste it."
+  },
+  "dolibarrApiKeyLoginBadCredentials": {
+    "message": "Wrong login or password (or this login can't be used here, for example with an external authentication or a second factor)."
+  },
+  "dolibarrApiKeyLoginNoToken": {
+    "message": "Your user has no API key yet and you are not allowed to create it. Ask your Dolibarr administrator."
+  },
+  "dolibarrApiKeyLoginNotFound": {
+    "message": "API not found : check the Dolibarr URL and that the « API REST » module is enabled."
+  },
+  "dolibarrApiKeyLoginError": {
+    "message": "Error $STATUS$ : $MESSAGE$",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      },
+      "message": {
+        "content": "$2"
+      }
+    }
   },
   "Comments" :{
     "message": "Comments"
@@ -514,5 +611,19 @@
   },
   "dolibarrForeignInstanceIds": {
     "message": "Correspondents' Dolibarr instances to ignore"
+  },
+  "SpoofTagLabel": {
+      "message": "⚠ Possible spoofing"
+  },
+  "SpoofAlertTitle": {
+      "message": "⚠ Warning: possible address spoofing"
+  },
+  "SpoofAlertText": {
+      "message": "This address is the one of $WHO$ in Dolibarr, but the server could not check that the email really comes from this domain (DMARC, DKIM or SPF failed). Beware of payment requests, bank details changes or unexpected attachments.",
+      "placeholders": {
+          "who": {
+              "content": "$1"
+          }
+      }
   }
 }

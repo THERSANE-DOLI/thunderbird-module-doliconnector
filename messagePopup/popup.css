@@ -728,3 +728,31 @@
 	transform: none;
 	border-color: transparent transparent transparent var(--tooltip-bg-color);
 }
+
+/* Upcoming agenda events of the thirdparty, Info tab (see setUpcomingEventsInfos()) */
+.upcoming-events__title {
+	font-size: 12px;
+	font-weight: bold;
+	margin: 6px 0 4px;
+}
+.upcoming-events__list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+.upcoming-events__item {
+	display: flex;
+	justify-content: space-between;
+	gap: 8px;
+	font-size: 12px;
+	padding: 2px 0;
+}
+.upcoming-events__label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.upcoming-events__date {
+	flex-shrink: 0;
+	color: #888888;
+}

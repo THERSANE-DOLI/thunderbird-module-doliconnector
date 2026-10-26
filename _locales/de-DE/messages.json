@@ -1,0 +1,629 @@
+{
+  "extensionName": {
+    "message": "Dolibarr connector"
+  },
+  "extensionDescription": {
+    "message": "Thunderbird-Erweiterung zur Integration von Dolibarr"
+  },
+  "Save": {
+    "message": "Speichern"
+  },
+  "Edit": {
+    "message": "Bearbeiten"
+  },
+  "Cancel": {
+    "message": "Abbrechen"
+  },
+  "EditSuccess": {
+    "message": "Nachricht bearbeitet"
+  },
+  "EditError": {
+    "message": "Fehler beim Bearbeiten der Nachricht"
+  },
+  "dolibarrApiKey": {
+    "message": "REST-API-Schlüssel"
+  },
+  "dolibarrApiEntity": {
+    "message": "Dolibarr-Mandant (Standard 1, nur für Benutzer des Multi-Company-Moduls)"
+  },
+  "dolibarrPropal": {
+    "message": "Angebotsstatus auswählen (keine Auswahl = alle anzeigen)"
+  },
+  "dolibarrCanceled": {
+    "message": "Storniert"
+  },
+  "dolibarrDraft": {
+    "message": "Entwürfe"
+  },
+  "dolibarrValidated": {
+    "message": "Freigegeben"
+  },
+  "dolibarrSigned": {
+    "message": "Unterzeichnet"
+  },
+  "dolibarrNotSigned": {
+    "message": "Nicht unterzeichnet"
+  },
+  "dolibarrBilled": {
+    "message": "Fakturiert"
+  },
+  "dolibarrUrl": {
+    "message": "Dolibarr-URL "
+  },
+  "CreateNewCompany": {
+    "message": "Neuen Geschäftspartner erstellen"
+  },
+  "CreateNewContact": {
+    "message": "Neuen Kontakt erstellen"
+  },
+  "CreateNewQuotation": {
+    "message": "Angebot erstellen"
+  },
+  "CreateNewOrder": {
+    "message": "Auftrag erstellen"
+  },
+  "CreateNewTicket": {
+    "message": "Ticket erstellen"
+  },
+  "MoreProjectOptions": {
+    "message": "Weitere Optionen für Projekte"
+  },
+  "dolibarrProjectStatuses": {
+    "message": "Im Reiter Dokumente angezeigte Projektstatus (keine Auswahl = alle anzeigen)"
+  },
+  "StatusOpenShort": {
+    "message": "Offen"
+  },
+  "ProjectTitle": {
+    "message": "Titel"
+  },
+  "DateStart": {
+    "message": "Startdatum"
+  },
+  "OpportunityAmount": {
+    "message": "Lead-Betrag"
+  },
+  "CreateNewProject": {
+    "message": "Projekt erstellen"
+  },
+  "UpcomingEvents": {
+    "message": "Anstehende Ereignisse"
+  },
+  "FicheDolibarr": {
+    "message": "Geschäftspartner anzeigen"
+  },
+  "Ref": {
+    "message": "Ref."
+  },
+  "RefClient": {
+    "message": "Kunden-Ref."
+  },
+  "RefSupplier": {
+    "message": "Lieferanten-Ref."
+  },
+  "Thirdparty": {
+    "message": "Geschäftspartner"
+  },
+  "CheckYourModuleConfig": {
+    "message": "Konfiguration unvollständig: Überprüfen Sie die Konfiguration des Moduls"
+  },
+  "CheckYourCredentials": {
+    "message": "Ungültige Zugangsdaten: Überprüfen Sie Ihren API-Schlüssel (und gegebenenfalls Ihre HTTP-Basic-Auth-Zugangsdaten) in der Konfiguration des Moduls"
+  },
+  "CheckServerConnection": {
+    "message": "Verbindung fehlgeschlagen: Der Dolibarr-Server ist nicht erreichbar. Überprüfen Sie die konfigurierte URL und Ihre Netzwerkverbindung"
+  },
+  "dolibarrHttpAuthEnabled": {
+    "message": "HTTP Basic Auth"
+  },
+  "dolibarrHttpAuthEnabledDesc": {
+    "message": "Aktivieren, wenn Aufrufe der Dolibarr-API durch HTTP Basic Auth geschützt sind (z. B. Zugriffsbeschränkung auf Webserver-Ebene)"
+  },
+  "dolibarrHttpAuthUser": {
+    "message": "HTTP-Benutzername"
+  },
+  "dolibarrHttpAuthPassword": {
+    "message": "HTTP-Passwort"
+  },
+  "refFourn": {
+    "message": "Lieferanten-Ref."
+  },
+  "Date": {
+    "message": "Datum"
+  },
+  "Total": {
+    "message": "Betrag (netto)"
+  },
+  "options.options": {
+    "message": "Optionen",
+    "description": "Optionen"
+  },
+  "MorePropalOptions": {
+    "message": "Weitere Optionen für Angebote"
+  },
+  "Saved": {
+    "message": "Gespeichert"
+  },
+  "dolibarrOptSearchDomain": {
+    "message": "Geschäftspartner auch über gemeinsame E-Mail-Domains suchen, z. B.: @domainname.de",
+    "description": "Optionen"
+  },
+  "SeeModuleDoc": {
+    "message": "Zur Dokumentationsseite des Moduls",
+    "description": "Optionen"
+  },
+  "dolibarrOptMainBtnDisplay": {
+    "message": "Anzeigemodus der Dolibarr-Schaltfläche",
+    "description": "Optionen"
+  },
+  "dolibarrOptMainBtnDisplayOptionMenu": {
+    "message": "E-Mail-Menü (Standard)",
+    "description": "Optionen"
+  },
+  "dolibarrOptMainBtnDisplayOptionTopBar": {
+    "message": "Obere Thunderbird-Leiste",
+    "description": "Optionen"
+  },
+  "PleaseSelectAnEmailBefore": {
+    "message": "Bitte wählen Sie eine E-Mail aus"
+  },
+  "ConfirmDelete": {
+    "message": "Endgültig löschen"
+  },
+  "DolibarrCrmConnectorEnabled": {
+    "message": "Funktionen des Moduls CRM Client Connector"
+  },
+  "DolibarrCrmConnectorEnabledDesc": {
+    "message": "Aktiviert gemeinsame Notizen zu E-Mails, den Reiter „Verknüpfen“ (Angebote, Aufträge, Rechnungen... suchen/verknüpfen) und die automatische Erkennung von Referenzen in E-Mails. Erfordert das in Ihrem Dolibarr installierte und aktivierte Modul CRM Client Connector."
+  },
+  "CrmConnectorFeatureDisabled": {
+    "message": "Funktion deaktiviert: Aktivieren Sie die Verbindung zu CRM Client Connector in den Einstellungen der Erweiterung"
+  },
+  "NoThirdpartyNoDocuments": {
+    "message": "Kein Geschäftspartner erkannt: Es können keine Dokumente angezeigt werden"
+  },
+  "NoThirdpartyOnDocument": {
+    "message": "Kein Geschäftspartner zugeordnet"
+  },
+  "dolibarrQuotationTrustedSenders": {
+    "message": "Vertrauenswürdige Absender für Angebots-Header"
+  },
+  "dolibarrQuotationTrustedSendersDesc": {
+    "message": "Stammt eine E-Mail von einem dieser Absender (genaue Adresse oder Domain, z. B.: @myshop.com) und enthält sie die Header X-Quotation-Mail / X-Quotation-Data (Prestashop-Modul tsquotationform), wird der Geschäftspartner anhand dieser Header statt anhand des Absenders gesucht/erstellt."
+  },
+  "dolibarrQuotationTrustedSendersPlaceholder": {
+    "message": "Eine Adresse oder Domain pro Zeile, z. B.:\nshop@example.com\n@myshop.com"
+  },
+  "dolibarrBannerDisplayMode": {
+    "message": "Banner im E-Mail-Text"
+  },
+  "dolibarrBannerDisplayModeDesc": {
+    "message": "Das graue Banner „nichts gefunden“ schützt vor Phishing: Eine E-Mail, die das Dolibarr-Banner imitiert, zeigt dann zwei Banner an. Wenn Sie es ausblenden, entfällt dieser Schutz. Der Spoofing-Alarm des Spamschutzes wird immer angezeigt."
+  },
+  "dolibarrBannerDisplayModeAlways": {
+    "message": "Immer (empfohlen)"
+  },
+  "dolibarrBannerDisplayModeContent": {
+    "message": "Nur wenn Dolibarr-Inhalte gefunden werden"
+  },
+  "dolibarrBannerDisplayModeNever": {
+    "message": "Nie"
+  },
+  "dolibarrApiKeyFromLogin": {
+    "message": "Mit meinem Login abrufen"
+  },
+  "dolibarrApiKeyLoginIntro": {
+    "message": "Ihr Dolibarr-Login und Ihr Passwort werden nur an $URL$ gesendet, um Ihren API-Schlüssel abzurufen, und nicht gespeichert.",
+    "placeholders": {
+      "url": {
+        "content": "$1"
+      }
+    }
+  },
+  "dolibarrApiKeyLoginHttpWarning": {
+    "message": "Diese Dolibarr-Adresse ist nicht gesichert (http): Das Passwort wird unverschlüsselt übertragen."
+  },
+  "dolibarrLogin": {
+    "message": "Login"
+  },
+  "dolibarrPassword": {
+    "message": "Passwort"
+  },
+  "dolibarrApiKeyLoginSubmit": {
+    "message": "API-Schlüssel abrufen"
+  },
+  "dolibarrApiKeyLoginSuccess": {
+    "message": "API-Schlüssel eingetragen. Speichern Sie die Optionen, um ihn zu behalten."
+  },
+  "dolibarrApiKeyLoginNoUrl": {
+    "message": "Geben Sie zuerst die Dolibarr-URL ein."
+  },
+  "dolibarrApiKeyLoginNetworkError": {
+    "message": "Dolibarr ist nicht erreichbar. Überprüfen Sie die URL und erlauben Sie den von Thunderbird angefragten Zugriff."
+  },
+  "dolibarrApiKeyLoginHttpAuthError": {
+    "message": "Zugriff durch die HTTP-Authentifizierung des Servers verweigert: Geben Sie zuerst unten deren Benutzer und Passwort ein."
+  },
+  "dolibarrApiKeyLoginDisabled": {
+    "message": "Das Abrufen des Schlüssels per Login ist in diesem Dolibarr deaktiviert. Erzeugen Sie den API-Schlüssel auf Ihrer Benutzerkarte in Dolibarr (Feld „API-Schlüssel“) und fügen Sie ihn ein."
+  },
+  "dolibarrApiKeyLoginBadCredentials": {
+    "message": "Falsches Login oder Passwort (oder dieses Login kann hier nicht verwendet werden, z. B. bei externer Authentifizierung oder einem zweiten Faktor)."
+  },
+  "dolibarrApiKeyLoginNoToken": {
+    "message": "Ihr Benutzer hat noch keinen API-Schlüssel und Sie dürfen ihn nicht erstellen. Wenden Sie sich an Ihren Dolibarr-Administrator."
+  },
+  "dolibarrApiKeyLoginNotFound": {
+    "message": "API nicht gefunden: Überprüfen Sie die Dolibarr-URL und ob das Modul „API REST“ aktiviert ist."
+  },
+  "dolibarrApiKeyLoginError": {
+    "message": "Fehler $STATUS$: $MESSAGE$",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      },
+      "message": {
+        "content": "$2"
+      }
+    }
+  },
+  "Comments": {
+    "message": "Kommentare"
+  },
+  "NoDolibarrContentDetected": {
+    "message": "Keine Dolibarr-Inhalte für diese E-Mail erkannt"
+  },
+  "MoreInfo": {
+    "message": "Mehr Infos"
+  },
+  "NoDolibarrContentDetectedDetails": {
+    "message": "Dieses Banner wird von der Erweiterung Dolibarr Connector immer angezeigt, unabhängig davon, ob Dolibarr-Inhalte (Angebot, Auftrag, Notiz...) für diese E-Mail gefunden wurden: Es dient dem Schutz vor Phishing. Wenn Sie diese Meldung zusammen mit einem weiteren Block sehen, der das übliche Aussehen der letzten Nachricht oder des verknüpften Dokuments imitiert, handelt es sich sehr wahrscheinlich um eine betrügerische E-Mail."
+  },
+  "Submit": {
+    "message": "Senden"
+  },
+  "WriteComment": {
+    "message": "Notiz oder Kommentar schreiben..."
+  },
+  "DolibarrUseGravatar": {
+    "message": "Gravatar zur Anzeige von Profilbildern verwenden"
+  },
+  "DolibarrUseGravatarDesc": {
+    "message": "Wenn aktiviert, werden Avatare von gravatar.com (externer Dienst) geladen"
+  },
+  "SecurityOptions": {
+    "message": "Sicherheitsoptionen"
+  },
+  "UseMasterPassword": {
+    "message": "Master-Passwort zum Schutz des API-Schlüssels verwenden"
+  },
+  "UseMasterPasswordDesc": {
+    "message": "Empfohlen: Ihr API-Schlüssel wird verschlüsselt und erfordert bei jedem Start ein Passwort"
+  },
+  "MasterPassword": {
+    "message": "Master-Passwort"
+  },
+  "MasterPasswordPlaceholder": {
+    "message": "Geben Sie ein sicheres Passwort ein"
+  },
+  "ConfirmMasterPassword": {
+    "message": "Passwort bestätigen"
+  },
+  "PasswordsDontMatch": {
+    "message": "Die Passwörter stimmen nicht überein"
+  },
+  "EnterMasterPassword": {
+    "message": "Geben Sie Ihr Master-Passwort ein"
+  },
+  "WrongPassword": {
+    "message": "Falsches Passwort"
+  },
+  "UnlockExtension": {
+    "message": "Erweiterung entsperren"
+  },
+  "ApiKeyWillBeEncrypted": {
+    "message": "Ihr API-Schlüssel wird beim Speichern automatisch verschlüsselt"
+  },
+  "CreateTicket": {
+    "message": "Ticket erstellen"
+  },
+  "TicketCreated": {
+    "message": "Ticket erfolgreich erstellt"
+  },
+  "TicketCreationError": {
+    "message": "Fehler beim Erstellen des Tickets"
+  },
+  "TicketSubject": {
+    "message": "Betreff des Tickets"
+  },
+  "TicketMessage": {
+    "message": "Nachricht des Tickets"
+  },
+  "StatusCanceledShort": {
+    "message": "Storniert"
+  },
+  "StatusDraftShort": {
+    "message": "Entwurf"
+  },
+  "StatusValidatedShort": {
+    "message": "Freigegeben"
+  },
+  "StatusSignedShort": {
+    "message": "Unterzeichnet"
+  },
+  "StatusNotSignedShort": {
+    "message": "Nicht unterz."
+  },
+  "StatusBilledShort": {
+    "message": "Fakturiert"
+  },
+  "StatusOrderDeliveredShort": {
+    "message": "Versandt"
+  },
+  "StatusOrderDelivered": {
+    "message": "Versandt"
+  },
+  "StatusDelivered": {
+    "message": "Geliefert"
+  },
+  "StatusClosed": {
+    "message": "Geschlossen"
+  },
+  "StatusAbandoned": {
+    "message": "Aufgegeben"
+  },
+  "statusshipmentonprocess": {
+    "message": "Lieferung läuft"
+  },
+  "Status": {
+    "message": "Status"
+  },
+  "StatusSupplierOrderOnProcessShort": {
+    "message": "Bestellt"
+  },
+  "StatusSupplierOrderReceivedPartiallyShort": {
+    "message": "Teilw. erhalten"
+  },
+  "StatusSupplierOrderReceivedAllShort": {
+    "message": "Produkte erhalten"
+  },
+  "StatusSupplierOrderCanceledShort": {
+    "message": "Storniert"
+  },
+  "StatusSupplierOrderRefusedShort": {
+    "message": "Abgelehnt"
+  },
+  "DolibarrRefDetected": {
+    "message": "In dieser E-Mail erkannte Referenz:"
+  },
+  "OpenDocument": {
+    "message": "Datensatz anzeigen"
+  },
+  "DolibarrTypeOrder": {
+    "message": "Auftrag"
+  },
+  "DolibarrTypeProposal": {
+    "message": "Angebot"
+  },
+  "DolibarrTypeInvoice": {
+    "message": "Rechnung"
+  },
+  "DolibarrTypeSupplierOrder": {
+    "message": "Lieferantenbestellung"
+  },
+  "DolibarrTypeSupplierInvoice": {
+    "message": "Lieferantenrechnung"
+  },
+  "DolibarrTypeSupplierProposal": {
+    "message": "Lieferantenangebot"
+  },
+  "DolibarrTypeShipment": {
+    "message": "Lieferung"
+  },
+  "DolibarrTypeContract": {
+    "message": "Vertrag"
+  },
+  "DolibarrTypeTicket": {
+    "message": "Ticket"
+  },
+  "DolibarrTypeProject": {
+    "message": "Projekt"
+  },
+  "DolibarrTypeIntervention": {
+    "message": "Serviceauftrag"
+  },
+  "DolibarrTypeMember": {
+    "message": "Mitglied"
+  },
+  "DolibarrTypeAgendaEvent": {
+    "message": "Ereignis"
+  },
+  "ThirdpartyTypeClient": {
+    "message": "Kunde"
+  },
+  "ThirdpartyTypeSupplier": {
+    "message": "Lieferant"
+  },
+  "UnrecognizedSender": {
+    "message": "Kein Geschäftspartner erkannt"
+  },
+  "TabInfo": {
+    "message": "Info"
+  },
+  "TabDocuments": {
+    "message": "Dokumente"
+  },
+  "TabLinkDocument": {
+    "message": "Verknüpfen"
+  },
+  "TabAgenda": {
+    "message": "Agenda"
+  },
+  "CreateNewEvent": {
+    "message": "Ereignis anzeigen und erstellen"
+  },
+  "AgendaEventAlreadyLinked": {
+    "message": "Ereignis bereits in Dolibarr erfasst"
+  },
+  "IcsEventDetectedInvitation": {
+    "message": "In dieser E-Mail wurde ein Ereignis erkannt."
+  },
+  "Location": {
+    "message": "Ort"
+  },
+  "Organizer": {
+    "message": "Organisator"
+  },
+  "LinkedDocuments": {
+    "message": "Verknüpfte Dokumente"
+  },
+  "NoLinkedDocument": {
+    "message": "Kein Dokument mit dieser E-Mail verknüpft"
+  },
+  "SearchDocumentToLink": {
+    "message": "Vorhandenes Dokument verknüpfen"
+  },
+  "SearchDocumentToLinkPlaceholder": {
+    "message": "Referenz suchen..."
+  },
+  "LinkSearchFilterSoc": {
+    "message": "Nach Geschäftspartner „$1“ filtern"
+  },
+  "SearchDocumentToLinkNoResults": {
+    "message": "Keine Ergebnisse"
+  },
+  "SearchDocumentToLinkAlreadyLinked": {
+    "message": "Diese Suche entspricht einem Dokument, das bereits mit dieser E-Mail verknüpft ist"
+  },
+  "SearchDocumentToLinkError": {
+    "message": "Suche fehlgeschlagen"
+  },
+  "LinkAllTypes": {
+    "message": "Alle Typen"
+  },
+  "Link": {
+    "message": "Verknüpfen"
+  },
+  "Unlink": {
+    "message": "Lösen"
+  },
+  "Actions": {
+    "message": "Aktionen"
+  },
+  "Refresh": {
+    "message": "Aktualisieren"
+  },
+  "LinkSuccess": {
+    "message": "Dokument verknüpft"
+  },
+  "UnlinkSuccess": {
+    "message": "Verknüpfung gelöst"
+  },
+  "UnlinkError": {
+    "message": "Fehler beim Lösen der Verknüpfung"
+  },
+  "LinkError": {
+    "message": "Fehler beim Verknüpfen des Dokuments"
+  },
+  "Type": {
+    "message": "Typ"
+  },
+  "DolibarrConnections": {
+    "message": "Dolibarr-Verbindungen"
+  },
+  "AddDolibarrConnection": {
+    "message": "+ Verbindung hinzufügen"
+  },
+  "DolibarrConnectionName": {
+    "message": "Name der Verbindung"
+  },
+  "DolibarrConnectionSetDefault": {
+    "message": "Standardverbindung"
+  },
+  "DolibarrConnectionRemove": {
+    "message": "Entfernen"
+  },
+  "DolibarrConnectionDefaultName": {
+    "message": "Dolibarr"
+  },
+  "DolibarrConnectionDefaultOption": {
+    "message": "(Standardverbindung: $1)"
+  },
+  "DolibarrAccountMapping": {
+    "message": "Zuordnung der Postfächer"
+  },
+  "DolibarrAccountMappingDesc": {
+    "message": "Ein Postfach verwendet immer nur eine Dolibarr-Verbindung gleichzeitig. Hier nicht zugeordnete Postfächer verwenden die Standardverbindung."
+  },
+  "DolibarrUsageOptionsTitle": {
+    "message": "Nutzungs- und Verhaltensoptionen"
+  },
+  "DolibarrPermissionNotice": {
+    "message": "Wenn Sie eine Dolibarr-Verbindung speichern, fordert dieses Add-on automatisch die Berechtigung für den Zugriff auf deren Adresse an (eine auf diese eine Website beschränkte Berechtigung). Reicht das nicht aus und bleiben eine oder mehrere Verbindungen blockiert, können Sie als letzten Ausweg den Zugriff des Add-ons über die Schaltfläche unten auf alle Websites erweitern - damit werden alle konfigurierten Dolibarr-Verbindungen auf einmal freigegeben. Diese weitergehende Berechtigung sollte ansonsten vermieden werden, um den Zugriff des Add-ons auf das absolut Notwendige zu beschränken."
+  },
+  "DolibarrRequestPermission": {
+    "message": "Zugriff erlauben"
+  },
+  "DolibarrPermissionNoticeFallback": {
+    "message": "Falls die Schaltfläche oben nicht funktioniert, können Sie diese Berechtigung auch manuell aktivieren:"
+  },
+  "DolibarrRequestPermissionGranted": {
+    "message": "Berechtigung erteilt"
+  },
+  "DolibarrRequestPermissionDenied": {
+    "message": "Berechtigung verweigert - Sie können es erneut versuchen oder die manuellen Schritte unten befolgen"
+  },
+  "DolibarrPermissionStep1": {
+    "message": "Öffnen Sie das Menü „Extras“ > „Add-ons und Themes“ (oder das Puzzle-Symbol in der Symbolleiste)."
+  },
+  "DolibarrPermissionStep2": {
+    "message": "Klicken Sie in der Add-on-Liste auf „Dolibarr-Connector“."
+  },
+  "DolibarrPermissionStep3": {
+    "message": "Öffnen Sie den Reiter „Berechtigungen“."
+  },
+  "DolibarrPermissionStep4": {
+    "message": "Aktivieren Sie den Schalter „Auf Ihre Daten für alle Websites zugreifen“."
+  },
+  "DolibarrMissingRightsIconLabel": {
+    "message": "Fehlende Dolibarr-Berechtigungen"
+  },
+  "DolibarrMissingRightsIntro": {
+    "message": "Dem Benutzer des API-Schlüssels fehlen die für einige Funktionen erforderlichen Berechtigungen:"
+  },
+  "DolibarrMissingRightsRequiredRight": {
+    "message": "erforderliche Dolibarr-Berechtigung"
+  },
+  "DolibarrInstanceUnknown": {
+    "message": "Diese Nachricht bezieht sich auf ein Dokument aus einer unbekannten Dolibarr-Instanz. Ist es Ihr Dolibarr?"
+  },
+  "DolibarrInstanceIsMine": {
+    "message": "Ja"
+  },
+  "DolibarrInstanceIsNotMine": {
+    "message": "Nein, Dolibarr eines Korrespondenten"
+  },
+  "dolibarrOwnInstanceIds": {
+    "message": "IDs meiner Dolibarr-Instanzen"
+  },
+  "dolibarrOwnInstanceIdsDesc": {
+    "message": "Eine pro Zeile: der Teil nach dem @ im Header X-Dolibarr-TRACKID der von diesem Dolibarr gesendeten E-Mails. Nur erkannte Dokumente aus diesen Instanzen werden verknüpft; wird nach Möglichkeit automatisch ausgefüllt."
+  },
+  "dolibarrForeignInstanceIds": {
+    "message": "Zu ignorierende Dolibarr-Instanzen von Korrespondenten"
+  },
+  "SpoofTagLabel": {
+    "message": "⚠ Mögliches Spoofing"
+  },
+  "SpoofAlertTitle": {
+    "message": "⚠ Achtung: mögliche gefälschte Absenderadresse"
+  },
+  "SpoofAlertText": {
+    "message": "Diese Adresse ist die von $WHO$ in Dolibarr, aber der Server konnte nicht prüfen, ob die E-Mail wirklich von dieser Domain stammt (DMARC, DKIM oder SPF fehlgeschlagen). Seien Sie vorsichtig bei Zahlungsaufforderungen, Änderungen von Bankverbindungen oder unerwarteten Anhängen.",
+    "placeholders": {
+      "who": {
+        "content": "$1"
+      }
+    }
+  }
+}

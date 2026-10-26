@@ -1,5 +1,32 @@
 # CHANGELOG DOLICONNECTOR
 
+## 2.13.0
+
+- Add the « Banner in the email body » option (issue #45) : always (default, unchanged), only when Dolibarr content is found (no more grey « nothing found » banner), or never. The option describes the anti-phishing protection given up when the grey banner is hidden. The spoofing alert of the anti-spam is still shown in every mode, and the badge of the Dolibarr button still counts the notes. In « never » mode, the trackid record and the linked documents are no longer fetched when an email is opened.
+- Add the projects of the thirdparty to the popup's Documents tab (issue #31) : reference, title, start date, opportunity amount and status, with the same row actions (Dolibarr card, link to the email) as the other documents. Only open projects by default, the statuses shown are chosen in the new « More options for projects » block of the options page (no choice = all statuses). Needs the Dolibarr right « Read projects and tasks ».
+- Add « Create a project » to the thirdparty's Actions menu. The project is linked to the email it was created from with CRM Client Connector 1.8.0 or later.
+- Linked projects now show their status badge (draft / open / closed) in the banner injected in the mail body and in the document cards.
+- Add the next agenda events of the thirdparty on top of the popup's Info tab (issue #13) : 5 events at most, the ones still to come and the ones not over yet, each with a link to its Dolibarr card and a relative date (« tomorrow », « in 6 days », « in 4 months », exact date on hover). Hidden when there is no upcoming event. With only the Dolibarr right to read their own events, users see their own events only.
+- Better company name when creating a thirdparty for an unknown sender (issue #39). The name is now taken, in this order, from : the organization (ORG) of a vCard attached to the email, the organization of the sender's contact in the Thunderbird address books, the part between parentheses of the sender's name (« Vincent Picavet ( Oslandia ) »), the domain of the email address (« oslandia.com » gives « Oslandia », public domains like gmail or orange excluded), and at last the sender's name as before. The new contact keeps the person's name, without the part between parentheses.
+- New optional permission « addressBooks », asked on the first click on « Create a company » only (no question on update). When declined, it is not asked again and the other sources are still used.
+- The Dolibarr button of the message display now shows whether the sender is known in Dolibarr (issue #24) : green dot when the sender is a contact or a thirdparty, orange dot when only a thirdparty of the same email domain is known (with the « also search by domain » option, never for a public email domain), plain icon otherwise.
+- One single API call per sender with CRM Client Connector 1.9.0 or later (`crmclientconnector/lookup`), else the core contacts and thirdparties endpoints are used. Each result is kept 10 minutes per mailbox and sender.
+- Add a « Get it with my login » button next to the API key of each Dolibarr connection (issue #21) : a dialog asks for the Dolibarr login and password and fills in the user's API key, from Dolibarr's `POST /login` endpoint (never the GET variant, which puts the password in the URL). The password is only sent to Dolibarr and never stored, the existing key is never reset (other clients using it keep working), and a warning shows when the Dolibarr URL isn't https. The HTTP authentication of the connection is used when enabled.
+- Clear messages when it can't work : wrong login or password, login API disabled on the Dolibarr side (`API_DISABLE_LOGIN_API`), user without API key and without the right to create it, wrong URL or REST API module disabled. External authentication (SSO / OAuth) or a second factor still need the key to be entered by hand.
+- Add German (de-DE), Italian (it-IT) and Spanish (es-ES) translations, complete (issue #37).
+- Add `tools/check-locales.py` : lists per language the keys missing or unknown compared to en-US and the messages whose `$NAME$` tokens differ, run before each release so the translators are told in time. New « Translate » section in the README explaining how to contribute a translation.
+- Remove the unused `NoCommentHistory` key (French only).
+- `buildXpi.sh` no longer puts the `tools/` and `analyses/` folders in the package.
+
+## 2.6.0
+
+- Add the spoofing alert of the anti-spam of the CRM Client Connector Dolibarr module (1.5.0 or later, anti-spam enabled) : when an email uses the address of a known customer, supplier or contact but its authentication by the receiving server (DMARC, DKIM or SPF) fails, a red block is shown on top of the banner injected in the mail body, with the thirdparty or contact concerned and the authentication result.
+- The email is checked when it is opened (`crmclientconnector/antispam/check`, only the From, Authentication-Results and Received-SPF headers are sent), and the emails already flagged by the scheduled scan of the anti-spam (IMAP keyword `doliconnector_spoof`) show their alert details (`crmclientconnector/antispam/alerts`).
+- A red « ⚠ Usurpation possible » tag is created for the keyword, so the flagged emails show in red in the message list before being opened. New permission `messagesTags` (asked by Thunderbird on update) to create it.
+- Nothing is shown when the anti-spam is not available on the Dolibarr side (feature disabled, older module, mailbox not in its list of email accounts).
+- Fix: the last note, its author and the references of the linked documents are now HTML-escaped in the banner injected in the mail body (a note or a reference containing HTML was inserted as is, it could for example show a fake banner). Line breaks of the note are kept.
+- Fix: `buildXpi.sh` no longer puts the previous `.xpi` (or a `.zip`) of the repository folder inside the new package (it excluded `${var}.xpi`, with `var` never set).
+
 ## 2.5.1
 
 - Fix: supplier proposals rows in the popup's Documents tab now have a "Ref Fournisseur" column like supplier orders, so their cells no longer shift out of line with the other document types' columns. The supplier orders column header now also reads "Ref Fournisseur" instead of "Ref Client".

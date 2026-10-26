@@ -43,6 +43,28 @@ mv my-addon.zip my-addon.xpi
 # Contribute
 see this start doc : [How to create hello world addon](https://developer.thunderbird.net/add-ons/hello-world-add-on)
 
+## Translate
+
+Translations live in this repository, one folder per language in `_locales/` (Thunderbird's own
+`messages.json` format). `_locales/en-US/messages.json` is the reference : every key it has is
+expected in the other languages.
+
+To translate or complete a language :
+
+1. Fork this repository, copy `_locales/en-US/messages.json` to `_locales/<lang>/messages.json`
+   (e.g. `el-GR`, `nl-NL`) if the language doesn't exist yet.
+2. Translate the `message` values only. Keep the keys, the `placeholders` blocks and the
+   `$NAME$` tokens as they are.
+3. Check the result : `python3 tools/check-locales.py` lists, per language, the missing keys, the
+   keys unknown to en-US and the messages whose `$NAME$` tokens differ from en-US.
+4. Open a pull request.
+
+Before each release, the missing keys of every language are listed with this same script and the
+translators are told in the issues, so they have time to translate before the version is published.
+
+The Dolibarr side (module CRM Client Connector) has its own translations, in its own repository :
+[dolibarr_crmclientconnector](https://github.com/THERSANE-DOLI/dolibarr_crmclientconnector) (`langs/`).
+
 # Thunderbird Dolibarr Connector
 
 ## Présentation

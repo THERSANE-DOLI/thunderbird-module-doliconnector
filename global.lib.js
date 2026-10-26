@@ -454,7 +454,10 @@ const DOLIBARR_ENDPOINT_RIGHTS = {
     'crmclientconnector/objectcategories/proj': [{id: 41, label: "Lire les projets et les tâches (projets partagés et projets dont je suis un contact)."}],
     'crmclientconnector/objectcategories/int':  [{id: 61, label: "Lire les fiches d'intervention"}],
     'crmclientconnector/objectcategories/mem':  [{id: 71, label: "Consulter les fiches adhérents"}],
-    'crmclientconnector/objectcategories/act':  [{id: 2411, label: "Lire les actions (événements ou tâches) des autres"}]
+    'crmclientconnector/objectcategories/act':  [{id: 2411, label: "Lire les actions (événements ou tâches) des autres"}],
+    // Anti-spam of the CRM Client Connector module : sender check and spoofing alerts of a mail
+    'crmclientconnector/antispam/check':  [{id: 121, label: "Consulter les tiers (sociétés) liés à l'utilisateur"}],
+    'crmclientconnector/antispam/alerts': [{id: 121, label: "Consulter les tiers (sociétés) liés à l'utilisateur"}]
 };
 
 /**
@@ -782,6 +785,68 @@ export function getCurrentDolibarrUser(accountId){
     return currentDolibarrUserPromise;
 }
 
+/**
+ * HTML-escapes a value coming from Dolibarr or from the email before putting it in HTML markup
+ * (the banner injected in the mail body, popup cells built as HTML strings).
+ * @param {*} value
+ * @returns {string}
+ */
+export function escapeHtml(value){
+    return String(value === null || value === undefined ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/**
+ * Relative day of a date, in the Thunderbird UI language : « today », « tomorrow », « in 6 days »,
+ * then weeks / months / years further away (« in 4 months »). Past dates read the same way
+ * (« yesterday »), for an event that started before today and isn't over yet.
+ * @param {Date} date
+ * @returns {string}
+ */
+export function formatRelativeDay(date){
+    let today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let day = new Date(date.getTime());
+    day.setHours(0, 0, 0, 0);
+    let days = Math.round((day.getTime() - today.getTime()) / 86400000);
+
+    let formatter = new Intl.RelativeTimeFormat(browser.i18n.getUILanguage(), {numeric: 'auto'});
+    if(Math.abs(days) < 14){
+        return formatter.format(days, 'day');
+    }
+    if(Math.abs(days) < 60){
+        return formatter.format(Math.round(days / 7), 'week');
+    }
+    if(Math.abs(days) < 365){
+        return formatter.format(Math.round(days / 30), 'month');
+    }
+    return formatter.format(Math.round(days / 365), 'year');
+}
+
+/**
+ * Project statuses shown by default in the popup's Documents tab : open projects only
+ * (Project::STATUS_VALIDATED).
+ * @type {number[]}
+ */
+export const DEFAULT_PROJECT_STATUSES = [1];
+
+/**
+ * Project statuses to show in the popup's Documents tab (0 draft, 1 open, 2 closed), chosen in the
+ * options page. Empty array = no filter, every status shown (same convention as
+ * filterPropalStatus()).
+ * @returns {Promise<number[]>}
+ */
+export async function getProjectDisplayStatuses(){
+    let config = await browser.storage.local.get({dolibarrProjectStatuses: DEFAULT_PROJECT_STATUSES});
+    return Array.isArray(config.dolibarrProjectStatuses)
+        ? config.dolibarrProjectStatuses.map((status) => parseInt(status)).filter((status) => [0, 1, 2].includes(status))
+        : DEFAULT_PROJECT_STATUSES;
+}
+
 //wip
 export async function filterPropalStatus() {
   let configData = await browser.storage.local.get(
@@ -876,6 +941,18 @@ export async function getQuotationTrustedSenders(){
 }
 
 /**
+ * When the banner is injected in the mail body (see checkAndInjectDolibarrBanner() in
+ * background.js) : 'always' (default, keeps the grey "nothing found" anti-phishing banner),
+ * 'content' (only when Dolibarr content was found) or 'never'. The anti-spam spoofing alert is
+ * shown whatever the mode.
+ * @returns {Promise<'always'|'content'|'never'>}
+ */
+export async function getBannerDisplayMode(){
+    let config = await browser.storage.local.get({dolibarrBannerDisplayMode: 'always'});
+    return ['always', 'content', 'never'].includes(config.dolibarrBannerDisplayMode) ? config.dolibarrBannerDisplayMode : 'always';
+}
+
+/**
  * @param {string} email
  * @param {string[]} trustedSenders list from getQuotationTrustedSenders()
  * @returns {boolean}
@@ -919,6 +996,171 @@ export async function detectIcsEventFromMessage(messageId){
     let file = await messenger.messages.getAttachmentFile(messageId, icsAttachment.partName);
     let text = await file.text();
     return parseIcsEvent(text);
+}
+
+/**
+ * Thunderbird permission to read the address books, optional (see manifest.json) : asked on the
+ * first click on « Create a company » only (see guessCompanyName()), so the extension's update
+ * doesn't ask for it.
+ */
+export const ADDRESS_BOOKS_PERMISSION = {permissions: ['addressBooks']};
+
+/**
+ * Value of the ORG property (organization name, its first component : the unit names after the
+ * ';' are dropped) of a vCard, '' when there is none. Handles folded lines, item1.ORG groups and
+ * escaped characters ; a full RFC 6350 parser is out of scope.
+ * @param {string} vcardText
+ * @returns {string}
+ */
+export function parseVcardOrg(vcardText){
+    let lines = String(vcardText || '').replace(/\r\n/g, '\n').replace(/\n[ \t]/g, '').split('\n');
+    for(let line of lines){
+        let match = line.match(/^(?:[A-Za-z0-9-]+\.)?ORG(?:;[^:]*)?:(.*)$/i);
+        if(!match){
+            continue;
+        }
+        let org = match[1].split(/(?<!\\);/)[0]
+            .replace(/\\([,;\\])/g, '$1')
+            .replace(/\\n/gi, ' ')
+            .trim();
+        if(org.length > 0){
+            return org;
+        }
+    }
+    return '';
+}
+
+/**
+ * ORG of the first vCard (.vcf, text/vcard or text/x-vcard) attached to a message, '' when there
+ * is none.
+ * @param {number} messageId
+ * @returns {Promise<string>}
+ */
+export async function findVcardOrgInMessage(messageId){
+    try {
+        let attachments = await messenger.messages.listAttachments(messageId);
+        let vcards = attachments.filter((attachment) => {
+            return /^text\/(x-)?vcard$/i.test(attachment.contentType || '') || /\.vcf$/i.test(attachment.name || '');
+        });
+        for(let vcard of vcards){
+            let file = await messenger.messages.getAttachmentFile(messageId, vcard.partName);
+            let org = parseVcardOrg(await file.text());
+            if(org){
+                return org;
+            }
+        }
+    } catch (e) {
+        console.warn('[DoliConnector] could not read the vCard attachments', e);
+    }
+    return '';
+}
+
+/**
+ * ORG of the Thunderbird address book contact having this email, '' when there is none or when
+ * the address books permission isn't granted (never asked from here, see ADDRESS_BOOKS_PERMISSION).
+ * @param {string} email
+ * @returns {Promise<string>}
+ */
+export async function findAddressBookOrg(email){
+    if(!email){
+        return '';
+    }
+    try {
+        if(!(await browser.permissions.contains(ADDRESS_BOOKS_PERMISSION))){
+            return '';
+        }
+        // Thunderbird 128 still has contacts.quickSearch(), newer ones addressBooks.contacts.query()
+        let nodes = [];
+        if(browser.addressBooks && browser.addressBooks.contacts && browser.addressBooks.contacts.query){
+            nodes = await browser.addressBooks.contacts.query({searchString: email});
+        }else if(browser.contacts && browser.contacts.quickSearch){
+            nodes = await browser.contacts.quickSearch(email);
+        }
+        for(let node of (nodes || [])){
+            let vcard = (node.vCard) || (node.properties && node.properties.vCard) || '';
+            if(!vcard.toLowerCase().includes(email.toLowerCase())){
+                continue;
+            }
+            let org = parseVcardOrg(vcard);
+            if(org){
+                return org;
+            }
+        }
+    } catch (e) {
+        console.warn('[DoliConnector] could not search the address books', e);
+    }
+    return '';
+}
+
+/**
+ * Splits an email's display name ("Vincent Picavet ( Oslandia ) <v@oslandia.com>") into the
+ * person's name and the company written between parentheses, if any.
+ * @param {string} author message.author
+ * @returns {{person: string, company: string}}
+ */
+export function splitDisplayName(author){
+    let name = String(author || '').replace(/<[^>]*>/g, ' ').replace(/[^\s<>()"]+@[^\s<>()"]+/g, ' ');
+    let company = '';
+    let parenthesis = name.match(/\(([^)]*)\)/);
+    if(parenthesis && !parenthesis[1].includes('@')){
+        company = parenthesis[1].replace(/\s+/g, ' ').trim();
+    }
+    let person = name.replace(/\([^)]*\)/g, ' ')
+        .replace(/[^a-zA-Z0-9áàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ' -]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    return {person: person, company: company};
+}
+
+/**
+ * Company name guessed from the domain of an email ("v@mail.oslandia.com" -> "Oslandia"), '' for
+ * a public email domain (gmail, orange... see exclude-domains.json and the excluded domains of the
+ * CRM Client Connector module).
+ * @param {string} email
+ * @param {string[]} excludedDomains
+ * @returns {string}
+ */
+export function companyNameFromEmailDomain(email, excludedDomains){
+    let domain = String(email || '').split('@').pop().toLowerCase().trim();
+    if(!domain.includes('.') || (excludedDomains || []).map((d) => String(d).toLowerCase()).includes(domain)){
+        return '';
+    }
+    let labels = domain.split('.');
+    labels.pop(); // top level domain
+    // Second level of a country domain : oslandia.co.uk, oslandia.com.fr
+    if(labels.length > 1 && ['co', 'com', 'org', 'net', 'gouv', 'asso', 'ac'].includes(labels[labels.length - 1])){
+        labels.pop();
+    }
+    let name = labels.pop() || '';
+    return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+/**
+ * Best company name for the « Create a company » action of an unknown sender (issue #39), in
+ * this order : ORG of an attached vCard, ORG of the Thunderbird address book contact, the part
+ * between parentheses of the display name, the email domain (not a public one), and at last the
+ * person's display name (the previous behaviour).
+ * @param {{messageId: number, author: string, email: string, excludedDomains: string[]}} data
+ * @returns {Promise<{name: string, source: 'vcard'|'addressbook'|'displayname'|'domain'|'person'}>}
+ */
+export async function guessCompanyName(data){
+    let org = await findVcardOrgInMessage(data.messageId);
+    if(org){
+        return {name: org, source: 'vcard'};
+    }
+    org = await findAddressBookOrg(data.email);
+    if(org){
+        return {name: org, source: 'addressbook'};
+    }
+    let displayName = splitDisplayName(data.author);
+    if(displayName.company){
+        return {name: displayName.company, source: 'displayname'};
+    }
+    let domainName = companyNameFromEmailDomain(data.email, data.excludedDomains);
+    if(domainName){
+        return {name: domainName, source: 'domain'};
+    }
+    return {name: displayName.person, source: 'person'};
 }
 
 /**
@@ -1109,6 +1351,11 @@ const DOCUMENT_STATUS_TABLES = {
         '2': {code: 4, key: 'StatusSignedShort'},
         '3': {code: 6, key: 'StatusNotSignedShort'},
         '4': {code: 6, key: 'StatusClosed'}
+    },
+    proj: {
+        '0': {code: 0, key: 'StatusDraftShort'},
+        '1': {code: 4, key: 'StatusOpenShort'},
+        '2': {code: 6, key: 'StatusClosed'}
     }
 };
 

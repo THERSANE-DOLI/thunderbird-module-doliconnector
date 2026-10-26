@@ -65,6 +65,30 @@
   "CreateNewTicket": {
     "message": "Créer un ticket"
   },
+  "MoreProjectOptions": {
+    "message": "Plus d'options pour les projets"
+  },
+  "dolibarrProjectStatuses": {
+    "message": "Statuts des projets affichés dans l'onglet Documents (aucune sélection = tout afficher)"
+  },
+  "StatusOpenShort": {
+    "message": "Ouvert"
+  },
+  "ProjectTitle": {
+    "message": "Libellé"
+  },
+  "DateStart": {
+    "message": "Date début"
+  },
+  "OpportunityAmount": {
+    "message": "Montant opp."
+  },
+  "CreateNewProject": {
+    "message": "Créer un projet"
+  },
+  "UpcomingEvents": {
+    "message": "Prochains événements"
+  },
   "FicheDolibarr": {
     "message": "Voir Fiche"
   },
@@ -167,11 +191,81 @@
   "dolibarrQuotationTrustedSendersPlaceholder" :{
     "message": "Une adresse ou un domaine par ligne, ex. :\nboutique@example.com\n@maboutique.fr"
   },
+  "dolibarrBannerDisplayMode" :{
+    "message": "Bandeau dans le corps du mail"
+  },
+  "dolibarrBannerDisplayModeDesc" :{
+    "message": "Le bandeau gris « rien trouvé » protège contre le phishing : un mail qui imite le bandeau Dolibarr affiche alors deux bandeaux. Le masquer retire cette protection. L'alerte d'usurpation de l'anti-spam reste toujours affichée."
+  },
+  "dolibarrBannerDisplayModeAlways" :{
+    "message": "Toujours (recommandé)"
+  },
+  "dolibarrBannerDisplayModeContent" :{
+    "message": "Seulement si du contenu Dolibarr est trouvé"
+  },
+  "dolibarrBannerDisplayModeNever" :{
+    "message": "Jamais"
+  },
+  "dolibarrApiKeyFromLogin": {
+    "message": "Obtenir avec mon identifiant"
+  },
+  "dolibarrApiKeyLoginIntro": {
+    "message": "Votre identifiant et votre mot de passe Dolibarr sont envoyés uniquement à $URL$ pour obtenir votre clé API, ils ne sont pas enregistrés.",
+    "placeholders": {
+      "url": {
+        "content": "$1"
+      }
+    }
+  },
+  "dolibarrApiKeyLoginHttpWarning": {
+    "message": "Cette adresse Dolibarr n'est pas sécurisée (http) : le mot de passe circule en clair."
+  },
+  "dolibarrLogin": {
+    "message": "Identifiant"
+  },
+  "dolibarrPassword": {
+    "message": "Mot de passe"
+  },
+  "dolibarrApiKeyLoginSubmit": {
+    "message": "Obtenir la clé API"
+  },
+  "dolibarrApiKeyLoginSuccess": {
+    "message": "Clé API remplie. Enregistrez les options pour la conserver."
+  },
+  "dolibarrApiKeyLoginNoUrl": {
+    "message": "Saisissez d'abord l'URL de Dolibarr."
+  },
+  "dolibarrApiKeyLoginNetworkError": {
+    "message": "Dolibarr est injoignable. Vérifiez l'URL et autorisez l'accès demandé par Thunderbird."
+  },
+  "dolibarrApiKeyLoginHttpAuthError": {
+    "message": "Accès refusé par l'authentification HTTP du serveur : renseignez d'abord son utilisateur et son mot de passe plus bas."
+  },
+  "dolibarrApiKeyLoginDisabled": {
+    "message": "L'obtention de la clé par identifiant est désactivée sur ce Dolibarr. Générez la clé API depuis votre fiche utilisateur dans Dolibarr (champ « Clé pour l'API ») et collez-la."
+  },
+  "dolibarrApiKeyLoginBadCredentials": {
+    "message": "Identifiant ou mot de passe incorrect (ou identifiant inutilisable ici, par exemple avec une authentification externe ou un second facteur)."
+  },
+  "dolibarrApiKeyLoginNoToken": {
+    "message": "Votre utilisateur n'a pas encore de clé API et vous n'avez pas le droit de la créer. Demandez à votre administrateur Dolibarr."
+  },
+  "dolibarrApiKeyLoginNotFound": {
+    "message": "API introuvable : vérifiez l'URL de Dolibarr et que le module « API REST » est activé."
+  },
+  "dolibarrApiKeyLoginError": {
+    "message": "Erreur $STATUS$ : $MESSAGE$",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      },
+      "message": {
+        "content": "$2"
+      }
+    }
+  },
   "Comments" :{
     "message": "Commentaires"
-  },
-  "NoCommentHistory" :{
-    "message": "Aucun historique récent"
   },
   "NoDolibarrContentDetected" :{
     "message": "Aucun contenu Dolibarr détecté pour cet email"
@@ -517,5 +611,19 @@
   },
   "dolibarrForeignInstanceIds": {
     "message": "Instances Dolibarr de correspondants à ignorer"
+  },
+  "SpoofTagLabel": {
+      "message": "⚠ Usurpation possible"
+  },
+  "SpoofAlertTitle": {
+      "message": "⚠ Attention : usurpation d'adresse possible"
+  },
+  "SpoofAlertText": {
+      "message": "Cette adresse est celle de $WHO$ dans Dolibarr, mais le serveur n'a pas pu vérifier que le mail vient vraiment de ce domaine (DMARC, DKIM ou SPF en échec). Méfiez-vous des demandes de paiement, de changement de RIB ou des pièces jointes inattendues.",
+      "placeholders": {
+          "who": {
+              "content": "$1"
+          }
+      }
   }
 }

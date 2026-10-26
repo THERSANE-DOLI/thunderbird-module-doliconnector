@@ -184,6 +184,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
     //Filter on propal objects status
     let propalDisplayStatus = await dolLib.filterPropalStatus();
+    // Filter on project statuses (open only by default, see dolLib.getProjectDisplayStatuses())
+    let projectDisplayStatuses = await dolLib.getProjectDisplayStatuses();
 
     let confDolibarUrl = await dolLib.getDolibarrUrl();
 
@@ -545,10 +547,9 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
                 soc.phone_pro = quotationData.phone || '';
             }else{
-                // societe not found
-                soc.name = message.author.replace(authorEmail,'');
-                soc.name = soc.name.replace(/[^a-zA-Z0-9áàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ ]/g, '');
-                soc.name = soc.name.trim();
+                // societe not found : soc.name is the person (popup title, new contact), the
+                // company name of the new thirdparty is guessed below (see guessCompanyName())
+                soc.name = dolLib.splitDisplayName(message.author).person;
 
                 // let phones = dolLib.searchPhonesInString(messageBody.html, true);
                 let phones = dolLib.searchPhonesInString(messageBody.txt);
@@ -568,16 +569,57 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                 ? {firstName: quotationData.firstname || '', lastName: quotationData.lastname || ''}
                 : dolLib.parseName(soc.name);
 
-            let newThirdURL = new URL(confDolibarUrl + "societe/card.php");
-            newThirdURL.searchParams.set('action', "create");
-            newThirdURL.searchParams.set('email', searchEmail);
-            newThirdURL.searchParams.set('name', soc.name);
-            newThirdURL.searchParams.set('phone',  soc.phone_pro);
-            if(quotationData.siren){
-                newThirdURL.searchParams.set('idprof1', quotationData.siren);
+            let buildNewThirdURL = (companyName) => {
+                let url = new URL(confDolibarUrl + "societe/card.php");
+                url.searchParams.set('action', "create");
+                url.searchParams.set('email', searchEmail);
+                url.searchParams.set('name', companyName);
+                url.searchParams.set('phone',  soc.phone_pro);
+                if(quotationData.siren){
+                    url.searchParams.set('idprof1', quotationData.siren);
+                }
+                if(quotationData.vat_number){
+                    url.searchParams.set('tva_intra', quotationData.vat_number);
+                }
+                return url;
+            };
+
+            // The trusted X-Quotation-Data header already gives the company, else guess it from the
+            // email (vCard, address book, display name, domain - see dolLib.guessCompanyName())
+            let companyGuessData = {messageId: message.id, author: message.author, email: searchEmail, excludedDomains: []};
+            let companyGuess = {name: soc.name, source: 'quotation'};
+            if(!(quotationActive && (quotationData.firstname || quotationData.lastname))){
+                companyGuessData.excludedDomains = await getExcludedDomains();
+                companyGuess = await dolLib.guessCompanyName(companyGuessData);
             }
-            if(quotationData.vat_number){
-                newThirdURL.searchParams.set('tva_intra', quotationData.vat_number);
+            let newThirdURL = buildNewThirdURL(companyGuess.name);
+            let newThirdItem = {label: chrome.i18n.getMessage('CreateNewCompany'), href: newThirdURL, target: '_blank', icon: 'icon-building-filled'};
+
+            // The address book permission is optional : asked on the first click only (it needs a
+            // user gesture), and never again once declined.
+            let addressBooksApi = !!((browser.addressBooks && browser.addressBooks.contacts) || browser.contacts);
+            let askAddressBooks = addressBooksApi
+                && ['domain', 'person'].includes(companyGuess.source)
+                && !(await browser.permissions.contains(dolLib.ADDRESS_BOOKS_PERMISSION))
+                && !(await browser.storage.local.get({dolibarrAddressBooksDeclined: false})).dolibarrAddressBooksDeclined;
+            if(askAddressBooks){
+                newThirdItem = {label: newThirdItem.label, icon: newThirdItem.icon, onClick: async () => {
+                    let granted = false;
+                    try {
+                        granted = await browser.permissions.request(dolLib.ADDRESS_BOOKS_PERMISSION);
+                    } catch (e) {
+                        console.warn('[DoliConnector popup] address books permission request failed', e);
+                    }
+                    if(!granted){
+                        await browser.storage.local.set({dolibarrAddressBooksDeclined: true});
+                    }else{
+                        let addressBookOrg = await dolLib.findAddressBookOrg(searchEmail);
+                        if(addressBookOrg){
+                            newThirdURL = buildNewThirdURL(addressBookOrg);
+                        }
+                    }
+                    await browser.windows.openDefaultBrowser(newThirdURL.toString());
+                }};
             }
 
             titleDiv.textContent =  soc.name;
@@ -595,7 +637,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             socActions.appendChild(dolLib.buildDropdownMenu({
                 triggerLabel: chrome.i18n.getMessage('Actions'),
                 items: [
-                    {label: chrome.i18n.getMessage('CreateNewCompany'), href: newThirdURL, target: '_blank', icon: 'icon-building-filled'},
+                    newThirdItem,
                     {label: chrome.i18n.getMessage('CreateNewContact'), href: newContactURL, target: '_blank', icon: 'icon-user-plus'},
                     {label: chrome.i18n.getMessage('Refresh'), href: buildRefreshUrl(), iconChar: '⟳', separatorBefore: true}
                 ]
@@ -625,8 +667,8 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         let socCardUrl = new URL(confDolibarUrl + "societe/card.php");
         socCardUrl.searchParams.set('socid', soc.id);
 
-        // Créer un devis / une commande / un ticket : accountEmail+msgId let the
-        // crmclientconnector PROPAL_CREATE/ORDER_CREATE/TICKET_CREATE trigger auto-link the
+        // Créer un devis / une commande / un ticket / un projet : accountEmail+msgId let the
+        // crmclientconnector PROPAL_CREATE/ORDER_CREATE/TICKET_CREATE/PROJECT_CREATE trigger auto-link the
         // newly created object back to this mail (see initNotesForMessage()'s comment above for
         // the same convention).
         let newPropalUrl = new URL(confDolibarUrl + "comm/propal/card.php");
@@ -638,6 +680,9 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
         let newTicketUrl = new URL(confDolibarUrl + "ticket/card.php");
         newTicketUrl.searchParams.set('action', "create");
         newTicketUrl.searchParams.set('socid', soc.id);
+        let newProjectUrl = new URL(confDolibarUrl + "projet/card.php");
+        newProjectUrl.searchParams.set('action', "create");
+        newProjectUrl.searchParams.set('socid', soc.id);
         if(ownerAccountEmail && ownerMsgId){
             newPropalUrl.searchParams.set('accountEmail', ownerAccountEmail);
             newPropalUrl.searchParams.set('msgId', ownerMsgId);
@@ -645,6 +690,9 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             newOrderUrl.searchParams.set('msgId', ownerMsgId);
             newTicketUrl.searchParams.set('accountEmail', ownerAccountEmail);
             newTicketUrl.searchParams.set('msgId', ownerMsgId);
+            // Needs crmclientconnector 1.8.0 or later (PROJECT_CREATE), ignored by older ones
+            newProjectUrl.searchParams.set('accountEmail', ownerAccountEmail);
+            newProjectUrl.searchParams.set('msgId', ownerMsgId);
         }
 
         socActions.innerHTML = '';
@@ -655,6 +703,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                 {label: chrome.i18n.getMessage('CreateNewQuotation'), href: newPropalUrl, target: '_blank', icon: 'icon-plus'},
                 {label: chrome.i18n.getMessage('CreateNewOrder'), href: newOrderUrl, target: '_blank', icon: 'icon-plus'},
                 {label: chrome.i18n.getMessage('CreateNewTicket'), href: newTicketUrl, target: '_blank', icon: 'icon-plus'},
+                {label: chrome.i18n.getMessage('CreateNewProject'), href: newProjectUrl, target: '_blank', icon: 'icon-plus'},
                 {label: chrome.i18n.getMessage('Refresh'), href: buildRefreshUrl(), iconChar: '⟳', separatorBefore: true}
             ]
         }));
@@ -1646,6 +1695,102 @@ function setSupplierProposalsInfos(confData){
 
 }
 
+/**
+ * Same pattern as setQuotationsInfos() above, for the thirdparty's projects (type 'proj'),
+ * filtered on the statuses chosen in the options page (open ones only by default, see
+ * dolLib.getProjectDisplayStatuses()). The refClient column holds the project's title and the
+ * total column its opportunity amount, so its cells line up with the other document types
+ * sharing the same table.
+ */
+function setProjectsInfos(confData){
+    let conf = Object.assign({
+        socId: 0
+    }, confData);
+
+    let sqlfilters = '';
+    if(projectDisplayStatuses.length > 0){
+        sqlfilters = '(t.fk_statut:in:' + projectDisplayStatuses.join(',') + ')';
+    }
+
+    return dolLib.callDolibarrApi('projects', {
+        sortfield: 't.rowid',
+        sortorder: 'DESC',
+        limit:5,
+        thirdparty_ids: conf.socId,
+        sqlfilters: sqlfilters
+    }, 'GET', {}, (dataLastProjects)=>{
+        LOG('setProjectsInfos received', dataLastProjects);
+
+        if(!Array.isArray(dataLastProjects) || dataLastProjects.length == 0){
+            checkDetectedRefAgainstList('proj', []);
+            return;
+        }
+
+        let tableItems = [];
+        dataLastProjects.forEach((project) => {
+
+            let item = {
+                'ref': {
+                    html: '<a href="'+ dolLib.getDolibarrCardUrl(confDolibarUrl, 'proj', project.id) + '" >' + dolLib.escapeHtml(project.ref) + '</a>',
+                    hightLight : project.ref,
+                    class : 'text-center'
+                },
+                'title': {
+                    html: dolLib.escapeHtml(project.title || '')
+                },
+                'date': '',
+                'opp_amount': '',
+                'status': '',
+                'actions': buildDocumentRowActions('proj', project.id)
+            };
+
+            if(project.date_start){
+                item.date = {
+                    html: new Date(parseInt(project.date_start) * 1000).toLocaleDateString(),
+                    class : 'text-center'
+                };
+            }
+
+            if(project.opp_amount !== null && project.opp_amount !== undefined && project.opp_amount !== '' && parseFloat(project.opp_amount) !== 0){
+                item.opp_amount = {
+                    html: new Intl.NumberFormat([], {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(parseFloat(project.opp_amount)),
+                    class: 'text-right'
+                };
+            }
+
+            let badge = dolLib.getDocumentStatusBadgeInfo('proj', project.status !== undefined ? project.status : project.statut);
+            if(badge){
+                item.status = {
+                    html: `<span class="badge badge-status${badge.code}">${dolLib.escapeHtml(badge.label)}</span>`,
+                    class : 'text-center'
+                };
+            }
+
+            tableItems.push(item);
+        });
+
+        dolLib.jsonToTable(
+            {
+                'ref': chrome.i18n.getMessage('Ref'),
+                'title': chrome.i18n.getMessage('ProjectTitle'),
+                'date': chrome.i18n.getMessage('DateStart'),
+                'opp_amount': chrome.i18n.getMessage('OpportunityAmount'),
+                'status': chrome.i18n.getMessage('Status'),
+                'actions': ''
+            },
+            tableItems,
+            document.getElementById("data-from-dolibarr")
+        );
+
+        checkDetectedRefAgainstList('proj', dataLastProjects);
+
+    },(errorMsg)=>{
+        console.error("setProjectsInfos : " + errorMsg);
+        checkDetectedRefAgainstList('proj', []);
+    });
+
+}
+
 function displayTpl(id){
     let tpl = document.getElementById(id);
     if(!tpl){
@@ -1705,12 +1850,83 @@ async function updateRightsWarningIcon(){
 }
 
 
+/**
+ * Next agenda events of the thirdparty (5 at most), shown on top of the Info tab with a relative
+ * date (« tomorrow », « in 6 days », exact date in the title). The events still to come are kept,
+ * as well as the ones that started earlier but are not over yet (datep2 = end date). The block stays hidden
+ * when there is no upcoming event or on any error (a 403 still shows in the missing rights icon).
+ * With only the « read own events » right, the API returns the events of the current user only.
+ */
+function setUpcomingEventsInfos(confData){
+    let conf = Object.assign({
+        socId: 0
+    }, confData);
+
+    let container = document.getElementById('info-upcoming-events-container');
+    let list = document.getElementById('info-upcoming-events-list');
+    if(!container || !list || !conf.socId){
+        return;
+    }
+
+    // From now on (the automatic events of the thirdparty, created a moment ago, are left out) :
+    // 'YYYYMMDDhhmmss', with no ':' because Dolibarr 18's sqlfilters parser cuts the value on it.
+    let now = new Date();
+    let pad = (n) => String(n).padStart(2, '0');
+    let nowSql = now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
+
+    return dolLib.callDolibarrApi('agendaevents', {
+        sortfield: 't.datep',
+        sortorder: 'ASC',
+        limit: 5,
+        sqlfilters: "(t.fk_soc:=:" + parseInt(conf.socId) + ") and ((t.datep:>=:'" + nowSql + "') or (t.datep2:>=:'" + nowSql + "'))"
+    }, 'GET', {}, (events)=>{
+        LOG('setUpcomingEventsInfos received', events);
+
+        list.innerHTML = '';
+        if(!Array.isArray(events) || events.length == 0){
+            container.classList.add('hidden-field');
+            return;
+        }
+
+        events.forEach((event) => {
+            let item = document.createElement('li');
+            item.className = 'upcoming-events__item';
+
+            let label = document.createElement('a');
+            label.className = 'upcoming-events__label';
+            label.href = dolLib.getDolibarrCardUrl(confDolibarUrl, 'act', event.id);
+            label.target = '_blank';
+            label.textContent = event.label || ('#' + event.id);
+            label.title = label.textContent;
+            item.appendChild(label);
+
+            if(event.datep){
+                let start = new Date(parseInt(event.datep) * 1000);
+                let date = document.createElement('span');
+                date.className = 'upcoming-events__date';
+                date.textContent = dolLib.formatRelativeDay(start);
+                date.title = start.toLocaleString();
+                item.appendChild(date);
+            }
+
+            list.appendChild(item);
+        });
+
+        container.classList.remove('hidden-field');
+    },(errorMsg)=>{
+        console.error("setUpcomingEventsInfos : " + errorMsg);
+        container.classList.add('hidden-field');
+    });
+}
+
 function loadDocumentsInfos(data){
     setQuotationsInfos(data);
     setOrdersInfos(data);
     setInvoicesInfos(data);
     setSupplierordersInfos(data);
     setSupplierProposalsInfos(data);
+    setProjectsInfos(data);
+    setUpcomingEventsInfos(data);
 }
 
 /**

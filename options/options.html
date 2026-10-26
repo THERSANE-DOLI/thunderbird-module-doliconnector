@@ -50,6 +50,20 @@
 
 			<tr>
 				<td>
+					<label id="label-for-dolibarr-banner-display-mode" for="dolibarr-banner-display-mode">__MSG_dolibarrBannerDisplayMode__</label>
+					<br/><small id="label-for-dolibarr-banner-display-mode_desc" ></small>
+				</td>
+				<td>
+					<select class="dol-input" id="dolibarr-banner-display-mode" name="dolibarr-banner-display-mode">
+						<option id="dolibarr-banner-display-mode-always" value="always">__MSG_dolibarrBannerDisplayModeAlways__</option>
+						<option id="dolibarr-banner-display-mode-content" value="content">__MSG_dolibarrBannerDisplayModeContent__</option>
+						<option id="dolibarr-banner-display-mode-never" value="never">__MSG_dolibarrBannerDisplayModeNever__</option>
+					</select>
+				</td>
+			</tr>
+
+			<tr>
+				<td>
 					<label id="label-for-dolibarr-quotation-trusted-senders" for="dolibarr-quotation-trusted-senders">__MSG_dolibarrQuotationTrustedSenders__</label>
 					<br/><small id="label-for-dolibarr-quotation-trusted-senders_desc" ></small>
 				</td>
@@ -118,6 +132,31 @@
 			</div>
 
 	</details>
+
+		<details class="dolibarr-connector-detail">
+			<summary id="more-project-option-title">__MSG_MoreProjectOptions__</summary>
+
+			<p id="dolibarr-project-statuses">__MSG_dolibarrProjectStatuses__</p>
+			<div>
+				<!-- Project::STATUS_DRAFT = 0 -->
+				<label class="label-badge" for="dolibarr-project-draft">
+					<input class="dol-input" type="checkbox" value="0" id="dolibarr-project-draft" name="dolibarr-project-draft" />
+					<span id="label-for-dolibarr-project-draft">__MSG_StatusDraftShort__</span>
+				</label>
+
+				<!-- Project::STATUS_VALIDATED = 1 -->
+				<label class="label-badge" for="dolibarr-project-open">
+					<input class="dol-input" type="checkbox" value="1" id="dolibarr-project-open" name="dolibarr-project-open" />
+					<span id="label-for-dolibarr-project-open">__MSG_StatusOpenShort__</span>
+				</label>
+
+				<!-- Project::STATUS_CLOSED = 2 -->
+				<label class="label-badge" for="dolibarr-project-closed">
+					<input class="dol-input" type="checkbox" value="2" id="dolibarr-project-closed" name="dolibarr-project-closed" />
+					<span id="label-for-dolibarr-project-closed">__MSG_StatusClosed__</span>
+				</label>
+			</div>
+		</details>
 
 	<hr/>
 	<button id="save-dolibarr-options" type="submit" class="btn btn-primary">__MSG_Save__</button>
