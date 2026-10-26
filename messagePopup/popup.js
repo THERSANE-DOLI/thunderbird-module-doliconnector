@@ -1812,8 +1812,8 @@ async function updateRightsWarningIcon(){
 
 /**
  * Next agenda events of the thirdparty (5 at most), shown on top of the Info tab with a relative
- * date (« tomorrow », « in 6 days », exact date in the title). Events of today are kept, as well
- * as the ones that started earlier but are not over yet (datep2 = end date). The block stays hidden
+ * date (« tomorrow », « in 6 days », exact date in the title). The events still to come are kept,
+ * as well as the ones that started earlier but are not over yet (datep2 = end date). The block stays hidden
  * when there is no upcoming event or on any error (a 403 still shows in the missing rights icon).
  * With only the « read own events » right, the API returns the events of the current user only.
  */
@@ -1828,18 +1828,17 @@ function setUpcomingEventsInfos(confData){
         return;
     }
 
-    let today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // From now on (the automatic events of the thirdparty, created a moment ago, are left out) :
+    // 'YYYYMMDDhhmmss', with no ':' because Dolibarr 18's sqlfilters parser cuts the value on it.
+    let now = new Date();
     let pad = (n) => String(n).padStart(2, '0');
-    // Date only : Dolibarr 18's sqlfilters parser cuts the value on ':' (a time would break the
-    // filter), and the database compares a datetime with '2026-10-26' as midnight anyway.
-    let todaySql = today.getFullYear() + '-' + pad(today.getMonth() + 1) + '-' + pad(today.getDate());
+    let nowSql = now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
 
     return dolLib.callDolibarrApi('agendaevents', {
         sortfield: 't.datep',
         sortorder: 'ASC',
         limit: 5,
-        sqlfilters: "(t.fk_soc:=:" + parseInt(conf.socId) + ") and ((t.datep:>=:'" + todaySql + "') or (t.datep2:>=:'" + todaySql + "'))"
+        sqlfilters: "(t.fk_soc:=:" + parseInt(conf.socId) + ") and ((t.datep:>=:'" + nowSql + "') or (t.datep2:>=:'" + nowSql + "'))"
     }, 'GET', {}, (events)=>{
         LOG('setUpcomingEventsInfos received', events);
 

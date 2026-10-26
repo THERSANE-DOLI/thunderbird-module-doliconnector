@@ -2,7 +2,7 @@
 
 ## 2.9.0
 
-- Add the next agenda events of the thirdparty on top of the popup's Info tab (issue #13) : 5 events at most, today's ones and the ones not over yet included, each with a link to its Dolibarr card and a relative date (« tomorrow », « in 6 days », « in 4 months », exact date on hover). Hidden when there is no upcoming event. With only the Dolibarr right to read their own events, users see their own events only.
+- Add the next agenda events of the thirdparty on top of the popup's Info tab (issue #13) : 5 events at most, the ones still to come and the ones not over yet, each with a link to its Dolibarr card and a relative date (« tomorrow », « in 6 days », « in 4 months », exact date on hover). Hidden when there is no upcoming event. With only the Dolibarr right to read their own events, users see their own events only.
 
 ## 2.8.0
 
