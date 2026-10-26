@@ -1,5 +1,9 @@
 # CHANGELOG DOLICONNECTOR
 
+## 2.7.0
+
+- Add the « Banner in the email body » option (issue #45) : always (default, unchanged), only when Dolibarr content is found (no more grey « nothing found » banner), or never. The option describes the anti-phishing protection given up when the grey banner is hidden. The spoofing alert of the anti-spam is still shown in every mode, and the badge of the Dolibarr button still counts the notes. In « never » mode, the trackid record and the linked documents are no longer fetched when an email is opened.
+
 ## 2.6.0
 
 - Add the spoofing alert of the anti-spam of the CRM Client Connector Dolibarr module (1.5.0 or later, anti-spam enabled) : when an email uses the address of a known customer, supplier or contact but its authentication by the receiving server (DMARC, DKIM or SPF) fails, a red block is shown on top of the banner injected in the mail body, with the thirdparty or contact concerned and the authentication result.

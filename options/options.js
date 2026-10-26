@@ -61,6 +61,7 @@ async function restoreOptions() {
 		document.getElementById("dolibarr-propal-billed").checked = data.dolibarrPropalBilled;
 		document.getElementById("dolibarr-search-domain").checked = data.dolibarrSearchDomain;
 		document.getElementById("dolibarr-quotation-trusted-senders").value = data.dolibarrQuotationTrustedSenders;
+		document.getElementById("dolibarr-banner-display-mode").value = data.dolibarrBannerDisplayMode;
 	}
 
 
@@ -95,6 +96,11 @@ async function restoreOptions() {
     document.getElementById("label-for-dolibarr-quotation-trusted-senders").textContent = browser.i18n.getMessage("dolibarrQuotationTrustedSenders");
     document.getElementById("label-for-dolibarr-quotation-trusted-senders_desc").textContent = browser.i18n.getMessage("dolibarrQuotationTrustedSendersDesc");
     document.getElementById("dolibarr-quotation-trusted-senders").placeholder = browser.i18n.getMessage("dolibarrQuotationTrustedSendersPlaceholder");
+    document.getElementById("label-for-dolibarr-banner-display-mode").textContent = browser.i18n.getMessage("dolibarrBannerDisplayMode");
+    document.getElementById("label-for-dolibarr-banner-display-mode_desc").textContent = browser.i18n.getMessage("dolibarrBannerDisplayModeDesc");
+    document.getElementById("dolibarr-banner-display-mode-always").textContent = browser.i18n.getMessage("dolibarrBannerDisplayModeAlways");
+    document.getElementById("dolibarr-banner-display-mode-content").textContent = browser.i18n.getMessage("dolibarrBannerDisplayModeContent");
+    document.getElementById("dolibarr-banner-display-mode-never").textContent = browser.i18n.getMessage("dolibarrBannerDisplayModeNever");
 
 
 	let connectionData = await dolLib.getDolibarrConnections();
@@ -114,7 +120,8 @@ async function restoreOptions() {
 		dolibarrPropalNotSigned:  false,
 		dolibarrPropalBilled:  false,
 		dolibarrSearchDomain:  false,
-		dolibarrQuotationTrustedSenders: ''
+		dolibarrQuotationTrustedSenders: '',
+		dolibarrBannerDisplayMode: 'always'
     }).then(setCurrentChoice, onError);
 }
 
@@ -477,7 +484,8 @@ async function saveOptions(e) {
         dolibarrPropalNotSigned: document.getElementById("dolibarr-propal-notsigned").checked,
         dolibarrPropalBilled: document.getElementById("dolibarr-propal-billed").checked,
         dolibarrSearchDomain: document.getElementById("dolibarr-search-domain").checked,
-        dolibarrQuotationTrustedSenders: document.getElementById("dolibarr-quotation-trusted-senders").value
+        dolibarrQuotationTrustedSenders: document.getElementById("dolibarr-quotation-trusted-senders").value,
+        dolibarrBannerDisplayMode: document.getElementById("dolibarr-banner-display-mode").value
     }
     // console.log(objToStore);
 

@@ -167,6 +167,21 @@
   "dolibarrQuotationTrustedSendersPlaceholder" :{
     "message": "Une adresse ou un domaine par ligne, ex. :\nboutique@example.com\n@maboutique.fr"
   },
+  "dolibarrBannerDisplayMode" :{
+    "message": "Bandeau dans le corps du mail"
+  },
+  "dolibarrBannerDisplayModeDesc" :{
+    "message": "Le bandeau gris « rien trouvé » protège contre le phishing : un mail qui imite le bandeau Dolibarr affiche alors deux bandeaux. Le masquer retire cette protection. L'alerte d'usurpation de l'anti-spam reste toujours affichée."
+  },
+  "dolibarrBannerDisplayModeAlways" :{
+    "message": "Toujours (recommandé)"
+  },
+  "dolibarrBannerDisplayModeContent" :{
+    "message": "Seulement si du contenu Dolibarr est trouvé"
+  },
+  "dolibarrBannerDisplayModeNever" :{
+    "message": "Jamais"
+  },
   "Comments" :{
     "message": "Commentaires"
   },

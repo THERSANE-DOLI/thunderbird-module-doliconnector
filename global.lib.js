@@ -879,6 +879,18 @@ export async function getQuotationTrustedSenders(){
 }
 
 /**
+ * When the banner is injected in the mail body (see checkAndInjectDolibarrBanner() in
+ * background.js) : 'always' (default, keeps the grey "nothing found" anti-phishing banner),
+ * 'content' (only when Dolibarr content was found) or 'never'. The anti-spam spoofing alert is
+ * shown whatever the mode.
+ * @returns {Promise<'always'|'content'|'never'>}
+ */
+export async function getBannerDisplayMode(){
+    let config = await browser.storage.local.get({dolibarrBannerDisplayMode: 'always'});
+    return ['always', 'content', 'never'].includes(config.dolibarrBannerDisplayMode) ? config.dolibarrBannerDisplayMode : 'always';
+}
+
+/**
  * @param {string} email
  * @param {string[]} trustedSenders list from getQuotationTrustedSenders()
  * @returns {boolean}

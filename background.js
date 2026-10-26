@@ -147,6 +147,11 @@ function injectDoliCss(tabId){
  * where there should only ever be one - see the empty banner's own <details> explanation
  * (renderEmptyDolibarrBox()) for the user-facing wording.
  *
+ * The user can give up this protection with the banner display mode option (see
+ * dolLib.getBannerDisplayMode()) : 'content' drops the grey banner, 'never' drops the whole content
+ * part (trackid and linked documents aren't even fetched then). The spoofing alert of the anti-spam
+ * is a security alert, not an information banner : it is shown whatever the mode.
+ *
  * @param tab
  * @param message
  */
@@ -167,17 +172,24 @@ async function checkAndInjectDolibarrBanner(tab, message){
     }
 
     let crmConnectorEnabled = await dolLib.isCrmConnectorEnabled(accountId);
+    let displayMode = await dolLib.getBannerDisplayMode();
+    let showContent = displayMode !== 'never';
 
+    // Notes are still resolved in 'never' mode : they also drive the badge of the message display
+    // action button, which isn't part of the banner.
     let [trackidInfo, notesInfo, linkedDocsInfo, spoofInfo] = await Promise.all([
-        resolveTrackidInfo(message, accountId),
+        showContent ? resolveTrackidInfo(message, accountId) : Promise.resolve(null),
         crmConnectorEnabled ? resolveNotesInfo(tab, message, accountId) : Promise.resolve(null),
-        crmConnectorEnabled ? resolveLinkedDocsInfo(message, accountId) : Promise.resolve([]),
+        (crmConnectorEnabled && showContent) ? resolveLinkedDocsInfo(message, accountId) : Promise.resolve([]),
         crmConnectorEnabled ? resolveSpoofInfo(message, accountId) : Promise.resolve(null)
     ]);
 
-    injectDoliCss(tab.id);
+    let html = renderDolibarrBanner(trackidInfo, notesInfo, linkedDocsInfo, spoofInfo, displayMode);
+    if(html === ''){
+        return;
+    }
 
-    let html = renderDolibarrBanner(trackidInfo, notesInfo, linkedDocsInfo, spoofInfo);
+    injectDoliCss(tab.id);
 
     browser.tabs.executeScript(tab.id, {
         code: `
@@ -536,11 +548,17 @@ function renderDolibarrRefGroupRow(refs){
  * @param {Array|null} notesInfo
  * @param {Array} linkedDocsInfo
  * @param {{thirdparty:string, contact:string, from:string, detail:string}|null} spoofInfo  anti-spam alert, see resolveSpoofInfo()
+ * @param {'always'|'content'|'never'} displayMode  see dolLib.getBannerDisplayMode()
+ * @returns {string} empty string when there is nothing to inject
  */
-function renderDolibarrBanner(trackidInfo, notesInfo, linkedDocsInfo, spoofInfo){
-    // The spoofing alert always comes first, whatever else is (or isn't) found for this mail
+function renderDolibarrBanner(trackidInfo, notesInfo, linkedDocsInfo, spoofInfo, displayMode){
+    // The spoofing alert always comes first, whatever else is (or isn't) found for this mail, and
+    // whatever the display mode
     let spoofHtml = spoofInfo ? renderSpoofAlert(spoofInfo) : '';
-    return spoofHtml + renderDolibarrContentBanner(trackidInfo, notesInfo, linkedDocsInfo);
+    if(displayMode === 'never'){
+        return spoofHtml;
+    }
+    return spoofHtml + renderDolibarrContentBanner(trackidInfo, notesInfo, linkedDocsInfo, displayMode === 'always');
 }
 
 /**
@@ -548,15 +566,16 @@ function renderDolibarrBanner(trackidInfo, notesInfo, linkedDocsInfo, spoofInfo)
  * @param {{type:string, id:number, typeLabel:string, refLabel:string}|null} trackidInfo
  * @param {Array|null} notesInfo
  * @param {Array} linkedDocsInfo
+ * @param {boolean} showEmptyBox  grey "nothing found" notice when there is no content, else ''
  */
-function renderDolibarrContentBanner(trackidInfo, notesInfo, linkedDocsInfo){
+function renderDolibarrContentBanner(trackidInfo, notesInfo, linkedDocsInfo, showEmptyBox){
     let lastNote = (notesInfo && notesInfo.length > 0) ? notesInfo[notesInfo.length - 1] : null;
     let otherLinkedDocs = (linkedDocsInfo || []).filter((doc) => {
         return !(trackidInfo && String(doc.type) === String(trackidInfo.type) && String(doc.id) === String(trackidInfo.id));
     });
 
     if(!trackidInfo && otherLinkedDocs.length === 0 && !lastNote){
-        return renderEmptyDolibarrBox();
+        return showEmptyBox ? renderEmptyDolibarrBox() : '';
     }
 
     let rows = '';

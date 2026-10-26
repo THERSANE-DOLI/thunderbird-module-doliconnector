@@ -170,6 +170,21 @@
   "dolibarrQuotationTrustedSendersPlaceholder" :{
     "message": "One address or domain per line, e.g.:\nshop@example.com\n@myshop.com"
   },
+  "dolibarrBannerDisplayMode" :{
+    "message": "Banner in the email body"
+  },
+  "dolibarrBannerDisplayModeDesc" :{
+    "message": "The grey « nothing found » banner protects against phishing: an email imitating the Dolibarr banner then shows two banners. Hiding it removes this protection. The spoofing alert of the anti-spam is always shown."
+  },
+  "dolibarrBannerDisplayModeAlways" :{
+    "message": "Always (recommended)"
+  },
+  "dolibarrBannerDisplayModeContent" :{
+    "message": "Only when Dolibarr content is found"
+  },
+  "dolibarrBannerDisplayModeNever" :{
+    "message": "Never"
+  },
   "Comments" :{
     "message": "Comments"
   },
