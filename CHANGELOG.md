@@ -1,5 +1,10 @@
 # CHANGELOG DOLICONNECTOR
 
+## 2.11.0
+
+- The Dolibarr button of the message display now shows whether the sender is known in Dolibarr (issue #24) : green dot when the sender is a contact or a thirdparty, orange dot when only a thirdparty of the same email domain is known (with the « also search by domain » option, never for a public email domain), plain icon otherwise. Its tooltip names the contact / thirdparty found.
+- One single API call per sender with CRM Client Connector 1.9.0 or later (`crmclientconnector/lookup`), else the core contacts and thirdparties endpoints are used. Each result is kept 10 minutes per mailbox and sender.
+
 ## 2.10.0
 
 - Better company name when creating a thirdparty for an unknown sender (issue #39). The name is now taken, in this order, from : the organization (ORG) of a vCard attached to the email, the organization of the sender's contact in the Thunderbird address books, the part between parentheses of the sender's name (« Vincent Picavet ( Oslandia ) »), the domain of the email address (« oslandia.com » gives « Oslandia », public domains like gmail or orange excluded), and at last the sender's name as before. The new contact keeps the person's name, without the part between parentheses.

@@ -72,7 +72,147 @@ browser.runtime.onMessage.addListener((message, sender) => {
 
 browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
     checkAndInjectDolibarrBanner(tab, message);
+    updateSenderIcon(tab, message);
 });
+
+
+/**
+ * Icons of the Dolibarr button of the message display (issue #24) : green dot when the sender is
+ * a contact or a thirdparty of Dolibarr, orange dot when only a thirdparty of the same email
+ * domain is known (« also search by domain » option), plain icon otherwise.
+ */
+const SENDER_ICONS = {
+    known: {16: 'images/dolibarr-16-known.png', 32: 'images/dolibarr-32-known.png'},
+    domain: {16: 'images/dolibarr-16-domain.png', 32: 'images/dolibarr-32-domain.png'},
+    unknown: {16: 'images/dolibarr-16.png', 32: 'images/dolibarr-32.png'}
+};
+
+/**
+ * Lookups of the senders are kept 10 minutes (per mailbox and email), so going back and forth
+ * between the emails of a same sender doesn't call Dolibarr each time. storage.session when the
+ * Thunderbird version has it (the background page isn't persistent), in memory otherwise.
+ */
+const SENDER_LOOKUP_TTL = 10 * 60 * 1000;
+const senderLookupMemoryCache = new Map();
+
+async function getCachedSenderLookup(key){
+    let entry = null;
+    if(browser.storage.session){
+        entry = (await browser.storage.session.get({['senderLookup:' + key]: null}))['senderLookup:' + key];
+    }else{
+        entry = senderLookupMemoryCache.get(key) || null;
+    }
+    return (entry && entry.time > Date.now() - SENDER_LOOKUP_TTL) ? entry.result : null;
+}
+
+async function setCachedSenderLookup(key, result){
+    let entry = {time: Date.now(), result: result};
+    if(browser.storage.session){
+        await browser.storage.session.set({['senderLookup:' + key]: entry});
+    }else{
+        senderLookupMemoryCache.set(key, entry);
+    }
+}
+
+/**
+ * Sets the icon and title of the Dolibarr button of this tab from the lookup of the sender (see
+ * resolveSenderLookup()). Reset to the plain icon first, so the icon of the previous email never
+ * stays while the lookup runs.
+ * @param tab
+ * @param message
+ */
+async function updateSenderIcon(tab, message){
+    try {
+        await browser.messageDisplayAction.setIcon({tabId: tab.id, path: SENDER_ICONS.unknown});
+        await browser.messageDisplayAction.setTitle({tabId: tab.id, title: browser.i18n.getMessage("extensionName")});
+
+        let accountId = message.folder ? message.folder.accountId : undefined;
+        if(!(await dolLib.checkConfig(accountId))){
+            return;
+        }
+        let emails = dolLib.extractEmailAddressFromString(message.author || '');
+        let email = emails ? emails[0].toLowerCase() : '';
+        if(!email){
+            return;
+        }
+
+        let cacheKey = accountId + '|' + email;
+        let result = await getCachedSenderLookup(cacheKey);
+        if(!result){
+            result = await resolveSenderLookup(email, accountId);
+            await setCachedSenderLookup(cacheKey, result);
+        }
+        if(!result.found){
+            return;
+        }
+
+        let name = result.contactname && result.socname ? result.contactname + ' (' + result.socname + ')' : (result.socname || result.contactname);
+        await browser.messageDisplayAction.setIcon({tabId: tab.id, path: result.matchedBy === 'domain' ? SENDER_ICONS.domain : SENDER_ICONS.known});
+        await browser.messageDisplayAction.setTitle({
+            tabId: tab.id,
+            title: browser.i18n.getMessage(result.matchedBy === 'domain' ? "SenderKnownByDomainTitle" : "SenderKnownTitle", [name])
+        });
+    } catch (e) {
+        console.warn("[DoliConnector background] could not update the icon of the sender", e);
+    }
+}
+
+/**
+ * Finds the thirdparty of the sender, same order as the popup's own search : contact having this
+ * email, thirdparty having this email, then thirdparty of the same email domain (only with the
+ * « also search by domain » option, never for a public domain). One call to
+ * crmclientconnector/lookup when the CRM Client Connector module is enabled (1.9.0 or later), else
+ * (or on an older module) the core contacts / thirdparties endpoints.
+ * @param {string} email
+ * @param {string} accountId
+ * @returns {Promise<{found: boolean, matchedBy: string, socid: number, socname: string, contactid: number, contactname: string}>}
+ */
+async function resolveSenderLookup(email, accountId){
+    let notFound = {found: false, matchedBy: '', socid: 0, socname: '', contactid: 0, contactname: ''};
+    let searchDomain = (await browser.storage.local.get({dolibarrSearchDomain: false})).dolibarrSearchDomain;
+    let emailDomain = email.split('@').pop();
+    let publicDomains = await fetch(browser.runtime.getURL("exclude-domains.json")).then(response => response.json()).catch(() => []);
+    let domainAllowed = searchDomain && !publicDomains.includes(emailDomain);
+
+    let callApi = (endPoint, params) => new Promise((resolve) => {
+        dolLib.callDolibarrApi(endPoint, params, 'GET', {}, (data) => resolve({data: data, error: null}), (message, info) => resolve({data: null, error: info || {}}), false, accountId);
+    });
+
+    if(await dolLib.isCrmConnectorEnabled(accountId)){
+        let res = await callApi('crmclientconnector/lookup', {email: email, domain: domainAllowed ? 1 : 0});
+        if(res.data && typeof res.data.found === 'boolean'){
+            return res.data;
+        }
+        if(!res.error || res.error.status !== 404){
+            // Error other than an older module without this endpoint : not known for now
+            return notFound;
+        }
+    }
+
+    let res = await callApi('contacts', {limit: 1, sortfield: 't.rowid', sortorder: 'DESC', sqlfilters: "(t.email:=:'" + email + "')"});
+    if(Array.isArray(res.data) && res.data.length > 0){
+        let contact = res.data[0];
+        return Object.assign({}, notFound, {
+            found: true, matchedBy: 'contact', contactid: parseInt(contact.id),
+            contactname: [contact.firstname, contact.lastname].filter(Boolean).join(' '),
+            socid: parseInt(contact.socid) || 0, socname: contact.socname || ''
+        });
+    }
+
+    res = await callApi('thirdparties', {limit: 1, sortfield: 't.rowid', sortorder: 'DESC', sqlfilters: "(t.email:=:'" + email + "')"});
+    if(Array.isArray(res.data) && res.data.length > 0){
+        return Object.assign({}, notFound, {found: true, matchedBy: 'thirdparty', socid: parseInt(res.data[0].id), socname: res.data[0].name || ''});
+    }
+
+    if(domainAllowed){
+        res = await callApi('thirdparties', {limit: 1, sortfield: 't.rowid', sortorder: 'DESC', sqlfilters: "(t.email:like:'%@" + emailDomain + "')"});
+        if(Array.isArray(res.data) && res.data.length > 0){
+            return Object.assign({}, notFound, {found: true, matchedBy: 'domain', socid: parseInt(res.data[0].id), socname: res.data[0].name || ''});
+        }
+    }
+
+    return notFound;
+}
 
 
 /**
