@@ -1,5 +1,10 @@
 # CHANGELOG DOLICONNECTOR
 
+## 2.12.0
+
+- Add a « Get it with my login » button next to the API key of each Dolibarr connection (issue #21) : a dialog asks for the Dolibarr login and password and fills in the user's API key, from Dolibarr's `POST /login` endpoint (never the GET variant, which puts the password in the URL). The password is only sent to Dolibarr and never stored, the existing key is never reset (other clients using it keep working), and a warning shows when the Dolibarr URL isn't https. The HTTP authentication of the connection is used when enabled.
+- Clear messages when it can't work : wrong login or password, login API disabled on the Dolibarr side (`API_DISABLE_LOGIN_API`), user without API key and without the right to create it, wrong URL or REST API module disabled. External authentication (SSO / OAuth) or a second factor still need the key to be entered by hand.
+
 ## 2.11.0
 
 - The Dolibarr button of the message display now shows whether the sender is known in Dolibarr (issue #24) : green dot when the sender is a contact or a thirdparty, orange dot when only a thirdparty of the same email domain is known (with the « also search by domain » option, never for a public email domain), plain icon otherwise. Its tooltip names the contact / thirdparty found.

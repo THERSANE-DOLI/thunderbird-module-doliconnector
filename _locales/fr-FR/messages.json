@@ -222,6 +222,64 @@
   "dolibarrBannerDisplayModeNever" :{
     "message": "Jamais"
   },
+  "dolibarrApiKeyFromLogin": {
+    "message": "Obtenir avec mon identifiant"
+  },
+  "dolibarrApiKeyLoginIntro": {
+    "message": "Votre identifiant et votre mot de passe Dolibarr sont envoyés uniquement à $URL$ pour obtenir votre clé API, ils ne sont pas enregistrés.",
+    "placeholders": {
+      "url": {
+        "content": "$1"
+      }
+    }
+  },
+  "dolibarrApiKeyLoginHttpWarning": {
+    "message": "Cette adresse Dolibarr n'est pas sécurisée (http) : le mot de passe circule en clair."
+  },
+  "dolibarrLogin": {
+    "message": "Identifiant"
+  },
+  "dolibarrPassword": {
+    "message": "Mot de passe"
+  },
+  "dolibarrApiKeyLoginSubmit": {
+    "message": "Obtenir la clé API"
+  },
+  "dolibarrApiKeyLoginSuccess": {
+    "message": "Clé API remplie. Enregistrez les options pour la conserver."
+  },
+  "dolibarrApiKeyLoginNoUrl": {
+    "message": "Saisissez d'abord l'URL de Dolibarr."
+  },
+  "dolibarrApiKeyLoginNetworkError": {
+    "message": "Dolibarr est injoignable. Vérifiez l'URL et autorisez l'accès demandé par Thunderbird."
+  },
+  "dolibarrApiKeyLoginHttpAuthError": {
+    "message": "Accès refusé par l'authentification HTTP du serveur : renseignez d'abord son utilisateur et son mot de passe plus bas."
+  },
+  "dolibarrApiKeyLoginDisabled": {
+    "message": "L'obtention de la clé par identifiant est désactivée sur ce Dolibarr. Générez la clé API depuis votre fiche utilisateur dans Dolibarr (champ « Clé pour l'API ») et collez-la."
+  },
+  "dolibarrApiKeyLoginBadCredentials": {
+    "message": "Identifiant ou mot de passe incorrect (ou identifiant inutilisable ici, par exemple avec une authentification externe ou un second facteur)."
+  },
+  "dolibarrApiKeyLoginNoToken": {
+    "message": "Votre utilisateur n'a pas encore de clé API et vous n'avez pas le droit de la créer. Demandez à votre administrateur Dolibarr."
+  },
+  "dolibarrApiKeyLoginNotFound": {
+    "message": "API introuvable : vérifiez l'URL de Dolibarr et que le module « API REST » est activé."
+  },
+  "dolibarrApiKeyLoginError": {
+    "message": "Erreur $STATUS$ : $MESSAGE$",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      },
+      "message": {
+        "content": "$2"
+      }
+    }
+  },
   "Comments" :{
     "message": "Commentaires"
   },

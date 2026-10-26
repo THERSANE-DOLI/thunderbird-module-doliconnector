@@ -206,7 +206,16 @@ function renderConnectionCard(connection){
 	keyInput.type = 'password';
 	keyInput.value = connection.apiKey || '';
 	keyInput.addEventListener('input', () => { connection.apiKey = keyInput.value; });
-	addRow(browser.i18n.getMessage("dolibarrApiKey"), keyInput);
+	let keyWrapper = document.createElement('div');
+	keyWrapper.className = 'dol-input-with-btn';
+	keyWrapper.appendChild(keyInput);
+	let keyLoginBtn = document.createElement('button');
+	keyLoginBtn.type = 'button';
+	keyLoginBtn.className = 'btn';
+	keyLoginBtn.textContent = browser.i18n.getMessage("dolibarrApiKeyFromLogin");
+	keyLoginBtn.addEventListener('click', () => openApiKeyLoginDialog(connection, keyInput));
+	keyWrapper.appendChild(keyLoginBtn);
+	addRow(browser.i18n.getMessage("dolibarrApiKey"), keyWrapper);
 
 	let entityInput = document.createElement('input');
 	entityInput.className = 'dol-input';
@@ -406,6 +415,174 @@ function removeConnection(connectionId){
 	});
 	renderConnectionsList();
 	renderAccountMappingTable();
+}
+
+/**
+ * « Get it with my login » button of the API key field (issue #21) : asks the Dolibarr login and
+ * password in a dialog and gets the user's API key from Dolibarr's POST /login endpoint. The
+ * password is only sent to Dolibarr, never stored. Always reset=0 : asking a new key would break
+ * every other client (another Thunderbird, a script...) using the current one. Doesn't work when
+ * the login API is disabled on the Dolibarr side (API_DISABLE_LOGIN_API), nor with an external
+ * authentication (SSO / OAuth) or a second factor : the key is then entered by hand as before.
+ * @param {object} connection
+ * @param {HTMLInputElement} keyInput
+ */
+async function openApiKeyLoginDialog(connection, keyInput){
+	let apiUrl = (connection.apiUrl || '').replace(/\/+$/, '');
+	if(!isValidHttpUrl(apiUrl)){
+		dolLib.showToast(browser.i18n.getMessage("dolibarrApiKeyLoginNoUrl"), 'error');
+		return;
+	}
+	// The host permission is needed to call this Dolibarr from the options page, asked here while
+	// the click (user gesture) is still running.
+	try {
+		await browser.permissions.request({origins: [apiUrl + '/*']});
+	} catch (e) {
+		console.warn('[DoliConnector options] host permission request failed', e);
+	}
+
+	let dialog = document.createElement('dialog');
+	dialog.className = 'dol-dialog';
+
+	let form = document.createElement('form');
+	form.method = 'dialog';
+	dialog.appendChild(form);
+
+	let title = document.createElement('h3');
+	title.textContent = browser.i18n.getMessage("dolibarrApiKeyFromLogin");
+	form.appendChild(title);
+
+	let intro = document.createElement('p');
+	intro.className = 'dol-dialog__intro';
+	intro.textContent = browser.i18n.getMessage("dolibarrApiKeyLoginIntro", [apiUrl]);
+	form.appendChild(intro);
+
+	if(apiUrl.startsWith('http:')){
+		let warning = document.createElement('p');
+		warning.className = 'dolibarr-notice';
+		warning.textContent = browser.i18n.getMessage("dolibarrApiKeyLoginHttpWarning");
+		form.appendChild(warning);
+	}
+
+	let addField = (labelKey, type, autocomplete) => {
+		let label = document.createElement('label');
+		label.className = 'dol-dialog__field';
+		let span = document.createElement('span');
+		span.textContent = browser.i18n.getMessage(labelKey);
+		let input = document.createElement('input');
+		input.className = 'dol-input';
+		input.type = type;
+		input.autocomplete = autocomplete;
+		input.required = true;
+		label.appendChild(span);
+		label.appendChild(input);
+		form.appendChild(label);
+		return input;
+	};
+	let loginInput = addField("dolibarrLogin", 'text', 'username');
+	let passwordInput = addField("dolibarrPassword", 'password', 'current-password');
+
+	let error = document.createElement('p');
+	error.className = 'dol-dialog__error hidden-field';
+	form.appendChild(error);
+
+	let buttons = document.createElement('div');
+	buttons.className = 'dol-dialog__buttons';
+	let cancelBtn = document.createElement('button');
+	cancelBtn.type = 'button';
+	cancelBtn.className = 'btn';
+	cancelBtn.textContent = browser.i18n.getMessage("Cancel");
+	cancelBtn.addEventListener('click', () => dialog.close());
+	let submitBtn = document.createElement('button');
+	submitBtn.type = 'submit';
+	submitBtn.className = 'btn btn-primary';
+	submitBtn.textContent = browser.i18n.getMessage("dolibarrApiKeyLoginSubmit");
+	buttons.appendChild(cancelBtn);
+	buttons.appendChild(submitBtn);
+	form.appendChild(buttons);
+
+	form.addEventListener('submit', async (event) => {
+		event.preventDefault();
+		error.classList.add('hidden-field');
+		submitBtn.disabled = true;
+		try {
+			let token = await requestApiKeyFromLogin(connection, apiUrl, loginInput.value, passwordInput.value);
+			keyInput.value = token;
+			connection.apiKey = token;
+			dialog.close();
+			dolLib.showToast(browser.i18n.getMessage("dolibarrApiKeyLoginSuccess"), 'success');
+		} catch (e) {
+			error.textContent = e.message;
+			error.classList.remove('hidden-field');
+		} finally {
+			passwordInput.value = '';
+			submitBtn.disabled = false;
+		}
+	});
+	dialog.addEventListener('close', () => dialog.remove());
+
+	document.body.appendChild(dialog);
+	dialog.showModal();
+	loginInput.focus();
+}
+
+/**
+ * POST {apiUrl}/api/index.php/login (never the GET variant, which puts the password in the URL
+ * and so in the server logs). HTTP Basic Auth of the connection added when enabled.
+ * @param {object} connection
+ * @param {string} apiUrl  without trailing slash
+ * @param {string} login
+ * @param {string} password
+ * @returns {Promise<string>} the API key
+ * @throws {Error} with a message for the user
+ */
+async function requestApiKeyFromLogin(connection, apiUrl, login, password){
+	let headers = {'Content-Type': 'application/json', 'Accept': 'application/json'};
+	if(connection.httpAuthEnabled && (connection.httpAuthUser || '').length > 0){
+		headers['Authorization'] = 'Basic ' + btoa(connection.httpAuthUser + ':' + (connection.httpAuthPassword || ''));
+	}
+	let entity = parseInt(connection.apiEntity) > 0 ? String(parseInt(connection.apiEntity)) : '';
+
+	let response;
+	try {
+		response = await fetch(apiUrl + '/api/index.php/login', {
+			method: 'POST',
+			headers: headers,
+			cache: 'no-store',
+			body: JSON.stringify({login: login, password: password, entity: entity, reset: 0})
+		});
+	} catch (e) {
+		throw new Error(browser.i18n.getMessage("dolibarrApiKeyLoginNetworkError"));
+	}
+
+	let data = null;
+	try {
+		data = await response.json();
+	} catch (e) {
+		data = null;
+	}
+	if(response.ok && data && data.success && data.success.token){
+		return data.success.token;
+	}
+
+	let dolibarrMessage = (data && data.error && data.error.message) ? data.error.message : '';
+	if(response.status === 401 && !dolibarrMessage){
+		// HTTP Basic Auth of a reverse proxy, before Dolibarr
+		throw new Error(browser.i18n.getMessage("dolibarrApiKeyLoginHttpAuthError"));
+	}
+	if(/disabled/i.test(dolibarrMessage)){
+		throw new Error(browser.i18n.getMessage("dolibarrApiKeyLoginDisabled"));
+	}
+	if(/Access denied/i.test(dolibarrMessage)){
+		throw new Error(browser.i18n.getMessage("dolibarrApiKeyLoginBadCredentials"));
+	}
+	if(/No API token set/i.test(dolibarrMessage)){
+		throw new Error(browser.i18n.getMessage("dolibarrApiKeyLoginNoToken"));
+	}
+	if(response.status === 404){
+		throw new Error(browser.i18n.getMessage("dolibarrApiKeyLoginNotFound"));
+	}
+	throw new Error(browser.i18n.getMessage("dolibarrApiKeyLoginError", [String(response.status), dolibarrMessage || response.statusText || '']));
 }
 
 /**

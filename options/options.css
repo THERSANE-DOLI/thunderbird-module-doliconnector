@@ -146,3 +146,58 @@ input:checked + .dol-input-slider:before {
 .dolibarr-notice li:last-child {
     margin-bottom: 0;
 }
+/* API key field + « get it with my login » button (see openApiKeyLoginDialog()) */
+.dol-input-with-btn {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.dol-input-with-btn .dol-input {
+    flex: 1;
+}
+
+.dol-input-with-btn .btn {
+    white-space: nowrap;
+}
+
+.dol-dialog {
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 16px 20px;
+    width: min(420px, calc(100vw - 32px));
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.dol-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.dol-dialog h3 {
+    margin-top: 0;
+}
+
+.dol-dialog__intro {
+    font-size: 12px;
+    color: #666;
+    word-break: break-all;
+}
+
+.dol-dialog__field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+.dol-dialog__error {
+    color: #b42318;
+    font-size: 12px;
+}
+
+.dol-dialog__buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 14px;
+}
