@@ -115,7 +115,7 @@ async function setCachedSenderLookup(key, result){
 }
 
 /**
- * Sets the icon and title of the Dolibarr button of this tab from the lookup of the sender (see
+ * Sets the icon of the Dolibarr button of this tab from the lookup of the sender (see
  * resolveSenderLookup()). Reset to the plain icon first, so the icon of the previous email never
  * stays while the lookup runs.
  * @param tab
@@ -124,7 +124,6 @@ async function setCachedSenderLookup(key, result){
 async function updateSenderIcon(tab, message){
     try {
         await browser.messageDisplayAction.setIcon({tabId: tab.id, path: SENDER_ICONS.unknown});
-        await browser.messageDisplayAction.setTitle({tabId: tab.id, title: browser.i18n.getMessage("extensionName")});
 
         let accountId = message.folder ? message.folder.accountId : undefined;
         if(!(await dolLib.checkConfig(accountId))){
@@ -146,12 +145,9 @@ async function updateSenderIcon(tab, message){
             return;
         }
 
-        let name = result.contactname && result.socname ? result.contactname + ' (' + result.socname + ')' : (result.socname || result.contactname);
+        // Icon only : Thunderbird shows the title of this button as its label in the toolbar, a
+        // title naming the sender would make the button far too wide.
         await browser.messageDisplayAction.setIcon({tabId: tab.id, path: result.matchedBy === 'domain' ? SENDER_ICONS.domain : SENDER_ICONS.known});
-        await browser.messageDisplayAction.setTitle({
-            tabId: tab.id,
-            title: browser.i18n.getMessage(result.matchedBy === 'domain' ? "SenderKnownByDomainTitle" : "SenderKnownTitle", [name])
-        });
     } catch (e) {
         console.warn("[DoliConnector background] could not update the icon of the sender", e);
     }

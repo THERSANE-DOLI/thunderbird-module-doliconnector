@@ -89,22 +89,6 @@
   "UpcomingEvents": {
     "message": "Anstehende Ereignisse"
   },
-  "SenderKnownTitle": {
-    "message": "Dolibarr: $NAME$ ist in Dolibarr bekannt",
-    "placeholders": {
-      "name": {
-        "content": "$1"
-      }
-    }
-  },
-  "SenderKnownByDomainTitle": {
-    "message": "Dolibarr: gleiche E-Mail-Domain wie $NAME$ in Dolibarr",
-    "placeholders": {
-      "name": {
-        "content": "$1"
-      }
-    }
-  },
   "FicheDolibarr": {
     "message": "Geschäftspartner anzeigen"
   },
