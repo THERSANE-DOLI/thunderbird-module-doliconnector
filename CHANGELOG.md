@@ -1,5 +1,10 @@
 # CHANGELOG DOLICONNECTOR
 
+## 2.10.0
+
+- Better company name when creating a thirdparty for an unknown sender (issue #39). The name is now taken, in this order, from : the organization (ORG) of a vCard attached to the email, the organization of the sender's contact in the Thunderbird address books, the part between parentheses of the sender's name (« Vincent Picavet ( Oslandia ) »), the domain of the email address (« oslandia.com » gives « Oslandia », public domains like gmail or orange excluded), and at last the sender's name as before. The new contact keeps the person's name, without the part between parentheses.
+- New optional permission « addressBooks », asked on the first click on « Create a company » only (no question on update). When declined, it is not asked again and the other sources are still used.
+
 ## 2.9.0
 
 - Add the next agenda events of the thirdparty on top of the popup's Info tab (issue #13) : 5 events at most, the ones still to come and the ones not over yet, each with a link to its Dolibarr card and a relative date (« tomorrow », « in 6 days », « in 4 months », exact date on hover). Hidden when there is no upcoming event. With only the Dolibarr right to read their own events, users see their own events only.

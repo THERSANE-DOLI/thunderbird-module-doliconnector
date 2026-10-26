@@ -11,9 +11,10 @@
     "messagesTags"
   ],
   "optional_permissions": [
-    "<all_urls>"
+    "<all_urls>",
+    "addressBooks"
   ],
-  "version": "2.9.0",
+  "version": "2.10.0",
   "author": "THERSANE",
   "homepage_url": "https://www.thersane.fr",
   "browser_specific_settings": {

@@ -547,10 +547,9 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
 
                 soc.phone_pro = quotationData.phone || '';
             }else{
-                // societe not found
-                soc.name = message.author.replace(authorEmail,'');
-                soc.name = soc.name.replace(/[^a-zA-Z0-9áàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ ]/g, '');
-                soc.name = soc.name.trim();
+                // societe not found : soc.name is the person (popup title, new contact), the
+                // company name of the new thirdparty is guessed below (see guessCompanyName())
+                soc.name = dolLib.splitDisplayName(message.author).person;
 
                 // let phones = dolLib.searchPhonesInString(messageBody.html, true);
                 let phones = dolLib.searchPhonesInString(messageBody.txt);
@@ -570,16 +569,57 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
                 ? {firstName: quotationData.firstname || '', lastName: quotationData.lastname || ''}
                 : dolLib.parseName(soc.name);
 
-            let newThirdURL = new URL(confDolibarUrl + "societe/card.php");
-            newThirdURL.searchParams.set('action', "create");
-            newThirdURL.searchParams.set('email', searchEmail);
-            newThirdURL.searchParams.set('name', soc.name);
-            newThirdURL.searchParams.set('phone',  soc.phone_pro);
-            if(quotationData.siren){
-                newThirdURL.searchParams.set('idprof1', quotationData.siren);
+            let buildNewThirdURL = (companyName) => {
+                let url = new URL(confDolibarUrl + "societe/card.php");
+                url.searchParams.set('action', "create");
+                url.searchParams.set('email', searchEmail);
+                url.searchParams.set('name', companyName);
+                url.searchParams.set('phone',  soc.phone_pro);
+                if(quotationData.siren){
+                    url.searchParams.set('idprof1', quotationData.siren);
+                }
+                if(quotationData.vat_number){
+                    url.searchParams.set('tva_intra', quotationData.vat_number);
+                }
+                return url;
+            };
+
+            // The trusted X-Quotation-Data header already gives the company, else guess it from the
+            // email (vCard, address book, display name, domain - see dolLib.guessCompanyName())
+            let companyGuessData = {messageId: message.id, author: message.author, email: searchEmail, excludedDomains: []};
+            let companyGuess = {name: soc.name, source: 'quotation'};
+            if(!(quotationActive && (quotationData.firstname || quotationData.lastname))){
+                companyGuessData.excludedDomains = await getExcludedDomains();
+                companyGuess = await dolLib.guessCompanyName(companyGuessData);
             }
-            if(quotationData.vat_number){
-                newThirdURL.searchParams.set('tva_intra', quotationData.vat_number);
+            let newThirdURL = buildNewThirdURL(companyGuess.name);
+            let newThirdItem = {label: chrome.i18n.getMessage('CreateNewCompany'), href: newThirdURL, target: '_blank', icon: 'icon-building-filled'};
+
+            // The address book permission is optional : asked on the first click only (it needs a
+            // user gesture), and never again once declined.
+            let addressBooksApi = !!((browser.addressBooks && browser.addressBooks.contacts) || browser.contacts);
+            let askAddressBooks = addressBooksApi
+                && ['domain', 'person'].includes(companyGuess.source)
+                && !(await browser.permissions.contains(dolLib.ADDRESS_BOOKS_PERMISSION))
+                && !(await browser.storage.local.get({dolibarrAddressBooksDeclined: false})).dolibarrAddressBooksDeclined;
+            if(askAddressBooks){
+                newThirdItem = {label: newThirdItem.label, icon: newThirdItem.icon, onClick: async () => {
+                    let granted = false;
+                    try {
+                        granted = await browser.permissions.request(dolLib.ADDRESS_BOOKS_PERMISSION);
+                    } catch (e) {
+                        console.warn('[DoliConnector popup] address books permission request failed', e);
+                    }
+                    if(!granted){
+                        await browser.storage.local.set({dolibarrAddressBooksDeclined: true});
+                    }else{
+                        let addressBookOrg = await dolLib.findAddressBookOrg(searchEmail);
+                        if(addressBookOrg){
+                            newThirdURL = buildNewThirdURL(addressBookOrg);
+                        }
+                    }
+                    await browser.windows.openDefaultBrowser(newThirdURL.toString());
+                }};
             }
 
             titleDiv.textContent =  soc.name;
@@ -597,7 +637,7 @@ import {jsonToTable, searchPhonesInString} from "../global.lib.js";
             socActions.appendChild(dolLib.buildDropdownMenu({
                 triggerLabel: chrome.i18n.getMessage('Actions'),
                 items: [
-                    {label: chrome.i18n.getMessage('CreateNewCompany'), href: newThirdURL, target: '_blank', icon: 'icon-building-filled'},
+                    newThirdItem,
                     {label: chrome.i18n.getMessage('CreateNewContact'), href: newContactURL, target: '_blank', icon: 'icon-user-plus'},
                     {label: chrome.i18n.getMessage('Refresh'), href: buildRefreshUrl(), iconChar: '⟳', separatorBefore: true}
                 ]
