@@ -27,13 +27,13 @@
     "message": "Οντότητα του Dolibarr (προεπιλογή 1, μόνο για χρήστες της ενότητας Multi-company)"
   },
   "dolibarrPropal": {
-    "message": "Επιλέξτε κατάσταση προσφοράς (καμία επιλογή = εμφάνιση όλων)"
+    "message": "Επιλογή κατάστασης προσφορών (χωρίς επιλογή = εμφάνιση όλων)"
   }, 
   "dolibarrCanceled": {
     "message": "Ακυρωμένες"
   },
   "dolibarrDraft": {
-    "message": "Πρόχειρες"
+    "message": "Προσχέδια"
   },
   "dolibarrValidated": {
     "message": "Επικυρωμένες"
@@ -51,7 +51,7 @@
     "message": "URL του Dolibarr "
   },
   "CreateNewCompany": {
-    "message": "Δημιουργία νέου τρίτου"
+    "message": "Δημιουργία Πελάτη/Προμηθευτή"
   },
   "CreateNewContact": {
     "message": "Δημιουργία νέας επαφής"
@@ -93,16 +93,16 @@
     "message": "Εμφάνιση τρίτου"
   },
   "Ref": {
-    "message": "Κωδ. αναφοράς"
+    "message": "Αρ. παραστατικού"
   },
   "RefClient": {
-    "message": "Κωδ. αναφοράς πελάτη"
+    "message": "Αναφ. Πελάτη"
   },
   "RefSupplier": {
-    "message": "Κωδ. αναφοράς προμηθευτή"
+    "message": "Αναφ. Προμηθευτή"
   },
   "Thirdparty": {
-    "message": "Τρίτος"
+    "message": "Τρίτο μέρος"
   },
   "CheckYourModuleConfig": {
     "message": "Η διαμόρφωση είναι ελλιπής : ελέγξτε τη διαμόρφωση της ενότητας"
@@ -126,13 +126,13 @@
     "message": "Κωδικός πρόσβασης HTTP"
   },
   "refFourn": {
-    "message": "Κωδ. αναφοράς προμηθευτή"
+    "message": "Αναφ. Προμηθευτή"
   },
   "Date": {
     "message": "Ημερομηνία"
   },
   "Total": {
-    "message": "Ποσό (χωρίς ΦΠΑ)"
+    "message": "Καθαρή αξία"
   },
   "options.options": {
     "message": "Επιλογές",
@@ -142,7 +142,7 @@
     "message": "Περισσότερες επιλογές για προσφορές"
   },
   "Saved" :{
-    "message": "Αποθηκεύτηκε"
+    "message": "Αποθηκεύθηκε"
   },
   "dolibarrOptSearchDomain" :{
     "message": "Αναζήτηση τρίτων και μέσω κοινών τομέων email, π.χ. : @domainname.fr",
