@@ -3,7 +3,7 @@
     "message": "Dolibarr connector"
   },
   "extensionDescription": {
-    "message": "Επέκταση Thunderbird για την ενσωμάτωση του Dolibarr"
+    "message": "Επέκταση του Thunderbird για ενσωμάτωση του Dolibarr"
   },
   "Save": {
     "message": "Αποθήκευση"
@@ -21,43 +21,40 @@
     "message": "Σφάλμα κατά την τροποποίηση του μηνύματος"
   },
   "dolibarrApiKey": {
-    "message": "REST API key"
+    "message": "Κλειδί REST API"
   },
   "dolibarrApiEntity": {
-    "message": "Entity of Dolibarr (προεπιλογή 1, χρήση μόνο με ενότητα Multi-company)"
-   },
-   "dolibarrPropal": {
-    "message": "Επιλογή κατάστασης προσφορών (χωρίς επιλογή = εμφάνιση όλων)"
+    "message": "Οντότητα του Dolibarr (προεπιλογή 1, μόνο για χρήστες της ενότητας Multi-company)"
+  },
+  "dolibarrPropal": {
+    "message": "Επιλέξτε κατάσταση προσφοράς (καμία επιλογή = εμφάνιση όλων)"
   }, 
-    "dolibarrCanceled": {
+  "dolibarrCanceled": {
     "message": "Ακυρωμένες"
   },
   "dolibarrDraft": {
-    "message": "Προσχέδια"
+    "message": "Πρόχειρες"
   },
-    "dolibarrValidated": {
+  "dolibarrValidated": {
     "message": "Επικυρωμένες"
   },
-    "dolibarrSigned": {
+  "dolibarrSigned": {
     "message": "Υπογεγραμμένες"
   },
-    "dolibarrNotSigned": {
-    "message": "Μη Υπογεγραμμένες"
+  "dolibarrNotSigned": {
+    "message": "Μη υπογεγραμμένες"
   },
-    "dolibarrBilled": {
+  "dolibarrBilled": {
     "message": "Τιμολογημένες"
   },
   "dolibarrUrl": {
-    "message": "Dolibarr Url "
+    "message": "URL του Dolibarr "
   },
   "CreateNewCompany": {
-    "message": "Δημιουργία Πελάτη/Προμηθευτή"
+    "message": "Δημιουργία νέου τρίτου"
   },
   "CreateNewContact": {
     "message": "Δημιουργία νέας επαφής"
-  },
-  "FicheDolibarr": {
-    "message": "Εμφάνιση Πελάτη/Προμηθευτή"
   },
   "CreateNewQuotation": {
     "message": "Δημιουργία προσφοράς"
@@ -66,37 +63,61 @@
     "message": "Δημιουργία παραγγελίας"
   },
   "CreateNewTicket": {
-    "message": "Δημιουργία Ticket"
+    "message": "Δημιουργία ticket"
+  },
+  "MoreProjectOptions": {
+    "message": "Περισσότερες επιλογές για έργα"
+  },
+  "dolibarrProjectStatuses": {
+    "message": "Καταστάσεις έργων που εμφανίζονται στην καρτέλα Έγγραφα (καμία επιλογή = εμφάνιση όλων)"
+  },
+  "StatusOpenShort": {
+    "message": "Ανοιχτό"
+  },
+  "ProjectTitle": {
+    "message": "Τίτλος"
+  },
+  "DateStart": {
+    "message": "Ημερομηνία έναρξης"
+  },
+  "OpportunityAmount": {
+    "message": "Ποσό ευκαιρίας"
+  },
+  "CreateNewProject": {
+    "message": "Δημιουργία έργου"
+  },
+  "UpcomingEvents": {
+    "message": "Επερχόμενα συμβάντα"
+  },
+  "FicheDolibarr": {
+    "message": "Εμφάνιση τρίτου"
   },
   "Ref": {
-    "message": "Αρ. παραστατικού"
+    "message": "Κωδ. αναφοράς"
   },
   "RefClient": {
-    "message": "Αναφ. Πελάτη"
+    "message": "Κωδ. αναφοράς πελάτη"
   },
   "RefSupplier": {
-    "message": "Αναφ. Προμηθευτή"
+    "message": "Κωδ. αναφοράς προμηθευτή"
   },
   "Thirdparty": {
-    "message": "Πελάτης/Προμηθευτής"
-  },
-  "StatusOrderDelivered": {
-    "message": "Παραδόθηκε"
+    "message": "Τρίτος"
   },
   "CheckYourModuleConfig": {
-    "message": "Ημιτελής διαμόρφωση : Ελέγξτε τη διαμόρφωση του Dolibarr connector"
+    "message": "Η διαμόρφωση είναι ελλιπής : ελέγξτε τη διαμόρφωση της ενότητας"
   },
   "CheckYourCredentials": {
-    "message": "Μη έγκυρα διαπιστευτήρια : Ελέγξτε το κλειδί API σας (και τα διαπιστευτήρια HTTP Basic Auth, εφόσον χρησιμοποιούνται) στη διαμόρφωση του module"
+    "message": "Μη έγκυρα διαπιστευτήρια : ελέγξτε το κλειδί API (και τα διαπιστευτήρια HTTP Basic Auth, εάν ισχύει) στη διαμόρφωση της ενότητας"
   },
   "CheckServerConnection": {
-    "message": "Αποτυχία σύνδεσης : Δεν είναι δυνατή η σύνδεση με τον διακομιστή Dolibarr. Ελέγξτε το διαμορφωμένο URL και τη σύνδεσή σας στο δίκτυο"
+    "message": "Αποτυχία σύνδεσης : δεν είναι δυνατή η πρόσβαση στον διακομιστή Dolibarr. Ελέγξτε το URL που έχει οριστεί και τη σύνδεσή σας στο δίκτυο"
   },
   "dolibarrHttpAuthEnabled": {
     "message": "HTTP Basic Auth"
   },
   "dolibarrHttpAuthEnabledDesc": {
-    "message": "Ενεργοποιήστε το αν οι κλήσεις προς το API του Dolibarr προστατεύονται με HTTP Basic Auth"
+    "message": "Ενεργοποιήστε το εάν οι κλήσεις προς το API του Dolibarr προστατεύονται με HTTP Basic Auth (π.χ. περιορισμός πρόσβασης σε επίπεδο web server)"
   },
   "dolibarrHttpAuthUser": {
     "message": "Όνομα χρήστη HTTP"
@@ -105,55 +126,278 @@
     "message": "Κωδικός πρόσβασης HTTP"
   },
   "refFourn": {
-    "message": "Αναφ. Προμηθευτή"
+    "message": "Κωδ. αναφοράς προμηθευτή"
   },
   "Date": {
     "message": "Ημερομηνία"
   },
   "Total": {
-    "message": "Καθαρή αξία"
+    "message": "Ποσό (χωρίς ΦΠΑ)"
   },
   "options.options": {
     "message": "Επιλογές",
-    "description": "Επιλογές"
+    "description": "Options"
   },
   "MorePropalOptions" :{
     "message": "Περισσότερες επιλογές για προσφορές"
   },
   "Saved" :{
-    "message": "Αποθηκεύθηκε"
+    "message": "Αποθηκεύτηκε"
   },
   "dolibarrOptSearchDomain" :{
-    "message": "Προσθήκη κοινών domain email για αναζήτηση Πελάτη/Προμηθευτή π.χ. @yahoo.gr",
-    "description": "Επιλογές"
+    "message": "Αναζήτηση τρίτων και μέσω κοινών τομέων email, π.χ. : @domainname.fr",
+    "description": "Options"
   },
   "SeeModuleDoc" :{
-    "message": "Δείτε τη σελίδα τεκμηρίωσης του module",
+    "message": "Δείτε τη σελίδα τεκμηρίωσης της ενότητας",
     "description": "Options"
   },
   "dolibarrOptMainBtnDisplay" :{
-    "message": "Τρόπος Εμφάνισης κουμπιού Dolibarr",
+    "message": "Τρόπος εμφάνισης του κουμπιού Dolibarr",
     "description": "Options"
   },
   "dolibarrOptMainBtnDisplayOptionMenu" :{
-    "message": "Email μενού (Προεπιλογή)",
+    "message": "Μενού email (προεπιλογή)",
     "description": "Options"
   },
   "dolibarrOptMainBtnDisplayOptionTopBar" :{
-    "message": "Top Thunderbird Bar",
+    "message": "Επάνω γραμμή του Thunderbird",
     "description": "Options"
   },
   "PleaseSelectAnEmailBefore" :{
-    "message": "Παρακαλώ επιλέξτε ενα email"
+    "message": "Επιλέξτε πρώτα ένα email"
   },
   "ConfirmDelete" :{
     "message": "Οριστική διαγραφή"
   },
+  "DolibarrCrmConnectorEnabled" :{
+    "message": "Λειτουργίες της ενότητας CRM Client Connector"
+  },
+  "DolibarrCrmConnectorEnabledDesc" :{
+    "message": "Ενεργοποιεί τις κοινόχρηστες σημειώσεις στα email, την καρτέλα \"Σύνδεση\" (αναζήτηση/σύνδεση προσφορών, παραγγελιών, τιμολογίων...) και την αυτόματη ανίχνευση κωδικών αναφοράς στα email. Απαιτεί την ενότητα CRM Client Connector εγκατεστημένη και ενεργοποιημένη στο Dolibarr σας."
+  },
+  "CrmConnectorFeatureDisabled" :{
+    "message": "Η λειτουργία είναι απενεργοποιημένη : ενεργοποιήστε τη σύνδεση CRM Client Connector στις ρυθμίσεις της επέκτασης"
+  },
+  "NoThirdpartyNoDocuments" :{
+    "message": "Δεν έχει αναγνωριστεί τρίτος : δεν μπορεί να εμφανιστεί κανένα έγγραφο"
+  },
+  "NoThirdpartyOnDocument" :{
+    "message": "Δεν έχει συνδεθεί τρίτος"
+  },
+  "dolibarrQuotationTrustedSenders" :{
+    "message": "Αξιόπιστοι αποστολείς για κεφαλίδες προσφορών"
+  },
+  "dolibarrQuotationTrustedSendersDesc" :{
+    "message": "Εάν ένα email προέρχεται από έναν από αυτούς τους αποστολείς (ακριβής διεύθυνση ή τομέας, π.χ. : @myshop.com) και περιέχει τις κεφαλίδες X-Quotation-Mail / X-Quotation-Data (ενότητα tsquotationform του Prestashop), ο τρίτος θα αναζητηθεί/δημιουργηθεί από αυτές τις κεφαλίδες αντί για τον αποστολέα του email."
+  },
+  "dolibarrQuotationTrustedSendersPlaceholder" :{
+    "message": "Μία διεύθυνση ή τομέας ανά γραμμή, π.χ.:\nshop@example.com\n@myshop.com"
+  },
+  "dolibarrBannerDisplayMode" :{
+    "message": "Banner στο σώμα του email"
+  },
+  "dolibarrBannerDisplayModeDesc" :{
+    "message": "Το γκρι banner «δεν βρέθηκε τίποτα» προστατεύει από το phishing: ένα email που μιμείται το banner του Dolibarr εμφανίζει τότε δύο banner. Η απόκρυψή του αφαιρεί αυτή την προστασία. Η ειδοποίηση πλαστοπροσωπίας του anti-spam εμφανίζεται πάντα."
+  },
+  "dolibarrBannerDisplayModeAlways" :{
+    "message": "Πάντα (συνιστάται)"
+  },
+  "dolibarrBannerDisplayModeContent" :{
+    "message": "Μόνο όταν βρεθεί περιεχόμενο του Dolibarr"
+  },
+  "dolibarrBannerDisplayModeNever" :{
+    "message": "Ποτέ"
+  },
+  "dolibarrApiKeyFromLogin": {
+    "message": "Λήψη με τα στοιχεία σύνδεσής μου"
+  },
+  "dolibarrApiKeyLoginIntro": {
+    "message": "Το όνομα χρήστη και ο κωδικός πρόσβασής σας στο Dolibarr αποστέλλονται μόνο στο $URL$ για τη λήψη του κλειδιού API και δεν αποθηκεύονται.",
+    "placeholders": {
+      "url": {
+        "content": "$1"
+      }
+    }
+  },
+  "dolibarrApiKeyLoginHttpWarning": {
+    "message": "Αυτή η διεύθυνση του Dolibarr δεν είναι ασφαλής (http) : ο κωδικός πρόσβασης αποστέλλεται χωρίς κρυπτογράφηση."
+  },
+  "dolibarrLogin": {
+    "message": "Όνομα χρήστη"
+  },
+  "dolibarrPassword": {
+    "message": "Κωδικός πρόσβασης"
+  },
+  "dolibarrApiKeyLoginSubmit": {
+    "message": "Λήψη του κλειδιού API"
+  },
+  "dolibarrApiKeyLoginSuccess": {
+    "message": "Το κλειδί API συμπληρώθηκε. Αποθηκεύστε τις επιλογές για να το διατηρήσετε."
+  },
+  "dolibarrApiKeyLoginNoUrl": {
+    "message": "Εισαγάγετε πρώτα το URL του Dolibarr."
+  },
+  "dolibarrApiKeyLoginNetworkError": {
+    "message": "Δεν ήταν δυνατή η πρόσβαση στο Dolibarr. Ελέγξτε το URL και επιτρέψτε την πρόσβαση που ζητά το Thunderbird."
+  },
+  "dolibarrApiKeyLoginHttpAuthError": {
+    "message": "Η πρόσβαση απορρίφθηκε από την πιστοποίηση HTTP του διακομιστή : συμπληρώστε πρώτα παρακάτω τον χρήστη και τον κωδικό της."
+  },
+  "dolibarrApiKeyLoginDisabled": {
+    "message": "Η λήψη του κλειδιού με στοιχεία σύνδεσης είναι απενεργοποιημένη σε αυτό το Dolibarr. Δημιουργήστε το κλειδί API από την καρτέλα του χρήστη σας στο Dolibarr (πεδίο « Κλειδί API ») και επικολλήστε το."
+  },
+  "dolibarrApiKeyLoginBadCredentials": {
+    "message": "Λανθασμένο όνομα χρήστη ή κωδικός πρόσβασης (ή αυτή η σύνδεση δεν μπορεί να χρησιμοποιηθεί εδώ, για παράδειγμα με εξωτερική πιστοποίηση ή δεύτερο παράγοντα)."
+  },
+  "dolibarrApiKeyLoginNoToken": {
+    "message": "Ο χρήστης σας δεν έχει ακόμη κλειδί API και δεν έχετε δικαίωμα να το δημιουργήσετε. Επικοινωνήστε με τον διαχειριστή του Dolibarr σας."
+  },
+  "dolibarrApiKeyLoginNotFound": {
+    "message": "Το API δεν βρέθηκε : ελέγξτε το URL του Dolibarr και ότι η ενότητα « API REST » είναι ενεργοποιημένη."
+  },
+  "dolibarrApiKeyLoginError": {
+    "message": "Σφάλμα $STATUS$ : $MESSAGE$",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      },
+      "message": {
+        "content": "$2"
+      }
+    }
+  },
+  "Comments" :{
+    "message": "Σχόλια"
+  },
+  "NoDolibarrContentDetected" :{
+    "message": "Δεν εντοπίστηκε περιεχόμενο του Dolibarr για αυτό το email"
+  },
+  "MoreInfo" :{
+    "message": "Περισσότερες πληροφορίες"
+  },
+  "NoDolibarrContentDetectedDetails" :{
+    "message": "Αυτό το banner εμφανίζεται πάντα από την επέκταση Dolibarr Connector, είτε βρέθηκε είτε όχι περιεχόμενο του Dolibarr (προσφορά, παραγγελία, σημείωση...) για αυτό το email : αποτελεί προστασία από το phishing. Εάν βλέπετε αυτό το μήνυμα μαζί με άλλο μπλοκ που μιμείται την συνήθη εμφάνιση του τελευταίου μηνύματος ή του συνδεδεμένου εγγράφου, πολύ πιθανόν πρόκειται για απατηλό email."
+  },
+  "Submit" :{
+    "message": "Υποβολή"
+  },
+  "WriteComment" :{
+    "message": "Γράψτε μια σημείωση ή σχόλιο..."
+  },
+  "DolibarrUseGravatar" :{
+    "message": "Χρήση του Gravatar για την εμφάνιση εικόνων προφίλ"
+  },
+  "DolibarrUseGravatarDesc" :{
+    "message": "Εάν ενεργοποιηθεί, τα avatar θα φορτώνονται από το gravatar.com (εξωτερική υπηρεσία)"
+  },
+  "SecurityOptions" :{
+    "message": "Επιλογές ασφαλείας"
+  },
+  "UseMasterPassword" :{
+    "message": "Χρήση κύριου κωδικού πρόσβασης για την προστασία του κλειδιού API"
+  },
+  "UseMasterPasswordDesc" :{
+    "message": "Συνιστάται: Το κλειδί API σας θα κρυπτογραφηθεί και θα απαιτείται κωδικός σε κάθε εκκίνηση"
+  },
+  "MasterPassword" :{
+    "message": "Κύριος κωδικός πρόσβασης"
+  },
+  "MasterPasswordPlaceholder" :{
+    "message": "Εισαγάγετε έναν ασφαλή κωδικό πρόσβασης"
+  },
+  "ConfirmMasterPassword" :{
+    "message": "Επιβεβαίωση κωδικού πρόσβασης"
+  },
+  "PasswordsDontMatch" :{
+    "message": "Οι κωδικοί πρόσβασης δεν ταιριάζουν"
+  },
+  "EnterMasterPassword" :{
+    "message": "Εισαγάγετε τον κύριο κωδικό πρόσβασής σας"
+  },
+  "WrongPassword" :{
+    "message": "Λανθασμένος κωδικός πρόσβασης"
+  },
+  "UnlockExtension" :{
+    "message": "Ξεκλείδωμα της επέκτασης"
+  },
+  "ApiKeyWillBeEncrypted" :{
+    "message": "Το κλειδί API σας θα κρυπτογραφηθεί αυτόματα κατά την αποθήκευση"
+  },
+  "CreateTicket" :{
+    "message": "Δημιουργία ticket"
+  },
+  "TicketCreated" :{
+    "message": "Το ticket δημιουργήθηκε με επιτυχία"
+  },
+  "TicketCreationError" :{
+    "message": "Σφάλμα κατά τη δημιουργία του ticket"
+  },
+  "TicketSubject" :{
+    "message": "Θέμα του ticket"
+  },
+  "TicketMessage" :{
+    "message": "Μήνυμα του ticket"
+  },
+  "StatusCanceledShort": {
+    "message": "Ακυρωμένο"
+  },
+  "StatusDraftShort": {
+    "message": "Πρόχειρο"
+  },
+  "StatusValidatedShort": {
+    "message": "Επικυρωμένο"
+  },
+  "StatusSignedShort": {
+    "message": "Υπογεγραμμένο"
+  },
+  "StatusNotSignedShort": {
+    "message": "Μη υπογεγραμμένο"
+  },
+  "StatusBilledShort": {
+    "message": "Τιμολογημένο"
+  },
+  "StatusOrderDeliveredShort": {
+    "message": "Απεστάλη"
+  },
+  "StatusOrderDelivered": {
+    "message": "Απεστάλη"
+  },
+  "StatusDelivered": {
+    "message": "Παραδόθηκε"
+  },
+  "StatusClosed": {
+    "message": "Κλειστό"
+  },
+  "StatusAbandoned": {
+    "message": "Εγκαταλείφθηκε"
+  },
+  "statusshipmentonprocess": {
+    "message": "Σε αποστολή"
+  },
+  "Status": {
+    "message": "Κατάσταση"
+  },
+  "StatusSupplierOrderOnProcessShort": {
+    "message": "Παραγγέλθηκε"
+  },
+  "StatusSupplierOrderReceivedPartiallyShort": {
+    "message": "Μερική παραλαβή"
+  },
+  "StatusSupplierOrderReceivedAllShort": {
+    "message": "Τα προϊόντα παραλήφθηκαν"
+  },
+  "StatusSupplierOrderCanceledShort": {
+    "message": "Ακυρωμένη"
+  },
+  "StatusSupplierOrderRefusedShort": {
+    "message": "Απορρίφθηκε"
+  },
   "DolibarrRefDetected": {
-    "message": "Εντοπίστηκε αναφορά σε αυτό το email:"
+    "message": "Εντοπίστηκε κωδικός αναφοράς σε αυτό το email:"
   },
   "OpenDocument": {
-    "message": "Εμφάνιση καταχώρησης"
+    "message": "Εμφάνιση εγγραφής"
   },
   "DolibarrTypeOrder": {
     "message": "Παραγγελία"
@@ -170,6 +414,9 @@
   "DolibarrTypeSupplierInvoice": {
     "message": "Τιμολόγιο προμηθευτή"
   },
+  "DolibarrTypeSupplierProposal": {
+    "message": "Προσφορά προμηθευτή"
+  },
   "DolibarrTypeShipment": {
     "message": "Αποστολή"
   },
@@ -183,10 +430,22 @@
     "message": "Έργο"
   },
   "DolibarrTypeIntervention": {
-    "message": "Δελτίο επέμβασης"
+    "message": "Δελτίο παρέμβασης"
   },
   "DolibarrTypeMember": {
     "message": "Μέλος"
+  },
+  "DolibarrTypeAgendaEvent": {
+    "message": "Συμβάν ατζέντας"
+  },
+  "ThirdpartyTypeClient": {
+    "message": "Πελάτης"
+  },
+  "ThirdpartyTypeSupplier": {
+    "message": "Προμηθευτής"
+  },
+  "UnrecognizedSender": {
+    "message": "Δεν έχει αναγνωριστεί τρίτος"
   },
   "TabInfo": {
     "message": "Πληροφορίες"
@@ -197,20 +456,44 @@
   "TabLinkDocument": {
     "message": "Σύνδεση"
   },
+  "TabAgenda": {
+    "message": "Ατζέντα"
+  },
+  "CreateNewEvent": {
+    "message": "Προβολή και δημιουργία συμβάντος"
+  },
+  "AgendaEventAlreadyLinked": {
+    "message": "Το συμβάν είναι ήδη καταχωρισμένο στο Dolibarr"
+  },
+  "IcsEventDetectedInvitation": {
+    "message": "Εντοπίστηκε ένα συμβάν σε αυτό το email."
+  },
+  "Location": {
+    "message": "Τοποθεσία"
+  },
+  "Organizer": {
+    "message": "Διοργανωτής"
+  },
   "LinkedDocuments": {
     "message": "Συνδεδεμένα έγγραφα"
   },
   "NoLinkedDocument": {
-    "message": "Κανένα συνδεδεμένο έγγραφο σε αυτό το email"
+    "message": "Δεν υπάρχει έγγραφο συνδεδεμένο με αυτό το email"
   },
   "SearchDocumentToLink": {
     "message": "Σύνδεση υπάρχοντος εγγράφου"
   },
   "SearchDocumentToLinkPlaceholder": {
-    "message": "Αναζήτηση αναφοράς..."
+    "message": "Αναζήτηση κωδικού αναφοράς..."
+  },
+  "LinkSearchFilterSoc": {
+    "message": "Φιλτράρισμα ανά τρίτο \"$1\""
   },
   "SearchDocumentToLinkNoResults": {
-    "message": "Χωρίς αποτελέσματα"
+    "message": "Δεν βρέθηκαν αποτελέσματα"
+  },
+  "SearchDocumentToLinkAlreadyLinked": {
+    "message": "Αυτή η αναζήτηση αντιστοιχεί σε έγγραφο που είναι ήδη συνδεδεμένο με αυτό το email"
   },
   "SearchDocumentToLinkError": {
     "message": "Η αναζήτηση απέτυχε"
@@ -227,6 +510,9 @@
   "Actions": {
     "message": "Ενέργειες"
   },
+  "Refresh": {
+    "message": "Ανανέωση"
+  },
   "LinkSuccess": {
     "message": "Το έγγραφο συνδέθηκε"
   },
@@ -242,14 +528,98 @@
   "Type": {
     "message": "Τύπος"
   },
+  "DolibarrConnections": {
+    "message": "Συνδέσεις Dolibarr"
+  },
+  "AddDolibarrConnection": {
+    "message": "+ Προσθήκη σύνδεσης"
+  },
+  "DolibarrConnectionName": {
+    "message": "Όνομα σύνδεσης"
+  },
+  "DolibarrConnectionSetDefault": {
+    "message": "Προεπιλεγμένη σύνδεση"
+  },
+  "DolibarrConnectionRemove": {
+    "message": "Αφαίρεση"
+  },
+  "DolibarrConnectionDefaultName": {
+    "message": "Dolibarr"
+  },
+  "DolibarrConnectionDefaultOption": {
+    "message": "(Προεπιλεγμένη σύνδεση: $1)"
+  },
+  "DolibarrAccountMapping": {
+    "message": "Συσχέτιση γραμματοκιβωτίων"
+  },
+  "DolibarrAccountMappingDesc": {
+    "message": "Ένα γραμματοκιβώτιο χρησιμοποιεί κάθε φορά μία μόνο σύνδεση Dolibarr. Τα γραμματοκιβώτια που δεν έχουν συσχετιστεί εδώ χρησιμοποιούν την προεπιλεγμένη σύνδεση."
+  },
+  "DolibarrUsageOptionsTitle": {
+    "message": "Επιλογές χρήσης και συμπεριφοράς"
+  },
+  "DolibarrPermissionNotice": {
+    "message": "Όταν αποθηκεύετε μια σύνδεση Dolibarr, αυτό το πρόσθετο ζητά αυτόματα άδεια πρόσβασης στη διεύθυνσή της (άδεια που αφορά μόνο αυτόν τον ιστότοπο). Εάν αυτό δεν αρκεί και μία ή περισσότερες συνδέσεις παραμένουν αποκλεισμένες, μπορείτε, ως έσχατη λύση, να διευρύνετε την πρόσβαση του πρόσθετου σε όλους τους ιστότοπους με το παρακάτω κουμπί - αυτό ξεμπλοκάρει όλες τις διαμορφωμένες συνδέσεις Dolibarr ταυτόχρονα. Αυτή η ευρύτερη άδεια πρέπει κατά τα άλλα να αποφεύγεται, ώστε η πρόσβαση του πρόσθετου να παραμένει στο απολύτως αναγκαίο ελάχιστο."
+  },
+  "DolibarrRequestPermission": {
+    "message": "Να επιτραπεί η πρόσβαση"
+  },
+  "DolibarrPermissionNoticeFallback": {
+    "message": "Εάν το παραπάνω κουμπί αποτύχει, μπορείτε επίσης να ενεργοποιήσετε αυτή την άδεια χειροκίνητα:"
+  },
+  "DolibarrRequestPermissionGranted": {
+    "message": "Η άδεια χορηγήθηκε"
+  },
+  "DolibarrRequestPermissionDenied": {
+    "message": "Η άδεια απορρίφθηκε - μπορείτε να δοκιμάσετε ξανά ή να ακολουθήσετε τα χειροκίνητα βήματα παρακάτω"
+  },
+  "DolibarrPermissionStep1": {
+    "message": "Ανοίξτε το μενού \"Εργαλεία\" > \"Πρόσθετα και θέματα\" (ή το εικονίδιο με το κομμάτι παζλ στη γραμμή εργαλείων)."
+  },
+  "DolibarrPermissionStep2": {
+    "message": "Κάντε κλικ στο \"Dolibarr connector\" στη λίστα των πρόσθετων."
+  },
+  "DolibarrPermissionStep3": {
+    "message": "Ανοίξτε την καρτέλα \"Δικαιώματα\"."
+  },
+  "DolibarrPermissionStep4": {
+    "message": "Ενεργοποιήστε τον διακόπτη \"Πρόσβαση στα δεδομένα σας για όλους τους ιστότοπους\"."
+  },
+  "DolibarrMissingRightsIconLabel": {
+    "message": "Λείπουν δικαιώματα Dolibarr"
+  },
+  "DolibarrMissingRightsIntro": {
+    "message": "Στον χρήστη του κλειδιού API λείπουν τα δικαιώματα που απαιτούνται για ορισμένες λειτουργίες:"
+  },
+  "DolibarrMissingRightsRequiredRight": {
+    "message": "απαιτούμενο δικαίωμα Dolibarr"
+  },
+  "DolibarrInstanceUnknown": {
+    "message": "Αυτό το μήνυμα αναφέρεται σε έγγραφο από μη αναγνωρισμένη εγκατάσταση Dolibarr. Είναι το δικό σας Dolibarr;"
+  },
+  "DolibarrInstanceIsMine": {
+    "message": "Ναι"
+  },
+  "DolibarrInstanceIsNotMine": {
+    "message": "Όχι, είναι το Dolibarr ενός ανταποκριτή"
+  },
+  "dolibarrOwnInstanceIds": {
+    "message": "Αναγνωριστικά των εγκαταστάσεων Dolibarr μου"
+  },
+  "dolibarrOwnInstanceIdsDesc": {
+    "message": "Ένα ανά γραμμή: το τμήμα μετά το @ της κεφαλίδας X-Dolibarr-TRACKID των email που αποστέλλονται από αυτό το Dolibarr. Συνδέονται μόνο τα έγγραφα που εντοπίζονται και προέρχονται από αυτές τις εγκαταστάσεις· συμπληρώνεται αυτόματα όταν είναι δυνατό."
+  },
+  "dolibarrForeignInstanceIds": {
+    "message": "Εγκαταστάσεις Dolibarr ανταποκριτών προς αγνόηση"
+  },
   "SpoofTagLabel": {
-      "message": "⚠ Possible spoofing"
+      "message": "⚠ Πιθανή πλαστοπροσωπία"
   },
   "SpoofAlertTitle": {
-      "message": "⚠ Warning: possible address spoofing"
+      "message": "⚠ Προσοχή: πιθανή πλαστοπροσωπία διεύθυνσης"
   },
   "SpoofAlertText": {
-      "message": "This address is the one of $WHO$ in Dolibarr, but the server could not check that the email really comes from this domain (DMARC, DKIM or SPF failed). Beware of payment requests, bank details changes or unexpected attachments.",
+      "message": "Αυτή η διεύθυνση ανήκει σε $WHO$ στο Dolibarr, αλλά ο διακομιστής δεν μπόρεσε να επαληθεύσει ότι το email προέρχεται πραγματικά από αυτόν τον τομέα (απέτυχε το DMARC, το DKIM ή το SPF). Προσέξτε τα αιτήματα πληρωμής, τις αλλαγές στοιχείων τραπεζικού λογαριασμού ή τα μη αναμενόμενα συνημμένα.",
       "placeholders": {
           "who": {
               "content": "$1"
